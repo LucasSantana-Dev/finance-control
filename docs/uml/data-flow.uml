@@ -1,0 +1,25 @@
+@startuml Data Flow Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 2
+skinparam sequenceMessageAlign center
+
+actor Client
+participant Controller
+participant Service
+participant Validation
+participant Repository
+participant Database
+
+Client -> Controller: HTTP Request
+Controller -> Service: Business Operation
+Service -> Validation: Validate Input
+Validation --> Service: Validation Result
+Service -> Repository: Data Operation
+Repository -> Database: SQL Query
+Database --> Repository: Query Result
+Repository --> Service: Entity/Data
+Service --> Controller: DTO Response
+Controller --> Client: HTTP Response
+
+@enduml 

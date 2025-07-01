@@ -1,0 +1,122 @@
+@startuml Database Schema
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+
+entity "users" {
+    * id : bigint <<PK>>
+    --
+    * email : varchar <<UK>>
+    * password : varchar
+    * full_name : varchar
+    is_active : boolean
+    * created_at : timestamp
+    updated_at : timestamp
+}
+
+entity "transaction_categories" {
+    * id : bigint <<PK>>
+    --
+    * name : varchar
+    * created_at : timestamp
+    updated_at : timestamp
+}
+
+entity "transaction_subcategories" {
+    * id : bigint <<PK>>
+    --
+    * name : varchar
+    description : varchar
+    is_active : boolean
+    * category_id : bigint <<FK>>
+    * created_at : timestamp
+    updated_at : timestamp
+}
+
+entity "transaction_source_entity" {
+    * id : bigint <<PK>>
+    --
+    * name : varchar
+    description : varchar
+    * source_type : varchar
+    bank_name : varchar
+    account_number : varchar
+    card_type : varchar
+    card_last_four : varchar
+    account_balance : numeric
+    is_active : boolean
+    user_id : bigint <<FK>>
+    * created_at : timestamp
+    updated_at : timestamp
+}
+
+entity "transaction_responsibles" {
+    * id : bigint <<PK>>
+    --
+    * name : varchar
+    * created_at : timestamp
+    updated_at : timestamp
+}
+
+entity "transactions" {
+    * id : bigint <<PK>>
+    --
+    * type : varchar
+    * subtype : varchar
+    * source : varchar
+    * description : varchar
+    * amount : numeric
+    installments : integer
+    date : timestamp
+    * user_id : bigint <<FK>>
+    * category_id : bigint <<FK>>
+    subcategory_id : bigint <<FK>>
+    source_entity_id : bigint <<FK>>
+    * created_at : timestamp
+    updated_at : timestamp
+}
+
+entity "transaction_responsibilities" {
+    * id : bigint <<PK>>
+    --
+    * transaction_id : bigint <<FK>>
+    * responsible_id : bigint <<FK>>
+    * percentage : numeric
+    calculated_amount : numeric
+    notes : varchar
+    * created_at : timestamp
+}
+
+entity "financial_goals" {
+    * id : bigint <<PK>>
+    --
+    * name : varchar
+    description : varchar
+    * goal_type : varchar
+    * target_amount : numeric
+    current_amount : numeric
+    deadline : date
+    is_active : boolean
+    auto_calculate : boolean
+    account_id : bigint <<FK>>
+    * user_id : bigint <<FK>>
+    * created_at : timestamp
+    updated_at : timestamp
+}
+
+' Relationships
+users ||--o{ transactions : "has"
+users ||--o{ financial_goals : "has"
+users ||--o{ transaction_source_entity : "owns"
+
+transaction_categories ||--o{ transaction_subcategories : "contains"
+transaction_categories ||--o{ transactions : "categorizes"
+transaction_subcategories ||--o{ transactions : "subcategorizes"
+
+transaction_source_entity ||--o{ transactions : "sources"
+transaction_source_entity ||--o{ financial_goals : "tracks"
+
+transaction_responsibles ||--o{ transaction_responsibilities : "participates"
+transactions ||--o{ transaction_responsibilities : "distributes"
+
+@enduml 

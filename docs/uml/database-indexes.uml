@@ -1,0 +1,40 @@
+@startuml Database Index Strategy
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+package "Primary Indexes" {
+    [users.id - PRIMARY KEY]
+    [transactions.id - PRIMARY KEY]
+    [transaction_categories.id - PRIMARY KEY]
+    [financial_goals.id - PRIMARY KEY]
+}
+
+package "Unique Indexes" {
+    [users.email - UNIQUE]
+}
+
+package "Performance Indexes" {
+    [users.email]
+    [users.is_active]
+    [transactions.user_id]
+    [transactions.date]
+    [transactions.type]
+    [transactions.category_id]
+    [transactions.user_id, date]
+    [transactions.user_id, type]
+    [financial_goals.user_id]
+    [financial_goals.is_active]
+    [financial_goals.deadline]
+}
+
+package "Foreign Key Indexes" {
+    [transactions.user_id]
+    [transactions.category_id]
+    [transactions.subcategory_id]
+    [transactions.source_entity_id]
+    [financial_goals.user_id]
+    [financial_goals.account_id]
+}
+
+@enduml 

@@ -1,0 +1,38 @@
+@startuml Security Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+package "Security Layer" {
+    [JWT Authentication Filter]
+    [Security Configuration]
+    [Custom User Details Service]
+    [User Context]
+}
+
+package "Authentication Flow" {
+    [Login Request]
+    [Authentication Service]
+    [JWT Utils]
+    [Token Response]
+}
+
+package "Authorization" {
+    [Role-Based Access Control]
+    [Method-Level Security]
+    [User-Scoped Data Access]
+}
+
+[Login Request] --> [Authentication Service]
+[Authentication Service] --> [JWT Utils]
+[JWT Utils] --> [Token Response]
+
+[JWT Authentication Filter] --> [Security Configuration]
+[Security Configuration] --> [Custom User Details Service]
+[Custom User Details Service] --> [User Context]
+
+[User Context] --> [Role-Based Access Control]
+[User Context] --> [Method-Level Security]
+[User Context] --> [User-Scoped Data Access]
+
+@enduml 

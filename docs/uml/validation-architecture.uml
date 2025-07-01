@@ -1,0 +1,36 @@
+@startuml Validation Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+package "Validation Layers" {
+    [Bean Validation]
+    [Custom Validation]
+    [Domain Validation]
+}
+
+package "Validation Components" {
+    [Base Validation]
+    [User Validation]
+    [Transaction Validation]
+    [Category Validation]
+}
+
+package "Validation Flow" {
+    [DTO Validation]
+    [Entity Validation]
+    [Business Rules Validation]
+}
+
+[Bean Validation] --> [DTO Validation]
+[Custom Validation] --> [Entity Validation]
+[Domain Validation] --> [Business Rules Validation]
+
+[Base Validation] --> [User Validation]
+[Base Validation] --> [Transaction Validation]
+[Base Validation] --> [Category Validation]
+
+[DTO Validation] --> [Entity Validation]
+[Entity Validation] --> [Business Rules Validation]
+
+@enduml 

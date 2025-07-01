@@ -1,0 +1,125 @@
+@startuml Entity Relationships
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+skinparam classFontSize 10
+
+abstract class BaseEntity {
+    +id
+    +LocalDateTime createdAt
+    +LocalDateTime updatedAt
+}
+
+' User Domain
+class User {
+    +String email
+    +String password
+    +String fullName
+    +Boolean isActive
+    +List<Transaction> transactions
+    +List<FinancialGoal> financialGoals
+}
+
+' Transaction Domain
+class Transaction {
+    +TransactionType type
+    +TransactionSubtype subtype
+    +TransactionSource source
+    +String description
+    +BigDecimal amount
+    +Integer installments
+    +LocalDateTime date
+    +User user
+    +TransactionCategory category
+    +TransactionSubcategory subcategory
+    +TransactionSourceEntity sourceEntity
+    +List<TransactionResponsibility> responsibilities
+    --
+    +addResponsible(responsible, percentage)
+    +getTotalPercentage()
+    +isPercentageValid()
+    +getAmountForResponsible(responsible)
+}
+
+class TransactionCategory {
+    +String name
+    +List<TransactionSubcategory> subcategories
+    +List<Transaction> transactions
+}
+
+class TransactionSubcategory {
+    +String name
+    +String description
+    +Boolean isActive
+    +TransactionCategory category
+    +List<Transaction> transactions
+}
+
+class TransactionSourceEntity {
+    +String name
+    +String description
+    +String sourceType
+    +String bankName
+    +String accountNumber
+    +String cardType
+    +String cardLastFour
+    +BigDecimal accountBalance
+    +Boolean isActive
+    +User user
+    +List<Transaction> transactions
+    +List<FinancialGoal> financialGoals
+}
+
+class TransactionResponsibles {
+    +String name
+    +List<TransactionResponsibility> responsibilities
+}
+
+class TransactionResponsibility {
+    +Transaction transaction
+    +TransactionResponsibles responsible
+    +BigDecimal percentage
+    +BigDecimal calculatedAmount
+    +String notes
+}
+
+' Financial Goals Domain
+class FinancialGoal {
+    +String name
+    +String description
+    +GoalType goalType
+    +BigDecimal targetAmount
+    +BigDecimal currentAmount
+    +LocalDate deadline
+    +Boolean isActive
+    +Boolean autoCalculate
+    +TransactionSourceEntity account
+    +User user
+}
+
+' Inheritance Relationships
+BaseEntity <|-- User
+BaseEntity <|-- Transaction
+BaseEntity <|-- TransactionCategory
+BaseEntity <|-- TransactionSubcategory
+BaseEntity <|-- TransactionSourceEntity
+BaseEntity <|-- TransactionResponsibles
+BaseEntity <|-- FinancialGoal
+BaseEntity <|-- TransactionResponsibility
+
+' Associations
+User ||--o{ Transaction : "has"
+User ||--o{ FinancialGoal : "has"
+User ||--o{ TransactionSourceEntity : "owns"
+
+TransactionCategory ||--o{ TransactionSubcategory : "contains"
+TransactionCategory ||--o{ Transaction : "categorizes"
+TransactionSubcategory ||--o{ Transaction : "subcategorizes"
+
+TransactionSourceEntity ||--o{ Transaction : "sources"
+TransactionSourceEntity ||--o{ FinancialGoal : "tracks"
+
+Transaction ||--o{ TransactionResponsibility : "distributes"
+TransactionResponsibles ||--o{ TransactionResponsibility : "participates"
+
+@enduml 

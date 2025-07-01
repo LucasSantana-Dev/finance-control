@@ -1,0 +1,176 @@
+@startuml Layered Architecture with Inheritance
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+skinparam classFontSize 10
+
+' Base Classes
+abstract class BaseEntity {
+    +id
+    +LocalDateTime createdAt
+    +LocalDateTime updatedAt
+}
+
+abstract class BaseDTO {
+    +id
+    +LocalDateTime createdAt
+    +LocalDateTime updatedAt
+    --
+    +validateCreate()
+    +validateUpdate()
+    +validateResponse()
+}
+
+abstract class BaseService {
+    +BaseRepository repository
+    --
+    +findAll(search, filters, sortBy, sortDirection, pageable)
+    +findById(id)
+    +create(dto)
+    +update(id, dto)
+    +delete(id)
+    +mapToEntity(dto)*
+    +updateEntityFromDTO(entity, dto)*
+    +mapToResponseDTO(entity)*
+}
+
+abstract class BaseController {
+    +BaseService service
+    --
+    +findAll(search, sortBy, sortDirection, pageable)
+    +findById(id)
+    +create(dto)
+    +update(id, dto)
+    +delete(id)
+}
+
+interface BaseRepository {
+    +findAll(specification, pageable)
+    +findById(id)
+    +save(entity)
+    +deleteById(id)
+    +existsById(id)
+}
+
+' Specialized Service Classes
+abstract class NameBasedService {
+    +findByName(name)
+    +existsByName(name)
+    +findAllOrderedByName()
+}
+
+abstract class UserAwareBaseService {
+    +findAllByUser(userId)
+    +createForUser(dto, userId)
+    +updateForUser(id, dto, userId)
+}
+
+' Domain Entities
+class User {
+    +String email
+    +String fullName
+    +String password
+    +Boolean isActive
+}
+
+class Transaction {
+    +BigDecimal amount
+    +TransactionType type
+    +TransactionSubtype subtype
+    +LocalDate date
+    +String description
+    +User user
+    +TransactionCategory category
+    +TransactionSubcategory subcategory
+    +TransactionSource source
+    +TransactionResponsibles responsible
+}
+
+class TransactionCategory {
+    +String name
+    +String description
+    +User user
+}
+
+class TransactionSubcategory {
+    +String name
+    +String description
+    +TransactionCategory category
+    +User user
+}
+
+class TransactionSource {
+    +String name
+    +String description
+    +User user
+}
+
+class TransactionResponsibles {
+    +String name
+    +String description
+    +User user
+}
+
+class FinancialGoal {
+    +String name
+    +String description
+    +BigDecimal targetAmount
+    +BigDecimal currentAmount
+    +LocalDate targetDate
+    +GoalType type
+    +User user
+}
+
+' DTOs
+class UserDTO {
+    +String email
+    +String fullName
+    +String password
+    +Boolean isActive
+}
+
+class TransactionDTO {
+    +BigDecimal amount
+    +TransactionType type
+    +TransactionSubtype subtype
+    +LocalDate date
+    +String description
+    +Long categoryId
+    +Long subcategoryId
+    +Long sourceId
+    +Long responsibleId
+}
+
+' Controllers
+class UserController
+class TransactionController
+class TransactionCategoryController
+class TransactionSubcategoryController
+class TransactionSourceController
+class TransactionResponsiblesController
+class FinancialGoalController
+
+' Inheritance Relationships
+BaseEntity <|-- User
+BaseEntity <|-- Transaction
+BaseEntity <|-- TransactionCategory
+BaseEntity <|-- TransactionSubcategory
+BaseEntity <|-- TransactionSource
+BaseEntity <|-- TransactionResponsibles
+BaseEntity <|-- FinancialGoal
+
+BaseDTO <|-- UserDTO
+BaseDTO <|-- TransactionDTO
+
+BaseService <|-- NameBasedService
+BaseService <|-- UserAwareBaseService
+
+BaseController <|-- UserController
+BaseController <|-- TransactionController
+BaseController <|-- TransactionCategoryController
+BaseController <|-- TransactionSubcategoryController
+BaseController <|-- TransactionSourceController
+BaseController <|-- TransactionResponsiblesController
+BaseController <|-- FinancialGoalController
+
+@enduml 

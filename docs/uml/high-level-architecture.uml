@@ -1,0 +1,37 @@
+@startuml High-Level Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+package "Client Layer" {
+    [Client Applications]
+}
+
+package "API Layer" {
+    [Controllers]
+    [Authentication]
+}
+
+package "Business Layer" {
+    [Services]
+    [Validation]
+}
+
+package "Data Layer" {
+    [Repositories]
+    [Entities]
+}
+
+package "Database" {
+    database [PostgreSQL]
+}
+
+[Client Applications] --> [Controllers]
+[Controllers] --> [Authentication]
+[Controllers] --> [Services]
+[Services] --> [Validation]
+[Services] --> [Repositories]
+[Repositories] --> [Entities]
+[Entities] --> [PostgreSQL]
+
+@enduml 

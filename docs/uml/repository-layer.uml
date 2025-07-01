@@ -1,0 +1,63 @@
+@startuml Repository Layer Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+skinparam classFontSize 10
+
+' Base Repository
+interface BaseRepository {
+    +findAll(specification, pageable)
+    +findById(id)
+    +save(entity)
+    +deleteById(id)
+    +existsById(id)
+    +count(specification)
+}
+
+' Domain Repositories
+interface UserRepository {
+    +findByEmail(email)
+    +findByEmailIgnoreCase(email)
+    +existsByEmail(email)
+    +findByIsActive(isActive)
+}
+
+interface TransactionRepository {
+    +findByUser(userId, pageable)
+    +findByUserAndDateBetween(userId, startDate, endDate)
+    +findByUserAndType(userId, type)
+    +findByUserAndCategory(userId, categoryId)
+    +findBySourceEntity(sourceEntityId)
+    +calculateTotalByUserAndType(userId, type)
+    +findByUserAndAmountBetween(userId, minAmount, maxAmount)
+}
+
+interface TransactionCategoryRepository {
+    +findByNameIgnoreCase(name)
+    +findByUser(userId)
+    +findByNameContainingIgnoreCase(name)
+}
+
+interface TransactionSourceRepository {
+    +findByUser(userId)
+    +findByUserAndIsActive(userId, isActive)
+    +findBySourceType(sourceType)
+    +findByBankName(bankName)
+}
+
+interface FinancialGoalRepository {
+    +findByUser(userId)
+    +findByUserAndIsActive(userId, isActive)
+    +findByGoalType(goalType)
+    +findByDeadlineBefore(deadline)
+    +findByAccount(accountId)
+}
+
+' Inheritance
+BaseRepository <|-- UserRepository
+BaseRepository <|-- TransactionRepository
+BaseRepository <|-- TransactionCategoryRepository
+BaseRepository <|-- TransactionSourceRepository
+BaseRepository <|-- FinancialGoalRepository
+
+@enduml 

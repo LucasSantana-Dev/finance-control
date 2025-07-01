@@ -1,0 +1,191 @@
+@startuml Package Structure
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam packageStyle rectangle
+
+package "com.finance_control" {
+    package "shared" {
+        package "config" {
+            [JpaAuditingConfig]
+            [OpenApiConfig]
+            [SecurityConfig]
+            [WebConfig]
+        }
+        
+        package "context" {
+            [UserContext]
+        }
+        
+        package "controller" {
+            [BaseController]
+            [CrudApi]
+        }
+        
+        package "dto" {
+            [BaseDTO]
+        }
+        
+        package "enums" {
+            [GoalType]
+            [TransactionSource]
+            [TransactionSubtype]
+            [TransactionType]
+        }
+        
+        package "exception" {
+            [EntityMappingException]
+            [EntityNotFoundException]
+            [ErrorResponse]
+            [GlobalExceptionHandler]
+        }
+        
+        package "model" {
+            [BaseEntity]
+        }
+        
+        package "repository" {
+            [BaseRepository]
+        }
+        
+        package "security" {
+            [CustomUserDetailsService]
+            [JwtAuthenticationFilter]
+            [JwtUtils]
+        }
+        
+        package "service" {
+            [BaseService]
+            [NameBasedService]
+            [UserAwareBaseService]
+        }
+        
+        package "util" {
+            [EntityMapper]
+            [SpecificationUtils]
+            [ValidationUtils]
+        }
+        
+        package "validation" {
+            [BaseValidation]
+        }
+    }
+    
+    package "auth" {
+        package "controller" {
+            [AuthController]
+        }
+        
+        package "dto" {
+            [LoginRequest]
+            [LoginResponse]
+        }
+        
+        package "service" {
+            [AuthService]
+        }
+    }
+    
+    package "users" {
+        package "controller" {
+            [UserController]
+        }
+        
+        package "dto" {
+            [UserDTO]
+        }
+        
+        package "model" {
+            [User]
+        }
+        
+        package "repository" {
+            [UserRepository]
+        }
+        
+        package "service" {
+            [UserService]
+        }
+        
+        package "validation" {
+            [UserValidation]
+        }
+    }
+    
+    package "transactions" {
+        package "controller" {
+            [TransactionController]
+            [TransactionCategoryController]
+            [TransactionSubcategoryController]
+            [TransactionSourceController]
+            [TransactionResponsiblesController]
+        }
+        
+        package "dto" {
+            [TransactionDTO]
+            [TransactionCategoryDTO]
+            [TransactionSubcategoryDTO]
+            [TransactionSourceDTO]
+            [TransactionResponsiblesDTO]
+        }
+        
+        package "model" {
+            [Transaction]
+            [TransactionCategory]
+            [TransactionSubcategory]
+            [TransactionSource]
+            [TransactionResponsibles]
+        }
+        
+        package "repository" {
+            [TransactionRepository]
+            [TransactionCategoryRepository]
+            [TransactionSubcategoryRepository]
+            [TransactionSourceRepository]
+            [TransactionResponsiblesRepository]
+        }
+        
+        package "service" {
+            [TransactionService]
+            [TransactionCategoryService]
+            [TransactionSubcategoryService]
+            [TransactionSourceService]
+            [TransactionResponsiblesService]
+        }
+        
+        package "validation" {
+            [TransactionValidation]
+            [TransactionCategoryValidation]
+            [TransactionSubcategoryValidation]
+            [TransactionSourceValidation]
+            [TransactionResponsiblesValidation]
+        }
+    }
+    
+    package "goals" {
+        package "controller" {
+            [FinancialGoalController]
+        }
+        
+        package "dto" {
+            [FinancialGoalDTO]
+        }
+        
+        package "model" {
+            [FinancialGoal]
+        }
+        
+        package "repository" {
+            [FinancialGoalRepository]
+        }
+        
+        package "service" {
+            [FinancialGoalService]
+        }
+        
+        package "validation" {
+            [FinancialGoalValidation]
+        }
+    }
+}
+
+@enduml 

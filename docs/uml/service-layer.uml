@@ -1,0 +1,73 @@
+@startuml Service Layer Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+skinparam classFontSize 10
+
+' Service Interfaces
+interface UserService {
+    +findByEmail(email)
+    +existsByEmail(email)
+    +softDelete(id)
+    +reactivate(id)
+}
+
+interface TransactionService {
+    +findByUser(userId)
+    +findByCategory(categoryId)
+    +findByDateRange(startDate, endDate)
+    +calculateTotalByType(type)
+}
+
+interface FinancialGoalService {
+    +findByUser(userId)
+    +updateProgress(id, amount)
+    +calculateCompletionPercentage(id)
+}
+
+' Service Implementations
+class DefaultUserService {
+    +UserRepository userRepository
+    +UserValidation userValidation
+    --
+    +findByEmail(email)
+    +existsByEmail(email)
+    +softDelete(id)
+    +reactivate(id)
+}
+
+class DefaultTransactionService {
+    +TransactionRepository transactionRepository
+    +TransactionValidation transactionValidation
+    --
+    +findByUser(userId)
+    +findByCategory(categoryId)
+    +findByDateRange(startDate, endDate)
+    +calculateTotalByType(type)
+}
+
+class DefaultFinancialGoalService {
+    +FinancialGoalRepository goalRepository
+    +FinancialGoalValidation goalValidation
+    --
+    +findByUser(userId)
+    +updateProgress(id, amount)
+    +calculateCompletionPercentage(id)
+}
+
+' Inheritance
+UserService <|.. DefaultUserService
+TransactionService <|.. DefaultTransactionService
+FinancialGoalService <|.. DefaultFinancialGoalService
+
+' Dependencies
+DefaultUserService --> UserRepository
+DefaultUserService --> UserValidation
+
+DefaultTransactionService --> TransactionRepository
+DefaultTransactionService --> TransactionValidation
+
+DefaultFinancialGoalService --> FinancialGoalRepository
+DefaultFinancialGoalService --> FinancialGoalValidation
+
+@enduml 
