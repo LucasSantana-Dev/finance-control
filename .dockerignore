@@ -1,0 +1,49 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Scripts
+scripts/
+
+# Test reports
+test-results/
+reports/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Maven (if any remnants)
+target/
+pom.xml
+mvnw
+mvnw.cmd
+
+# Node (if any frontend)
+node_modules/
+npm-debug.log*
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore 

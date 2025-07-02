@@ -1,28 +1,198 @@
-version: '3.8'
 services:
+  # Database service
   db:
     image: postgres:17
-    container_name: postgres-finance
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-finance_control}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
-      - "${DB_PORT}:${DB_PORT}"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
+  # Application service
   app:
-    build: .
-    container_name: finance-control-app
-    ports:
-      - "8080:8080"
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DEV_MODE: "${DEV_MODE:-false}"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:${DB_PORT}/${DB_NAME}
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-finance_control}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
+      JAVA_OPTS: "${JAVA_OPTS:-}"
+    ports:
+      - "${APPLICATION_PORT:-8080}:8080"
+      - "5005:5005"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./build:/app/build
+    restart: unless-stopped
+
+  # Development service for running scripts and Gradle commands
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+      JAVA_OPTS: "${JAVA_OPTS:-}"
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+      - ./build:/app/build
+      - ./logs:/app/logs
+    working_dir: /app
+    profiles:
+      - dev
+    command: tail -f /dev/null  # Keep container running for interactive use
+
+  # Quality check service
+  quality:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+      - ./build:/app/build
+      - ./logs:/app/logs
+    working_dir: /app
+    profiles:
+      - quality
+    command: ./gradlew qualityCheck --console=rich
+
+  # Test service
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+      SPRING_PROFILES_ACTIVE: test
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-finance_control}_test
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+      - ./build:/app/build
+      - ./logs:/app/logs
+    working_dir: /app
+    profiles:
+      - test
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ./gradlew test --console=rich
+
+  # Build service
+  build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+      - ./build:/app/build
+      - ./logs:/app/logs
+    working_dir: /app
+    profiles:
+      - build
+    command: ./gradlew build --console=rich
+
+  # Environment check service
+  check-env:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+      - ./build:/app/build
+      - ./logs:/app/logs
+    working_dir: /app
+    profiles:
+      - check-env
+    command: ./scripts/check-environment.sh
+
+  # Fix environment service
+  fix-env:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+      - ./build:/app/build
+      - ./logs:/app/logs
+    working_dir: /app
+    profiles:
+      - fix-env
+    command: ./scripts/fix-environment.sh
+
+  # Test fixes service
+  test-fixes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+      - ./build:/app/build
+      - ./logs:/app/logs
+    working_dir: /app
+    profiles:
+      - test-fixes
+    command: ./scripts/test-fixes.sh
+
+  # Shell service for interactive development
+  shell:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+      - ./build:/app/build
+      - ./logs:/app/logs
+    working_dir: /app
+    profiles:
+      - shell
+    stdin_open: true
+    tty: true
+    command: bash
 
 volumes:
   pgdata:
+  gradle-cache:
