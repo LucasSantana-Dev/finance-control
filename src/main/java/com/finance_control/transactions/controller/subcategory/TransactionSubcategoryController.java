@@ -4,8 +4,6 @@ import com.finance_control.shared.controller.BaseController;
 import com.finance_control.transactions.dto.subcategory.TransactionSubcategoryDTO;
 import com.finance_control.transactions.model.subcategory.TransactionSubcategory;
 import com.finance_control.transactions.service.subcategory.TransactionSubcategoryService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

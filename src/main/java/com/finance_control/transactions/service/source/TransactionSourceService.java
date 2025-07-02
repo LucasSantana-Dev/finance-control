@@ -1,7 +1,8 @@
 package com.finance_control.transactions.service.source;
 
+import com.finance_control.shared.enums.TransactionSource;
 import com.finance_control.shared.exception.EntityNotFoundException;
-import com.finance_control.shared.service.UserAwareBaseService;
+import com.finance_control.shared.service.BaseService;
 import com.finance_control.shared.util.EntityMapper;
 import com.finance_control.shared.util.SpecificationUtils;
 import com.finance_control.shared.util.ValidationUtils;
@@ -19,30 +20,34 @@ import java.util.Map;
 @Service
 @Transactional
 public class TransactionSourceService extends
-        UserAwareBaseService<TransactionSourceEntity, Long, TransactionSourceDTO> {
+        BaseService<TransactionSourceEntity, Long, TransactionSourceDTO> {
 
-    private final TransactionSourceRepository transactionSourceRepository;
+    private static final String FIELD_IS_ACTIVE = "isActive";
+    private static final String FIELD_SOURCE_TYPE = "sourceType";
+    private static final String FIELD_NAME = "name";
+    
     private final UserRepository userRepository;
 
-    public TransactionSourceService(TransactionSourceRepository transactionSourceRepository,
-            UserRepository userRepository) {
+    public TransactionSourceService(TransactionSourceRepository transactionSourceRepository, UserRepository userRepository) {
         super(transactionSourceRepository);
-        this.transactionSourceRepository = transactionSourceRepository;
         this.userRepository = userRepository;
     }
 
-
-
+    @Override
+    protected boolean isUserAware() {
+        return true;
+    }
+    
+    @Override
+    protected boolean isNameBased() {
+        return true;
+    }
+    
     @Override
     protected TransactionSourceEntity mapToEntity(TransactionSourceDTO createDTO) {
-        User user = userRepository.findById(createDTO.getUserId())
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        
-        if (transactionSourceRepository.existsByNameAndUserId(createDTO.getName(), createDTO.getUserId())) {
-            throw new IllegalArgumentException("Transaction source with this name already exists for this user");
-        }
-        
         TransactionSourceEntity entity = new TransactionSourceEntity();
+        
+        // Set additional fields specific to TransactionSource
         entity.setName(createDTO.getName());
         entity.setDescription(createDTO.getDescription());
         entity.setSourceType(createDTO.getSourceType());
@@ -51,8 +56,8 @@ public class TransactionSourceService extends
         entity.setCardType(createDTO.getCardType());
         entity.setCardLastFour(createDTO.getCardLastFour());
         entity.setAccountBalance(createDTO.getAccountBalance());
-        entity.setUser(user);
         entity.setIsActive(true);
+        
         return entity;
     }
 
@@ -93,12 +98,6 @@ public class TransactionSourceService extends
         return "TransactionSource";
     }
 
-    private void validateUserExists(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new EntityNotFoundException("User not found");
-        }
-    }
-
     @Override
     protected boolean belongsToUser(TransactionSourceEntity entity, Long userId) {
         return entity.getUser().getId().equals(userId);
@@ -116,18 +115,18 @@ public class TransactionSourceService extends
         Specification<TransactionSourceEntity> spec = super.createSpecificationFromFilters(search, filters);
         
         if (filters != null) {
-            if (filters.containsKey("isActive")) {
-                Boolean isActive = (Boolean) filters.get("isActive");
-                spec = spec.and((root, _, cb) -> isActive ? cb.isTrue(root.get("isActive")) : cb.isFalse(root.get("isActive")));
+            if (filters.containsKey(FIELD_IS_ACTIVE)) {
+                Boolean isActive = (Boolean) filters.get(FIELD_IS_ACTIVE);
+                spec = spec.and((root, _, cb) -> cb.equal(root.get(FIELD_IS_ACTIVE), isActive));
             }
-            if (filters.containsKey("sourceType")) {
-                com.finance_control.shared.enums.TransactionSource sourceType = (com.finance_control.shared.enums.TransactionSource) filters.get("sourceType");
-                spec = spec.and(SpecificationUtils.<TransactionSourceEntity>fieldEqual("sourceType", sourceType));
+            if (filters.containsKey(FIELD_SOURCE_TYPE)) {
+                TransactionSource sourceType = (TransactionSource) filters.get(FIELD_SOURCE_TYPE);
+                spec = spec.and(SpecificationUtils.<TransactionSourceEntity>fieldEqual(FIELD_SOURCE_TYPE, sourceType));
             }
-            if (filters.containsKey("name")) {
-                String name = (String) filters.get("name");
+            if (filters.containsKey(FIELD_NAME)) {
+                String name = (String) filters.get(FIELD_NAME);
                 if (name != null && !name.trim().isEmpty()) {
-                    spec = spec.and(SpecificationUtils.<TransactionSourceEntity>likeIgnoreCase("name", name));
+                    spec = spec.and(SpecificationUtils.<TransactionSourceEntity>likeIgnoreCase(FIELD_NAME, name));
                 }
             }
         }

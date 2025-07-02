@@ -1,16 +1,15 @@
 package com.finance_control.transactions.service;
 
-import com.finance_control.transactions.dto.TransactionDTO;
-import com.finance_control.transactions.dto.responsibles.TransactionResponsiblesDTO;
 import com.finance_control.shared.exception.EntityNotFoundException;
 import com.finance_control.shared.service.BaseService;
 import com.finance_control.shared.util.EntityMapper;
-import com.finance_control.shared.util.SpecificationUtils;
 import com.finance_control.shared.util.ValidationUtils;
+import com.finance_control.transactions.dto.TransactionDTO;
+import com.finance_control.transactions.dto.responsibles.TransactionResponsiblesDTO;
 import com.finance_control.transactions.model.Transaction;
-import com.finance_control.transactions.validation.TransactionValidation;
 import com.finance_control.transactions.model.category.TransactionCategory;
 import com.finance_control.transactions.model.responsibles.TransactionResponsibles;
+import com.finance_control.transactions.model.responsibles.TransactionResponsibles.TransactionResponsibility;
 import com.finance_control.transactions.model.source.TransactionSourceEntity;
 import com.finance_control.transactions.model.subcategory.TransactionSubcategory;
 import com.finance_control.transactions.repository.TransactionRepository;
@@ -25,10 +24,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.criteria.Predicate;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Service for managing financial transaction operations.
@@ -38,12 +39,12 @@ import java.util.Optional;
  */
 @Service
 @Transactional
+@Slf4j
 public class TransactionService
         extends BaseService<Transaction, Long, TransactionDTO> {
 
-    private static final String DESCRIPTION_FIELD = "Description";
+    private static final String FIELD_DESCRIPTION = "description";
 
-    private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final TransactionCategoryRepository categoryRepository;
     private final TransactionSubcategoryRepository subcategoryRepository;
@@ -57,7 +58,6 @@ public class TransactionService
             TransactionSourceRepository sourceEntityRepository,
             TransactionResponsiblesRepository responsibleRepository) {
         super(transactionRepository);
-        this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.subcategoryRepository = subcategoryRepository;
@@ -87,7 +87,7 @@ public class TransactionService
                 "categoryId", filters.getCategoryId(),
                 "subcategoryId", filters.getSubcategoryId(),
                 "sourceEntityId", filters.getSourceEntityId(),
-                "description", filters.getDescription()
+                FIELD_DESCRIPTION, filters.getDescription()
             );
         }
         
@@ -199,6 +199,23 @@ public class TransactionService
     }
 
     @Override
+    protected boolean isUserAware() {
+        return true;
+    }
+    
+    @Override
+    protected boolean belongsToUser(Transaction entity, Long userId) {
+        return entity.getUser().getId().equals(userId);
+    }
+    
+    @Override
+    protected void setUserId(Transaction entity, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        entity.setUser(user);
+    }
+    
+    @Override
     protected void validateEntity(Transaction transaction) {
         validateTransaction(transaction);
     }
@@ -209,33 +226,55 @@ public class TransactionService
     }
     
     @Override
-    protected org.springframework.data.jpa.domain.Specification<Transaction> createSpecificationFromFilters(String search, java.util.Map<String, Object> filters) {
-        return (root, query, criteriaBuilder) -> {
-            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+    protected Specification<Transaction> createSpecificationFromFilters(String search, Map<String, Object> filters) {
+        return (root, _, criteriaBuilder) -> {
+            var predicates = new ArrayList<Predicate>();
             
-            // Handle search term across searchable fields
-            if (search != null && !search.trim().isEmpty()) {
-                predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), "%" + search.toLowerCase() + "%"));
-            }
+            addSearchPredicate(predicates, search, root, criteriaBuilder);
+            addFilterPredicates(predicates, filters, root, criteriaBuilder);
             
-            // Handle specific filters using SpecificationUtils patterns
-            if (filters != null) {
-                filters.forEach((key, value) -> {
-                    if (value != null) {
-                        switch (key) {
-                            case "userId" -> predicates.add(criteriaBuilder.equal(root.get("user").get("id"), value));
-                            case "type" -> predicates.add(criteriaBuilder.equal(root.get("type"), value));
-                            case "categoryId" -> predicates.add(criteriaBuilder.equal(root.get("category").get("id"), value));
-                            case "subcategoryId" -> predicates.add(criteriaBuilder.equal(root.get("subcategory").get("id"), value));
-                            case "sourceEntityId" -> predicates.add(criteriaBuilder.equal(root.get("sourceEntity").get("id"), value));
-                            case "description" -> predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), "%" + value.toString().toLowerCase() + "%"));
-                        }
-                    }
-                });
-            }
-            
-            return predicates.isEmpty() ? null : criteriaBuilder.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            return predicates.isEmpty() ? null : criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private void addSearchPredicate(ArrayList<Predicate> predicates, String search, 
+            jakarta.persistence.criteria.Root<Transaction> root, 
+            jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder) {
+        if (search != null && !search.trim().isEmpty()) {
+            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_DESCRIPTION)), 
+                    "%" + search.toLowerCase() + "%"));
+        }
+    }
+
+    private void addFilterPredicates(ArrayList<Predicate> predicates, Map<String, Object> filters,
+            jakarta.persistence.criteria.Root<Transaction> root, 
+            jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder) {
+        if (filters == null) {
+            return;
+        }
+        
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                addFilterPredicate(predicates, key, value, root, criteriaBuilder);
+            }
+        });
+    }
+
+    private void addFilterPredicate(ArrayList<Predicate> predicates, String key, Object value,
+            jakarta.persistence.criteria.Root<Transaction> root, 
+            jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder) {
+        switch (key) {
+            case "userId" -> predicates.add(criteriaBuilder.equal(root.get("user").get("id"), value));
+            case "type" -> predicates.add(criteriaBuilder.equal(root.get("type"), value));
+            case "categoryId" -> predicates.add(criteriaBuilder.equal(root.get("category").get("id"), value));
+            case "subcategoryId" -> predicates.add(criteriaBuilder.equal(root.get("subcategory").get("id"), value));
+            case "sourceEntityId" -> predicates.add(criteriaBuilder.equal(root.get("sourceEntity").get("id"), value));
+            case FIELD_DESCRIPTION -> predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_DESCRIPTION)),
+                    "%" + value.toString().toLowerCase() + "%"));
+            default -> {
+                // Ignore unknown filter keys
+            }
+        }
     }
 
     // Helper methods for entity fetching
@@ -264,23 +303,8 @@ public class TransactionService
                 .orElseThrow(() -> new EntityNotFoundException("TransactionResponsible", "id", responsibleId));
     }
 
-    // Helper methods for validation
-    private void validateOptionalIds(Long... ids) {
-        for (Long id : ids) {
-            if (id != null) {
-                ValidationUtils.validateId(id);
-            }
-        }
-    }
-    
-    private void validateInstallments(Integer installments) {
-        if (installments != null && installments <= 0) {
-            throw new IllegalArgumentException("Installments must be greater than 0");
-        }
-    }
-
     private TransactionResponsiblesDTO mapResponsiblesToDTO(
-            com.finance_control.transactions.model.responsibles.TransactionResponsibles.TransactionResponsibility responsibility) {
+            TransactionResponsibility responsibility) {
         TransactionResponsiblesDTO dto = new TransactionResponsiblesDTO();
         
         // Map common fields using reflection
@@ -295,13 +319,13 @@ public class TransactionService
 
     private void validateTransaction(Transaction transaction) {
         ValidationUtils.validateAmount(transaction.getAmount());
-        ValidationUtils.validateString(transaction.getDescription(), DESCRIPTION_FIELD);
+        ValidationUtils.validateString(transaction.getDescription(), FIELD_DESCRIPTION);
 
         if (!transaction.isPercentageValid()) {
             throw new IllegalArgumentException("Total percentage of responsibilities must equal 100%");
         }
 
-        for (com.finance_control.transactions.model.responsibles.TransactionResponsibles.TransactionResponsibility responsibility : transaction
+        for (TransactionResponsibility responsibility : transaction
                 .getResponsibilities()) {
             ValidationUtils.validatePercentage(responsibility.getPercentage());
         }

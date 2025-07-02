@@ -1,8 +1,7 @@
 package com.finance_control.transactions.repository.subcategory;
 
-import com.finance_control.shared.repository.BaseRepository;
+import com.finance_control.shared.service.BaseService;
 import com.finance_control.transactions.model.subcategory.TransactionSubcategory;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface TransactionSubcategoryRepository extends BaseRepository<TransactionSubcategory, Long>, JpaSpecificationExecutor<TransactionSubcategory> {
+public interface TransactionSubcategoryRepository extends BaseService.NameBasedRepository<TransactionSubcategory, Long> {
 
     List<TransactionSubcategory> findByCategoryIdAndIsActiveTrueOrderByNameAsc(Long categoryId);
 

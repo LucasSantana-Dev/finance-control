@@ -1,42 +1,51 @@
 package com.finance_control.transactions.service.category;
 
-import com.finance_control.shared.service.NameBasedService;
+import com.finance_control.shared.service.BaseService;
 import com.finance_control.transactions.dto.category.TransactionCategoryDTO;
 import com.finance_control.transactions.model.category.TransactionCategory;
 import com.finance_control.transactions.repository.category.TransactionCategoryRepository;
-import com.finance_control.transactions.validation.TransactionCategoryValidation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
-public class TransactionCategoryService extends NameBasedService<TransactionCategory, Long, TransactionCategoryDTO> {
+public class TransactionCategoryService extends BaseService<TransactionCategory, Long, TransactionCategoryDTO> {
 
-    private final TransactionCategoryRepository transactionCategoryRepository;
 
     public TransactionCategoryService(TransactionCategoryRepository transactionCategoryRepository) {
         super(transactionCategoryRepository);
-        this.transactionCategoryRepository = transactionCategoryRepository;
     }
 
     @Override
-    protected NameBasedRepository<TransactionCategory, Long> getRepository() {
-        return transactionCategoryRepository;
+    protected boolean isNameBased() {
+        return true;
     }
-
+    
     @Override
     protected String getEntityName() {
         return "TransactionCategory";
     }
-
+    
     @Override
-    protected TransactionCategory createEntityInstance() {
-        return new TransactionCategory();
+    protected TransactionCategory mapToEntity(TransactionCategoryDTO dto) {
+        TransactionCategory entity = new TransactionCategory();
+        entity.setName(dto.getName());
+        return entity;
     }
-
+    
     @Override
-    protected TransactionCategoryDTO createResponseDTOInstance() {
-        return new TransactionCategoryDTO();
+    protected void updateEntityFromDTO(TransactionCategory entity, TransactionCategoryDTO dto) {
+        entity.setName(dto.getName());
+    }
+    
+    @Override
+    protected TransactionCategoryDTO mapToResponseDTO(TransactionCategory entity) {
+        TransactionCategoryDTO dto = new TransactionCategoryDTO();
+        dto.setId(entity.getId());
+        dto.setName(entity.getName());
+        dto.setCreatedAt(entity.getCreatedAt());
+        dto.setUpdatedAt(entity.getUpdatedAt());
+        return dto;
     }
     
     @Override

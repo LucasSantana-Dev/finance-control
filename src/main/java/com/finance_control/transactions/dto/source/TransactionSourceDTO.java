@@ -48,6 +48,7 @@ public class TransactionSourceDTO extends BaseDTO<Long> {
      * 
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public void validateCreate() {
         TransactionSourceValidation.validateName(name);
         TransactionSourceValidation.validateUserId(userId);
@@ -59,6 +60,7 @@ public class TransactionSourceDTO extends BaseDTO<Long> {
      * 
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public void validateUpdate() {
         TransactionSourceValidation.validateNameForUpdate(name);
         TransactionSourceValidation.validateUserIdForUpdate(userId);
@@ -70,6 +72,7 @@ public class TransactionSourceDTO extends BaseDTO<Long> {
      * 
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public void validateResponse() {
         super.validateResponse(); // Validate common fields (ID)
         TransactionSourceValidation.validateName(name);

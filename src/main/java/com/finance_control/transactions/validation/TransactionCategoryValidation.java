@@ -1,6 +1,7 @@
 package com.finance_control.transactions.validation;
 
 import com.finance_control.shared.validation.BaseValidation;
+import java.util.function.Predicate;
 
 /**
  * Utility class for transaction category-specific validations.
@@ -45,9 +46,9 @@ public final class TransactionCategoryValidation {
      * @param nameExistsFunction function to check if name already exists
      * @throws IllegalArgumentException if validation fails
      */
-    public static void validateNameUnique(String name, java.util.function.Function<String, Boolean> nameExistsFunction) {
+    public static void validateNameUnique(String name, Predicate<String> nameExistsFunction) {
         validateName(name);
-        if (nameExistsFunction.apply(name)) {
+        if (nameExistsFunction.test(name)) {
             throw new IllegalArgumentException("Category with name '" + name + "' already exists");
         }
     }

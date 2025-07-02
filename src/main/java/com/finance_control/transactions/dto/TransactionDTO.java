@@ -70,6 +70,7 @@ public class TransactionDTO extends BaseDTO<Long> {
      * 
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public void validateCreate() {
         TransactionValidation.validateType(type);
         TransactionValidation.validateSubtype(subtype);
@@ -91,6 +92,7 @@ public class TransactionDTO extends BaseDTO<Long> {
      * 
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public void validateUpdate() {
         TransactionValidation.validateTypeForUpdate(type);
         TransactionValidation.validateSubtypeForUpdate(subtype);
@@ -112,6 +114,7 @@ public class TransactionDTO extends BaseDTO<Long> {
      * 
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public void validateResponse() {
         super.validateResponse(); // Validate common fields (ID)
         

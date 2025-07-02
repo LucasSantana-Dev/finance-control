@@ -1,6 +1,6 @@
 package com.finance_control.transactions.repository.source;
 
-import com.finance_control.shared.repository.BaseRepository;
+import com.finance_control.shared.service.BaseService;
 import com.finance_control.transactions.model.source.TransactionSourceEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface TransactionSourceRepository extends BaseRepository<TransactionSourceEntity, Long> {
+public interface TransactionSourceRepository extends BaseService.NameBasedRepository<TransactionSourceEntity, Long> {
 
         @Query("SELECT tse FROM TransactionSourceEntity tse WHERE tse.user.id = :userId AND tse.sourceType = :sourceType")
         List<TransactionSourceEntity> findByUserIdAndSourceType(@Param("userId") Long userId,
@@ -20,7 +20,11 @@ public interface TransactionSourceRepository extends BaseRepository<TransactionS
 
         Optional<TransactionSourceEntity> findByIdAndUserId(Long id, Long userId);
 
-        boolean existsByNameAndUserId(String name, Long userId);
+        Optional<TransactionSourceEntity> findByNameIgnoreCaseAndUserId(String name, Long userId);
+
+        boolean existsByNameIgnoreCaseAndUserId(String name, Long userId);
+
+        List<TransactionSourceEntity> findAllByUserIdOrderByNameAsc(Long userId);
 
         @Override
         @Query("SELECT tse FROM TransactionSourceEntity tse WHERE " +

@@ -21,6 +21,7 @@ public class TransactionCategoryDTO extends BaseDTO<Long> {
      * 
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public void validateCreate() {
         TransactionCategoryValidation.validateName(name);
     }
@@ -31,6 +32,7 @@ public class TransactionCategoryDTO extends BaseDTO<Long> {
      * 
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public void validateUpdate() {
         TransactionCategoryValidation.validateNameForUpdate(name);
     }
@@ -41,6 +43,7 @@ public class TransactionCategoryDTO extends BaseDTO<Long> {
      * 
      * @throws IllegalArgumentException if validation fails
      */
+    @Override
     public void validateResponse() {
         super.validateResponse(); // Validate common fields (ID)
         TransactionCategoryValidation.validateName(name);

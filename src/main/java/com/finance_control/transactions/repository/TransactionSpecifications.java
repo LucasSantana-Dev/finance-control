@@ -13,6 +13,10 @@ import java.time.LocalDateTime;
  */
 public class TransactionSpecifications {
     
+    private TransactionSpecifications() {
+        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    }
+    
     /**
      * Creates a specification for filtering by user ID.
      */
@@ -73,7 +77,7 @@ public class TransactionSpecifications {
      * Creates a specification for filtering by responsible ID.
      */
     public static Specification<Transaction> hasResponsibleId(Long responsibleId) {
-        return (root, query, criteriaBuilder) -> 
+        return (root, _, criteriaBuilder) -> 
             criteriaBuilder.equal(root.join("responsibilities").get("responsible").get("id"), responsibleId);
     }
 } 
