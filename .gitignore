@@ -10,6 +10,13 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+# Gradle
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+.gradletasknamecache
+
 # IDEs
 ## IntelliJ IDEA
 .idea/
@@ -46,6 +53,35 @@ build/
 *.class
 *.log
 
+# Logs directory
+logs/
+
+# Code Quality Reports
+target/checkstyle-result.xml
+target/pmd.xml
+target/spotbugs/
+target/site/
+target/jacoco.exec
+target/jacoco-it.exec
+
+# Gradle Reports
+build/reports/
+build/test-results/
+build/classes/
+build/generated/
+
+# IDE specific files
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+.cursor/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
@@ -58,9 +94,15 @@ build/
 *.tar.gz
 *.rar
 
+# Gradle Wrapper
+!gradle/wrapper/gradle-wrapper.jar
+
 # Virtual machine crash logs
 hs_err_pid*
 replay_pid*
 
 # BlueJ files
 *.ctxt
+
+# Logs
+logs/
