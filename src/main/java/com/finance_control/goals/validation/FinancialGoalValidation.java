@@ -174,12 +174,12 @@ public final class FinancialGoalValidation {
      * Validates goal name uniqueness for a user.
      * 
      * @param name the name to validate
-     * @param nameExistsFunction function to check if name already exists for the user
+     * @param nameExistsPredicate predicate to check if name already exists for the user
      * @throws IllegalArgumentException if validation fails
      */
-    public static void validateNameUnique(String name, java.util.function.Function<String, Boolean> nameExistsFunction) {
+    public static void validateNameUnique(String name, java.util.function.Predicate<String> nameExistsPredicate) {
         validateName(name);
-        if (nameExistsFunction.apply(name)) {
+        if (nameExistsPredicate.test(name)) {
             throw new IllegalArgumentException("Goal with name '" + name + "' already exists for this user");
         }
     }

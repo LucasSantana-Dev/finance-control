@@ -1,5 +1,6 @@
 package com.finance_control.auth.service;
 
+import com.finance_control.auth.exception.AuthenticationException;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,14 +24,14 @@ public class AuthService {
      */
     public Long authenticate(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+                .orElseThrow(() -> new AuthenticationException("Invalid email or password"));
         
-        if (!user.getIsActive()) {
-            throw new RuntimeException("User account is disabled");
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new AuthenticationException("User account is disabled");
         }
         
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
+            throw new AuthenticationException("Invalid email or password");
         }
         
         return user.getId();

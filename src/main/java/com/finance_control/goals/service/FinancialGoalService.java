@@ -3,15 +3,12 @@ package com.finance_control.goals.service;
 import com.finance_control.goals.dto.FinancialGoalDTO;
 import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.goals.repository.FinancialGoalRepository;
-import com.finance_control.shared.service.UserAwareBaseService;
+import com.finance_control.shared.service.BaseService;
 import com.finance_control.shared.util.EntityMapper;
-import com.finance_control.shared.util.ValidationUtils;
 import com.finance_control.transactions.model.source.TransactionSourceEntity;
-import com.finance_control.goals.validation.FinancialGoalValidation;
 import com.finance_control.transactions.repository.source.TransactionSourceRepository;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -23,7 +20,9 @@ import java.util.Map;
 
 @Service
 @Transactional
-public class FinancialGoalService extends UserAwareBaseService<FinancialGoal, Long, FinancialGoalDTO> {
+public class FinancialGoalService extends BaseService<FinancialGoal, Long, FinancialGoalDTO> {
+
+    private static final String GOAL_TYPE_FIELD = "goalType";
 
     private final FinancialGoalRepository financialGoalRepository;
     private final UserRepository userRepository;
@@ -37,6 +36,11 @@ public class FinancialGoalService extends UserAwareBaseService<FinancialGoal, Lo
         this.userRepository = userRepository;
         this.transactionSourceRepository = transactionSourceRepository;
     }
+    
+    @Override
+    protected boolean isUserAware() {
+        return true;
+    }
 
     /**
      * Find active goals for the current user.
@@ -44,7 +48,7 @@ public class FinancialGoalService extends UserAwareBaseService<FinancialGoal, Lo
      * @return list of active financial goals
      */
     public List<FinancialGoalDTO> findActiveGoals() {
-        Map<String, Object> filters = Map.of("isActive", true);
+        Map<String, Object> filters = Map.of(IS_ACTIVE_FIELD, true);
         return findAll(null, filters, "deadline", "asc", Pageable.unpaged()).getContent();
     }
 
@@ -54,7 +58,7 @@ public class FinancialGoalService extends UserAwareBaseService<FinancialGoal, Lo
      * @return list of completed financial goals
      */
     public List<FinancialGoalDTO> findCompletedGoals() {
-        Map<String, Object> filters = Map.of("isActive", false);
+        Map<String, Object> filters = Map.of(IS_ACTIVE_FIELD, false);
         return findAll(null, filters, "updatedAt", "desc", Pageable.unpaged()).getContent();
     }
 
@@ -114,7 +118,7 @@ public class FinancialGoalService extends UserAwareBaseService<FinancialGoal, Lo
         goal.setTargetAmount(createDTO.getTargetAmount());
         goal.setCurrentAmount(createDTO.getCurrentAmount() != null ? createDTO.getCurrentAmount() : BigDecimal.ZERO);
         goal.setDeadline(createDTO.getDeadline() != null ? createDTO.getDeadline().toLocalDate() : null);
-        goal.setAutoCalculate(createDTO.getAutoCalculate() != null ? createDTO.getAutoCalculate() : false);
+        goal.setAutoCalculate(Boolean.TRUE.equals(createDTO.getAutoCalculate()));
         goal.setIsActive(true);
 
         // Set account if provided
@@ -210,14 +214,14 @@ public class FinancialGoalService extends UserAwareBaseService<FinancialGoal, Lo
         Specification<FinancialGoal> spec = super.createSpecificationFromFilters(search, filters);
 
         if (filters != null) {
-            if (filters.containsKey("isActive")) {
-                Boolean isActive = (Boolean) filters.get("isActive");
-                spec = spec.and(
-                        (root, _, cb) -> isActive ? cb.isTrue(root.get("isActive")) : cb.isFalse(root.get("isActive")));
-            }
-            if (filters.containsKey("goalType")) {
-                String goalType = (String) filters.get("goalType");
-                spec = spec.and((root, _, cb) -> cb.equal(root.get("goalType"), goalType));
+                    if (filters.containsKey(IS_ACTIVE_FIELD)) {
+            Boolean isActive = (Boolean) filters.get(IS_ACTIVE_FIELD);
+            spec = spec.and(
+                    (root, _, cb) -> cb.equal(root.get(IS_ACTIVE_FIELD), isActive));
+        }
+            if (filters.containsKey(GOAL_TYPE_FIELD)) {
+                String goalType = (String) filters.get(GOAL_TYPE_FIELD);
+                spec = spec.and((root, _, cb) -> cb.equal(root.get(GOAL_TYPE_FIELD), goalType));
             }
             if (filters.containsKey("name")) {
                 String name = (String) filters.get("name");
