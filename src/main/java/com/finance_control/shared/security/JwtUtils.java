@@ -1,8 +1,10 @@
 package com.finance_control.shared.security;
 
+import com.finance_control.shared.config.AppProperties;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -10,15 +12,14 @@ import java.util.Date;
 
 /**
  * Utility class for JWT token operations including generation, validation, and parsing.
+ * Uses environment variables through AppProperties for configuration.
  */
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class JwtUtils {
     
-    @Value("${jwt.secret:defaultSecretKeyForDevelopmentOnly}")
-    private String jwtSecret;
-    
-    @Value("${jwt.expiration:86400000}")
-    private long jwtExpirationMs;
+    private final AppProperties appProperties;
     
     /**
      * Generates a JWT token for the given user ID.
@@ -28,14 +29,38 @@ public class JwtUtils {
      */
     public String generateToken(Long userId) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+        Date expiryDate = new Date(now.getTime() + appProperties.getSecurity().getJwt().getExpirationMs());
         
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        SecretKey key = Keys.hmacShaKeyFor(appProperties.getSecurity().getJwt().getSecret().getBytes());
         
         return Jwts.builder()
                 .subject(userId.toString())
                 .issuedAt(now)
                 .expiration(expiryDate)
+                .issuer(appProperties.getSecurity().getJwt().getIssuer())
+                .audience().add(appProperties.getSecurity().getJwt().getAudience()).and()
+                .signWith(key)
+                .compact();
+    }
+    
+    /**
+     * Generates a refresh token for the given user ID.
+     * 
+     * @param userId the user ID to include in the token
+     * @return the generated refresh token
+     */
+    public String generateRefreshToken(Long userId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + appProperties.getSecurity().getJwt().getRefreshExpirationMs());
+        
+        SecretKey key = Keys.hmacShaKeyFor(appProperties.getSecurity().getJwt().getSecret().getBytes());
+        
+        return Jwts.builder()
+                .subject(userId.toString())
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .issuer(appProperties.getSecurity().getJwt().getIssuer())
+                .audience().add(appProperties.getSecurity().getJwt().getAudience() + "-refresh").and()
                 .signWith(key)
                 .compact();
     }
@@ -48,7 +73,7 @@ public class JwtUtils {
      */
     public Long getUserIdFromToken(String token) {
         try {
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+            SecretKey key = Keys.hmacShaKeyFor(appProperties.getSecurity().getJwt().getSecret().getBytes());
             Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
@@ -57,6 +82,7 @@ public class JwtUtils {
             
             return Long.valueOf(claims.getSubject());
         } catch (JwtException | NumberFormatException e) {
+            log.warn("Failed to extract user ID from token: {}", e.getMessage());
             return null;
         }
     }
@@ -69,35 +95,48 @@ public class JwtUtils {
      */
     public boolean validateToken(String token) {
         try {
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+            SecretKey key = Keys.hmacShaKeyFor(appProperties.getSecurity().getJwt().getSecret().getBytes());
             Jwts.parser()
                     .verifyWith(key)
                     .build()
                     .parseSignedClaims(token);
             return true;
         } catch (JwtException e) {
+            log.warn("Invalid JWT token: {}", e.getMessage());
             return false;
         }
     }
     
     /**
-     * Checks if a JWT token is expired.
+     * Gets the expiration time from a JWT token.
      * 
-     * @param token the JWT token to check
-     * @return true if the token is expired, false otherwise
+     * @param token the JWT token
+     * @return the expiration date, or null if the token is invalid
      */
-    public boolean isTokenExpired(String token) {
+    public Date getExpirationFromToken(String token) {
         try {
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+            SecretKey key = Keys.hmacShaKeyFor(appProperties.getSecurity().getJwt().getSecret().getBytes());
             Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
             
-            return claims.getExpiration().before(new Date());
+            return claims.getExpiration();
         } catch (JwtException e) {
-            return true;
+            log.warn("Failed to extract expiration from token: {}", e.getMessage());
+            return null;
         }
+    }
+    
+    /**
+     * Checks if a JWT token is expired.
+     * 
+     * @param token the JWT token
+     * @return true if the token is expired, false otherwise
+     */
+    public boolean isTokenExpired(String token) {
+        Date expiration = getExpirationFromToken(token);
+        return expiration != null && expiration.before(new Date());
     }
 } 

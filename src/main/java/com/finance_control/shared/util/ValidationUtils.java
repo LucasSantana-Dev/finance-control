@@ -66,7 +66,7 @@ public final class ValidationUtils {
         }
     }
 
-    public static void validateCollection(Collection<?> collection, String fieldName) {
+    public static void validateCollection(final Collection<?> collection, String fieldName) {
         if (!isValidCollection(collection)) {
             throw new IllegalArgumentException(fieldName + " cannot be null or empty");
         }

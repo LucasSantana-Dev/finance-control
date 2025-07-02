@@ -1,16 +1,16 @@
 package com.finance_control.shared.controller;
 
 import com.finance_control.shared.service.BaseService;
-import com.finance_control.shared.controller.CrudApi;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +26,7 @@ import java.util.Map;
  * @param <I> The ID type of the entity (typically Long)
  * @param <D> The DTO type used for all operations (create, update, response)
  */
+@Slf4j
 public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
 
     /** The service for business logic operations */
@@ -64,10 +65,14 @@ public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
             Pageable pageable,
             HttpServletRequest request) {
 
+        log.debug("GET request to list entities - search: '{}', sortBy: '{}', sortDirection: '{}', page: {}", 
+                 search, sortBy, sortDirection, pageable.getPageNumber());
+
         // Extract all query parameters as filters (excluding standard ones)
         Map<String, Object> filters = extractFiltersFromRequest(request, search, sortBy, sortDirection);
 
         Page<D> result = service.findAll(search, filters, sortBy, sortDirection, pageable);
+        log.debug("Returning {} entities out of {} total", result.getNumberOfElements(), result.getTotalElements());
         return ResponseEntity.ok(result);
     }
 
@@ -151,9 +156,16 @@ public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
     @GetMapping("/{id}")
     @Operation(summary = "Get entity by ID", description = "Retrieve a single entity by its unique identifier.")
     public ResponseEntity<D> findById(@PathVariable I id) {
+        log.debug("GET request to find entity by ID: {}", id);
         return service.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .map(entity -> {
+                    log.debug("Entity found with ID: {}", id);
+                    return ResponseEntity.ok(entity);
+                })
+                .orElseGet(() -> {
+                    log.debug("Entity not found with ID: {}", id);
+                    return ResponseEntity.notFound().build();
+                });
     }
 
     /**
@@ -166,7 +178,9 @@ public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
     @PostMapping
     @Operation(summary = "Create entity", description = "Create a new entity.")
     public ResponseEntity<D> create(@Valid @RequestBody D createDTO) {
+        log.debug("POST request to create entity: {}", createDTO);
         D result = service.create(createDTO);
+        log.info("Entity created successfully");
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
@@ -181,7 +195,9 @@ public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
     @PutMapping("/{id}")
     @Operation(summary = "Update entity", description = "Update an existing entity by its ID.")
     public ResponseEntity<D> update(@PathVariable I id, @Valid @RequestBody D updateDTO) {
+        log.debug("PUT request to update entity with ID: {} and DTO: {}", id, updateDTO);
         D result = service.update(id, updateDTO);
+        log.info("Entity updated successfully with ID: {}", id);
         return ResponseEntity.ok(result);
     }
 
@@ -195,7 +211,9 @@ public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete entity", description = "Delete an entity by its ID.")
     public ResponseEntity<Void> delete(@PathVariable I id) {
+        log.debug("DELETE request to delete entity with ID: {}", id);
         service.delete(id);
+        log.info("Entity deleted successfully with ID: {}", id);
         return ResponseEntity.noContent().build();
     }
 }
