@@ -93,7 +93,7 @@ POSTGRES_DB=finance_control
 # Start the application with PostgreSQL
 docker-compose up -d
 
-# The application will be available at http://localhost:8080
+# The application will be available at http://localhost:${APPLICATION_PORT}
 ```
 
 ### Running Locally
@@ -126,8 +126,8 @@ cd finance-control
 ## 📚 API Documentation
 
 Once the application is running, you can access:
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **OpenAPI JSON**: http://localhost:8080/v3/api-docs
+- **Swagger UI**: http://localhost:${APPLICATION_PORT}/swagger-ui.html
+- **OpenAPI JSON**: http://localhost:${APPLICATION_PORT}/v3/api-docs
 
 ### Key Endpoints
 

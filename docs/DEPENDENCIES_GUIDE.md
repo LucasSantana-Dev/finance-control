@@ -73,7 +73,7 @@ This document explains the key dependencies used in the finance-control applicat
 - **3.5.3**: Latest stable version with Java 24 support
 
 ### Java Version
-- **24**: Latest LTS version with modern features
+- **21**: Latest LTS version with modern features
 
 ## Dependency Management
 
