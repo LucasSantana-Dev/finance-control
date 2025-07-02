@@ -5,7 +5,7 @@ A comprehensive financial management system built with Spring Boot, designed to 
 [![Java](https://img.shields.io/badge/Java-24-orange.svg)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.3-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue.svg)](https://www.postgresql.org/)
-[![Maven](https://img.shields.io/badge/Maven-3.9+-red.svg)](https://maven.apache.org/)
+[![Gradle](https://img.shields.io/badge/Gradle-8.7+-green.svg)](https://gradle.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## 🚀 Features
@@ -43,7 +43,9 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Security**: Spring Security with JWT authentication
 - **Documentation**: OpenAPI 3.0 (Swagger)
 - **Testing**: JUnit 5, TestContainers, Selenium
-- **Build Tool**: Maven 3.9+
+- **Build Tool**: Gradle 8.7+
+- **Code Quality**: Checkstyle, PMD, SpotBugs, SonarQube
+- **Coverage**: JaCoCo with 80% minimum requirement
 
 ### Project Structure
 ```
@@ -69,8 +71,8 @@ src/main/java/com/finance_control/
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Java 24 or higher
-- Maven 3.9+
+- Java 21 or 22
+- Gradle 8.7+ (or use the included wrapper)
 - PostgreSQL 17
 - Docker (optional)
 
@@ -103,25 +105,49 @@ git clone https://github.com/yourusername/finance-control.git
 cd finance-control
 
 # Build the project
-./mvnw clean compile
+./gradlew build
 
 # Run database migrations
-./mvnw flyway:migrate
+./gradlew flywayMigrate
 
 # Start the application
-./mvnw spring-boot:run
+./gradlew bootRun
 ```
 
 ### Running Tests
 ```bash
 # Run all tests
-./mvnw test
+./gradlew test
 
 # Run specific test categories
-./mvnw test -Dtest=*UnitTest
-./mvnw test -Dtest=*IntegrationTest
-./mvnw test -Dtest=*SeleniumTest
+./gradlew test --tests "*UnitTest"
+./gradlew test --tests "*IntegrationTest"
+./gradlew test --tests "*SeleniumTest"
+
+# Run tests with coverage
+./gradlew jacocoTestReport
+./gradlew jacocoTestCoverageVerification
 ```
+
+### Code Quality Checks
+```bash
+# Run all quality checks
+./gradlew qualityCheck
+
+# Individual quality checks
+./gradlew checkstyleMain    # Code style validation
+./gradlew pmdMain          # Static code analysis
+./gradlew spotbugsMain     # Bug detection
+./gradlew sonarqube        # SonarQube analysis
+
+# Quality check with script
+./scripts/quality-check.sh
+```
+
+### Coverage Requirements
+- **Minimum Coverage**: 80% (line and branch coverage)
+- **Exclusions**: Configuration classes, DTOs, models, exceptions, enums, utilities, and validation classes
+- **Reports**: HTML and XML formats available in `build/reports/jacoco/`
 
 ## 📚 API Documentation
 
@@ -172,16 +198,16 @@ src/test/java/com/finance_control/
 ### Running Tests
 ```bash
 # Unit tests only
-./mvnw test -Dtest=*UnitTest
+./gradlew test --tests "*UnitTest"
 
 # Integration tests only
-./mvnw test -Dtest=*IntegrationTest
+./gradlew test --tests "*IntegrationTest"
 
 # E2E tests only
-./mvnw test -Dtest=*SeleniumTest
+./gradlew test --tests "*SeleniumTest"
 
 # All tests with coverage
-./mvnw test jacoco:report
+./gradlew test jacocoTestReport
 ```
 
 ## 🛠️ Development
@@ -192,6 +218,9 @@ src/test/java/com/finance_control/
 - **Spring Boot**: Latest stable version
 - **PostgreSQL**: Primary database with optimized queries
 - **Flyway**: Database migration management
+- **Code Quality**: Enforced by Checkstyle, PMD, and SpotBugs
+- **Coverage**: Minimum 80% test coverage required
+- **SonarQube**: Code quality gates and analysis
 
 ### Architecture Guidelines
 - **Base Classes**: Extend appropriate base classes for consistency
@@ -215,6 +244,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) folder:
 - **[Testing Strategy](docs/TESTING_STRATEGY.md)** - Testing guidelines and examples
 - **[Naming Conventions](docs/NAMING_EXAMPLES.md)** - Code naming standards
 - **[Service Patterns](docs/SERVICE_IMPROVEMENTS.md)** - Service layer improvements
+- **[Code Quality Tools](docs/CODE_QUALITY_TOOLS.md)** - Checkstyle, PMD, SpotBugs configuration
+- **[Gradle Scripts](docs/GRADLE_SCRIPTS.md)** - Custom Gradle tasks and scripts
 
 ## 🤝 Contributing
 
@@ -237,7 +268,10 @@ cd finance-control
 git checkout -b feature/your-feature
 
 # Make changes and test
-./mvnw clean test
+./gradlew clean test
+
+# Run quality checks
+./gradlew qualityCheck
 
 # Commit with conventional commits
 git commit -m "feat: add new transaction filtering feature"
@@ -297,6 +331,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Building a RESTful Web Service with Spring Boot Actuator](https://spring.io/guides/gs/actuator-service/)
 - [Validation](https://spring.io/guides/gs/validating-form-input/)
 
-### Maven Parent overrides
+### Code Quality Tools
 
-Due to Maven's design, elements are inherited from the parent POM to the project POM. While most of the inheritance is fine, it also inherits unwanted elements like `<license>` and `<developers>` from the parent. To prevent this, the project POM contains empty overrides for these elements. If you manually switch to a different parent and actually want the inheritance, you need to remove those overrides. 
+The project uses several code quality tools to maintain high standards:
+
+- **Checkstyle**: Enforces coding standards and conventions
+- **PMD**: Static code analysis for potential bugs and code smells
+- **SpotBugs**: Bytecode analysis for bug detection
+- **SonarQube**: Comprehensive code quality analysis and reporting
+- **JaCoCo**: Test coverage analysis with 80% minimum requirement
+
+### Quality Reports
+
+Quality reports are generated in `build/reports/`:
+- **Checkstyle**: `build/reports/checkstyle/`
+- **PMD**: `build/reports/pmd/`
+- **SpotBugs**: `build/reports/spotbugs/`
+- **JaCoCo**: `build/reports/jacoco/`
+- **SonarQube**: Available via SonarQube server 
