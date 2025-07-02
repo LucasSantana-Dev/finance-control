@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;
 
@@ -17,6 +18,7 @@ import java.util.Optional;
  * operations like finding users by email and checking email existence.
  */
 @RestController
+@Slf4j
 @RequestMapping("/users")
 @Tag(name = "Users", description = "Endpoints for managing users")
 public class UserController extends BaseController<User, Long, UserDTO> {

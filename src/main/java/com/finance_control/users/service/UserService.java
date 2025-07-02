@@ -2,8 +2,12 @@ package com.finance_control.users.service;
 
 import com.finance_control.shared.service.BaseService;
 import com.finance_control.shared.util.EntityMapper;
-import com.finance_control.shared.util.ValidationUtils;
 import com.finance_control.users.validation.UserValidation;
+
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.CriteriaBuilder;
+
 import com.finance_control.users.dto.UserDTO;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
@@ -15,7 +19,11 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service class for managing user operations.
@@ -24,11 +32,16 @@ import java.util.Optional;
  */
 @Service
 @Transactional
+@Slf4j
 public class UserService extends BaseService<User, Long, UserDTO> {
-    
+
+    private static final String FIELD_EMAIL = "email";
+    private static final String FIELD_FULL_NAME = "fullName";
+    private static final String FIELD_IS_ACTIVE = "isActive";
+
     /** The user repository for data access operations */
     private final UserRepository userRepository;
-    
+
     /**
      * Constructs a new UserService with the specified repository.
      * 
@@ -38,46 +51,47 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         super(userRepository);
         this.userRepository = userRepository;
     }
-    
+
     /**
      * Find users with dynamic filtering.
      * 
-     * @param email optional email filter (case-insensitive)
+     * @param email    optional email filter (case-insensitive)
      * @param fullName optional full name filter (case-insensitive)
      * @param isActive optional active status filter
      * @param pageable pagination parameters
      * @return a page of user DTOs
      */
     public Page<UserDTO> findAllWithFilters(String email, String fullName, Boolean isActive, Pageable pageable) {
-        Specification<User> spec = (root, query, criteriaBuilder) -> {
-            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
-            
+        Specification<User> spec = (root, _, criteriaBuilder) -> {
+            var predicates = new ArrayList<Predicate>();
+
             if (email != null && !email.trim().isEmpty()) {
                 predicates.add(criteriaBuilder.like(
-                    criteriaBuilder.lower(root.get("email")), 
-                    "%" + email.toLowerCase() + "%"
-                ));
+                        criteriaBuilder.lower(root.get(FIELD_EMAIL)),
+                        "%" + email.toLowerCase() + "%"));
             }
-            
+
             if (fullName != null && !fullName.trim().isEmpty()) {
                 predicates.add(criteriaBuilder.like(
-                    criteriaBuilder.lower(root.get("fullName")), 
-                    "%" + fullName.toLowerCase() + "%"
-                ));
+                        criteriaBuilder.lower(root.get(FIELD_FULL_NAME)),
+                        "%" + fullName.toLowerCase() + "%"));
             }
-            
+
             if (isActive != null) {
-                predicates.add(isActive ? criteriaBuilder.isTrue(root.get("isActive")) : criteriaBuilder.isFalse(root.get("isActive")));
+                predicates.add(isActive ? criteriaBuilder.isTrue(root.get(FIELD_IS_ACTIVE))
+                        : criteriaBuilder.isFalse(root.get(FIELD_IS_ACTIVE)));
             }
-            
-            return predicates.isEmpty() ? null : criteriaBuilder.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+
+            return predicates.isEmpty() ? null
+                    : criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
-        
+
         // Default sorting by full name if no sort is specified
         if (pageable.getSort().isUnsorted()) {
-            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.ASC, "fullName"));
+            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                    Sort.by(Sort.Direction.ASC, FIELD_FULL_NAME));
         }
-        
+
         return userRepository.findAll(spec, pageable)
                 .map(this::mapToResponseDTO);
     }
@@ -91,16 +105,14 @@ public class UserService extends BaseService<User, Long, UserDTO> {
      */
     public Optional<UserDTO> findByEmail(String email) {
         UserValidation.validateEmail(email);
-        Specification<User> spec = (root, query, criteriaBuilder) -> 
-            criteriaBuilder.like(
-                criteriaBuilder.lower(root.get("email")), 
-                email.toLowerCase()
-            );
-        
+        Specification<User> spec = (root, _, criteriaBuilder) -> criteriaBuilder.like(
+                criteriaBuilder.lower(root.get(FIELD_EMAIL)),
+                email.toLowerCase());
+
         return userRepository.findOne(spec)
                 .map(this::mapToResponseDTO);
     }
-    
+
     /**
      * Checks if a user exists with the given email address.
      * 
@@ -112,7 +124,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         UserValidation.validateEmail(email);
         return userRepository.existsByEmail(email);
     }
-    
+
     // BaseService abstract method implementations
     @Override
     protected User mapToEntity(UserDTO createDTO) {
@@ -122,7 +134,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         user.setPassword(createDTO.getPassword());
         return user;
     }
-    
+
     @Override
     protected void updateEntityFromDTO(User entity, UserDTO updateDTO) {
         if (updateDTO.getFullName() != null) {
@@ -135,36 +147,36 @@ public class UserService extends BaseService<User, Long, UserDTO> {
             entity.setPassword(updateDTO.getPassword());
         }
     }
-    
+
     @Override
     protected UserDTO mapToResponseDTO(User entity) {
         UserDTO dto = new UserDTO();
-        
+
         // Map common fields using reflection
         EntityMapper.mapCommonFields(entity, dto);
-        
+
         return dto;
     }
-    
+
     @Override
     protected void validateCreateDTO(UserDTO createDTO) {
         UserValidation.validateEmailUnique(createDTO.getEmail(), userRepository::existsByEmail);
         UserValidation.validateFullName(createDTO.getFullName());
         UserValidation.validatePassword(createDTO.getPassword());
     }
-    
+
     @Override
     protected void validateUpdateDTO(UserDTO updateDTO) {
         UserValidation.validateFullNameForUpdate(updateDTO.getFullName());
         UserValidation.validateEmailForUpdate(updateDTO.getEmail());
         UserValidation.validatePasswordForUpdate(updateDTO.getPassword());
     }
-    
+
     @Override
     protected String getEntityName() {
         return "User";
     }
-    
+
     /**
      * Soft delete a user by setting isActive to false.
      * 
@@ -177,7 +189,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         user.setIsActive(false);
         userRepository.save(user);
     }
-    
+
     /**
      * Reactivate a user by setting isActive to true.
      * 
@@ -190,34 +202,57 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         user.setIsActive(true);
         userRepository.save(user);
     }
-    
-    @Override
-    protected org.springframework.data.jpa.domain.Specification<User> createSpecificationFromFilters(String search, java.util.Map<String, Object> filters) {
-        return (root, query, criteriaBuilder) -> {
-            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+
+        @Override
+    protected Specification<User> createSpecificationFromFilters(String search,
+            Map<String, Object> filters) {
+        return (root, _, criteriaBuilder) -> {
+            var predicates = new ArrayList<Predicate>();
             
-            // Handle search term across searchable fields
-            if (search != null && !search.trim().isEmpty()) {
-                predicates.add(criteriaBuilder.or(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")), "%" + search.toLowerCase() + "%"),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), "%" + search.toLowerCase() + "%")
-                ));
-            }
+            addSearchPredicates(predicates, search, root, criteriaBuilder);
+            addFilterPredicates(predicates, filters, root, criteriaBuilder);
             
-            // Handle specific filters
-            if (filters != null) {
-                filters.forEach((key, value) -> {
-                    if (value != null) {
-                        switch (key) {
-                            case "email" -> predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), "%" + value.toString().toLowerCase() + "%"));
-                            case "fullName" -> predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")), "%" + value.toString().toLowerCase() + "%"));
-                            case "isActive" -> predicates.add((Boolean) value ? criteriaBuilder.isTrue(root.get("isActive")) : criteriaBuilder.isFalse(root.get("isActive")));
-                        }
-                    }
-                });
-            }
-            
-            return predicates.isEmpty() ? null : criteriaBuilder.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            return predicates.isEmpty() ? null
+                    : criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
-} 
+    
+    private void addSearchPredicates(List<Predicate> predicates, String search,
+            Root<User> root, CriteriaBuilder criteriaBuilder) {
+        if (search != null && !search.trim().isEmpty()) {
+            predicates.add(criteriaBuilder.or(
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_FULL_NAME)),
+                            "%" + search.toLowerCase() + "%"),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_EMAIL)),
+                            "%" + search.toLowerCase() + "%")));
+        }
+    }
+    
+    private void addFilterPredicates(List<Predicate> predicates,
+            Map<String, Object> filters, Root<User> root,
+            CriteriaBuilder criteriaBuilder) {
+        if (filters != null) {
+            filters.forEach((key, value) -> {
+                if (value != null) {
+                    addFilterPredicate(predicates, key, value, root, criteriaBuilder);
+                }
+            });
+        }
+    }
+    
+    private void addFilterPredicate(List<Predicate> predicates, String key,
+            Object value, Root<User> root,
+            CriteriaBuilder criteriaBuilder) {
+        switch (key) {
+            case FIELD_EMAIL ->
+                predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_EMAIL)),
+                        "%" + value.toString().toLowerCase() + "%"));
+            case FIELD_FULL_NAME ->
+                predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_FULL_NAME)),
+                        "%" + value.toString().toLowerCase() + "%"));
+            case FIELD_IS_ACTIVE ->
+                predicates.add(criteriaBuilder.equal(root.get(FIELD_IS_ACTIVE), value));
+            default -> throw new IllegalArgumentException("Invalid filter key: " + key);
+        }
+    }
+}

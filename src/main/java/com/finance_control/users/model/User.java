@@ -1,6 +1,9 @@
 package com.finance_control.users.model;
 
+import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.shared.model.BaseEntity;
+import com.finance_control.transactions.model.Transaction;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -37,8 +40,8 @@ public class User extends BaseEntity<Long> {
     private Boolean isActive = true;
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<com.finance_control.transactions.model.Transaction> transactions;
+    private List<Transaction> transactions;
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<com.finance_control.goals.model.FinancialGoal> financialGoals;
+    private List<FinancialGoal> financialGoals;
 } 
