@@ -13,7 +13,6 @@ build/
 # Gradle
 .gradle/
 gradle-app.setting
-!gradle-wrapper.jar
 !gradle-wrapper.properties
 .gradletasknamecache
 
@@ -95,7 +94,7 @@ Thumbs.db
 *.rar
 
 # Gradle Wrapper
-!gradle/wrapper/gradle-wrapper.jar
+# Note: gradle-wrapper.jar is ignored by *.jar rule above
 
 # Virtual machine crash logs
 hs_err_pid*
