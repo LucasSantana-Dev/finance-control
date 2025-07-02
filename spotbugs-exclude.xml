@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter
+        xmlns="https://github.com/spotbugs/filter/3.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://github.com/spotbugs/filter/3.0.0 https://raw.githubusercontent.com/spotbugs/spotbugs/3.1.0/spotbugs/etc/findbugsfilter.xsd">
+
+    <!-- Exclude generated code -->
+    <Match>
+        <Class name="~.*\.generated\..*"/>
+    </Match>
+
+    <!-- Exclude test classes -->
+    <Match>
+        <Class name="~.*Test$"/>
+    </Match>
+
+    <!-- Exclude integration test classes -->
+    <Match>
+        <Class name="~.*IntegrationTest$"/>
+    </Match>
+
+    <!-- Exclude E2E test classes -->
+    <Match>
+        <Class name="~.*SeleniumTest$"/>
+    </Match>
+
+    <!-- Exclude specific false positives -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="com.finance_control.shared.dto.BaseDTO"/>
+    </Match>
+
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+        <Class name="com.finance_control.shared.dto.BaseDTO"/>
+    </Match>
+
+    <!-- Exclude Lombok generated code -->
+    <Match>
+        <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+        <Class name="~.*\$.*"/>
+    </Match>
+
+    <!-- Exclude Spring Boot specific patterns -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="~.*\.config\..*"/>
+    </Match>
+
+    <!-- Exclude JPA entities -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="~.*\.model\..*"/>
+    </Match>
+
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+        <Class name="~.*\.model\..*"/>
+    </Match>
+
+    <!-- Exclude DTOs -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="~.*\.dto\..*"/>
+    </Match>
+
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+        <Class name="~.*\.dto\..*"/>
+    </Match>
+
+    <!-- Exclude enums -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="~.*\.enums\..*"/>
+    </Match>
+
+    <!-- Exclude validation classes -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="~.*\.validation\..*"/>
+    </Match>
+
+    <!-- Exclude utility classes -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="~.*\.util\..*"/>
+    </Match>
+
+    <!-- Exclude exception classes -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="~.*\.exception\..*"/>
+    </Match>
+
+    <!-- Exclude Java 24 specific issues -->
+    <Match>
+        <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+        <Class name="~.*\.config\..*"/>
+    </Match>
+
+    <!-- Exclude Spring Security patterns -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="~.*\.security\..*"/>
+    </Match>
+
+    <!-- Exclude JWT related patterns -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="~.*\.auth\..*"/>
+    </Match>
+
+</FindBugsFilter> 
