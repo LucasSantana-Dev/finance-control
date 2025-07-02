@@ -2,34 +2,29 @@ package com.finance_control.unit.transactions.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance_control.shared.enums.TransactionSource;
+import com.finance_control.shared.exception.GlobalExceptionHandler;
+import com.finance_control.transactions.controller.source.TransactionSourceController;
 import com.finance_control.transactions.dto.source.TransactionSourceDTO;
 import com.finance_control.transactions.service.source.TransactionSourceService;
+import com.finance_control.unit.BaseWebMvcTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import com.finance_control.shared.exception.GlobalExceptionHandler;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-import com.finance_control.transactions.controller.source.TransactionSourceController;
-import com.finance_control.unit.BaseWebMvcTest;
 
 @WebMvcTest(controllers = TransactionSourceController.class)
 @Import({ GlobalExceptionHandler.class })
@@ -116,11 +111,10 @@ class TransactionSourceControllerTest extends BaseWebMvcTest {
 
         @Test
         void getTransactionSource_ShouldReturnOk_WhenExists() throws Exception {
-                when(transactionSourceService.findById(1L, 1L))
+                when(transactionSourceService.findById(1L))
                                 .thenReturn(Optional.of(responseDTO));
 
-                mockMvc.perform(get("/transaction-sources/1")
-                                .param("userId", "1"))
+                mockMvc.perform(get("/transaction-sources/1"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.id").value(1))
                                 .andExpect(jsonPath("$.name").value("Nubank Credit Card"));
@@ -128,47 +122,11 @@ class TransactionSourceControllerTest extends BaseWebMvcTest {
 
         @Test
         void getTransactionSource_ShouldReturnNotFound_WhenNotExists() throws Exception {
-                when(transactionSourceService.findById(1L, 1L))
+                when(transactionSourceService.findById(1L))
                                 .thenReturn(Optional.empty());
 
-                mockMvc.perform(get("/transaction-sources/1")
-                                .param("userId", "1"))
+                mockMvc.perform(get("/transaction-sources/1"))
                                 .andExpect(status().isNotFound());
-        }
-
-        @Test
-        void getTransactionSources_ShouldReturnAllSources() throws Exception {
-                TransactionSourceDTO source2 = new TransactionSourceDTO();
-                source2.setId(2L);
-                source2.setName("Itaú Account");
-                source2.setUserId(1L);
-
-                List<TransactionSourceDTO> sources = Arrays.asList(responseDTO, source2);
-                when(transactionSourceService.findByUserId(1L))
-                                .thenReturn(sources);
-
-                mockMvc.perform(get("/transaction-sources")
-                                .param("userId", "1"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$").isArray())
-                                .andExpect(jsonPath("$[0].id").value(1))
-                                .andExpect(jsonPath("$[0].name").value("Nubank Credit Card"))
-                                .andExpect(jsonPath("$[1].id").value(2))
-                                .andExpect(jsonPath("$[1].name").value("Itaú Account"));
-        }
-
-        @Test
-        void getTransactionSources_ShouldReturnActiveSourcesOnly() throws Exception {
-                when(transactionSourceService.findActiveByUserId(1L))
-                                .thenReturn(Arrays.asList(responseDTO));
-
-                mockMvc.perform(get("/transaction-sources")
-                                .param("userId", "1")
-                                .param("activeOnly", "true"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$").isArray())
-                                .andExpect(jsonPath("$[0].id").value(1))
-                                .andExpect(jsonPath("$[0].isActive").value(true));
         }
 
         @Test

@@ -16,8 +16,6 @@ import org.mockito.Mock;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,7 +118,7 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
 
     @Test
     void updateTransactionSource_ShouldUpdateSuccessfully() {
-        when(transactionSourceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSourceEntity));
+        when(transactionSourceRepository.findById(1L)).thenReturn(Optional.of(testSourceEntity));
         when(transactionSourceRepository.save(any(TransactionSourceEntity.class))).thenReturn(testSourceEntity);
 
         TransactionSourceDTO result = transactionSourceService.update(1L, createDTO);
@@ -129,124 +127,62 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getName()).isEqualTo("Nubank Credit Card");
 
-        verify(transactionSourceRepository).findByIdAndUserId(1L, 1L);
+        verify(transactionSourceRepository).findById(1L);
         verify(transactionSourceRepository).save(any(TransactionSourceEntity.class));
     }
 
     @Test
     void updateTransactionSource_ShouldThrowException_WhenSourceNotFound() {
-        when(transactionSourceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.empty());
+        when(transactionSourceRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> transactionSourceService.update(1L, createDTO))
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("Transaction source not found");
-
-        verify(transactionSourceRepository).findByIdAndUserId(1L, 1L);
-    }
-
-    @Test
-    void findById_ShouldReturnSource_WhenExists() {
-        when(transactionSourceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSourceEntity));
-
-        Optional<TransactionSourceDTO> result = transactionSourceService.findById(1L, 1L);
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getId()).isEqualTo(1L);
-        assertThat(result.get().getName()).isEqualTo("Nubank Credit Card");
-
-        verify(transactionSourceRepository).findByIdAndUserId(1L, 1L);
-    }
-
-    @Test
-    void findById_ShouldReturnEmpty_WhenNotExists() {
-        when(transactionSourceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.empty());
-
-        Optional<TransactionSourceDTO> result = transactionSourceService.findById(1L, 1L);
-
-        assertThat(result).isEmpty();
-
-        verify(transactionSourceRepository).findByIdAndUserId(1L, 1L);
-    }
-
-    @Test
-    void findByUserId_ShouldReturnAllSources() {
-        TransactionSourceEntity source2 = new TransactionSourceEntity();
-        source2.setId(2L);
-        source2.setName("Itaú Account");
-        source2.setUser(testUser);
-
-        List<TransactionSourceEntity> entities = Arrays.asList(testSourceEntity, source2);
-        org.springframework.data.domain.Page<TransactionSourceEntity> page = new org.springframework.data.domain.PageImpl<>(entities);
-        when(transactionSourceRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
-
-        List<TransactionSourceDTO> result = transactionSourceService.findByUserId(1L);
-
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getName()).isEqualTo("Nubank Credit Card");
-        assertThat(result.get(1).getName()).isEqualTo("Itaú Account");
-    }
-
-    @Test
-    void findActiveByUserId_ShouldReturnOnlyActiveSources() {
-        TransactionSourceEntity inactiveSource = new TransactionSourceEntity();
-        inactiveSource.setId(2L);
-        inactiveSource.setName("Inactive Source");
-        inactiveSource.setIsActive(false);
-        inactiveSource.setUser(testUser);
-
-        List<TransactionSourceEntity> entities = Arrays.asList(testSourceEntity);
-        org.springframework.data.domain.Page<TransactionSourceEntity> page = new org.springframework.data.domain.PageImpl<>(entities);
-        when(transactionSourceRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
-
-        List<TransactionSourceDTO> result = transactionSourceService.findActiveByUserId(1L);
-
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getName()).isEqualTo("Nubank Credit Card");
-        assertThat(result.get(0).getIsActive()).isTrue();
-    }
-
-    @Test
-    void deleteTransactionSource_ShouldDeactivateSource() {
-        when(transactionSourceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSourceEntity));
-        when(transactionSourceRepository.save(any(TransactionSourceEntity.class))).thenReturn(testSourceEntity);
-
-        transactionSourceService.deleteTransactionSource(1L, 1L);
-
-        verify(transactionSourceRepository).findByIdAndUserId(1L, 1L);
-        verify(transactionSourceRepository).save(any(TransactionSourceEntity.class));
-    }
-
-    @Test
-    void deleteTransactionSource_ShouldThrowException_WhenSourceNotFound() {
-        when(transactionSourceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> transactionSourceService.deleteTransactionSource(1L, 1L))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("Transaction source not found");
-
-        verify(transactionSourceRepository).findByIdAndUserId(1L, 1L);
-    }
-
-    @Test
-    void getTransactionSourceEntity_ShouldReturnEntity() {
-        when(transactionSourceRepository.findById(1L)).thenReturn(Optional.of(testSourceEntity));
-
-        TransactionSourceEntity result = transactionSourceRepository.findById(1L).orElseThrow();
-
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getName()).isEqualTo("Nubank Credit Card");
+                .hasMessage("TransactionSource not found");
 
         verify(transactionSourceRepository).findById(1L);
     }
 
     @Test
-    void getTransactionSourceEntity_ShouldThrowException_WhenNotFound() {
+    void findById_ShouldReturnSource_WhenExists() {
+        when(transactionSourceRepository.findById(1L)).thenReturn(Optional.of(testSourceEntity));
+
+        Optional<TransactionSourceDTO> result = transactionSourceService.findById(1L);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo(1L);
+        assertThat(result.get().getName()).isEqualTo("Nubank Credit Card");
+
+        verify(transactionSourceRepository).findById(1L);
+    }
+
+    @Test
+    void findById_ShouldReturnEmpty_WhenNotExists() {
         when(transactionSourceRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> transactionSourceRepository.findById(1L).orElseThrow(() -> new EntityNotFoundException("Transaction source not found")))
+        Optional<TransactionSourceDTO> result = transactionSourceService.findById(1L);
+
+        assertThat(result).isEmpty();
+
+        verify(transactionSourceRepository).findById(1L);
+    }
+
+    @Test
+    void deleteTransactionSource_ShouldDeleteSuccessfully() {
+        when(transactionSourceRepository.findById(1L)).thenReturn(Optional.of(testSourceEntity));
+
+        transactionSourceService.delete(1L);
+
+        verify(transactionSourceRepository).findById(1L);
+        verify(transactionSourceRepository).deleteById(1L);
+    }
+
+    @Test
+    void deleteTransactionSource_ShouldThrowException_WhenSourceNotFound() {
+        when(transactionSourceRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> transactionSourceService.delete(1L))
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("Transaction source not found");
+                .hasMessage("TransactionSource not found");
 
         verify(transactionSourceRepository).findById(1L);
     }
