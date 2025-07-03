@@ -28,6 +28,9 @@ import static org.mockito.Mockito.when;
 
 class DefaultTransactionSourceServiceTest extends BaseUnitTest {
 
+    private static final String SOURCE_NAME = "Nubank Credit Card";
+    private static final String BANK_NAME = "Nubank";
+
     @Mock
     private TransactionSourceRepository transactionSourceRepository;
 
@@ -45,14 +48,16 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
     void setUp() {
         testUser = new User();
         testUser.setId(1L);
-        testUser.setFullName("John Doe");
+        testUser.setEmail("john.doe@example.com");
+        testUser.setPassword("password123");
+        testUser.setIsActive(true);
 
         testSourceEntity = new TransactionSourceEntity();
         testSourceEntity.setId(1L);
-        testSourceEntity.setName("Nubank Credit Card");
+        testSourceEntity.setName(SOURCE_NAME);
         testSourceEntity.setDescription("Main credit card");
         testSourceEntity.setSourceType(TransactionSource.CREDIT_CARD);
-        testSourceEntity.setBankName("Nubank");
+        testSourceEntity.setBankName(BANK_NAME);
         testSourceEntity.setCardType("Credit");
         testSourceEntity.setCardLastFour("1234");
         testSourceEntity.setAccountBalance(new BigDecimal("5000.00"));
@@ -62,10 +67,10 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
         testSourceEntity.setUpdatedAt(LocalDateTime.now());
 
         createDTO = new TransactionSourceDTO();
-        createDTO.setName("Nubank Credit Card");
+        createDTO.setName(SOURCE_NAME);
         createDTO.setDescription("Main credit card");
         createDTO.setSourceType(TransactionSource.CREDIT_CARD);
-        createDTO.setBankName("Nubank");
+        createDTO.setBankName(BANK_NAME);
         createDTO.setCardType("Credit");
         createDTO.setCardLastFour("1234");
         createDTO.setAccountBalance(new BigDecimal("5000.00"));
@@ -75,20 +80,20 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
     @Test
     void createTransactionSource_ShouldCreateSuccessfully() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(transactionSourceRepository.existsByNameAndUserId(anyString(), anyLong())).thenReturn(false);
+        when(transactionSourceRepository.existsByNameIgnoreCaseAndUserId(anyString(), anyLong())).thenReturn(false);
         when(transactionSourceRepository.save(any(TransactionSourceEntity.class))).thenReturn(testSourceEntity);
 
         TransactionSourceDTO result = transactionSourceService.create(createDTO);
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getName()).isEqualTo("Nubank Credit Card");
+        assertThat(result.getName()).isEqualTo(SOURCE_NAME);
         assertThat(result.getSourceType()).isEqualTo(TransactionSource.CREDIT_CARD);
-        assertThat(result.getBankName()).isEqualTo("Nubank");
+        assertThat(result.getBankName()).isEqualTo(BANK_NAME);
         assertThat(result.getUserId()).isEqualTo(1L);
 
         verify(userRepository).findById(1L);
-        verify(transactionSourceRepository).existsByNameAndUserId("Nubank Credit Card", 1L);
+        verify(transactionSourceRepository).existsByNameIgnoreCaseAndUserId(SOURCE_NAME, 1L);
         verify(transactionSourceRepository).save(any(TransactionSourceEntity.class));
     }
 
@@ -106,14 +111,14 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
     @Test
     void createTransactionSource_ShouldThrowException_WhenNameAlreadyExists() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(transactionSourceRepository.existsByNameAndUserId(anyString(), anyLong())).thenReturn(true);
+        when(transactionSourceRepository.existsByNameIgnoreCaseAndUserId(anyString(), anyLong())).thenReturn(true);
 
         assertThatThrownBy(() -> transactionSourceService.create(createDTO))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Transaction source with this name already exists for this user");
 
         verify(userRepository).findById(1L);
-        verify(transactionSourceRepository).existsByNameAndUserId("Nubank Credit Card", 1L);
+        verify(transactionSourceRepository).existsByNameIgnoreCaseAndUserId(SOURCE_NAME, 1L);
     }
 
     @Test
@@ -125,7 +130,7 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getName()).isEqualTo("Nubank Credit Card");
+        assertThat(result.getName()).isEqualTo(SOURCE_NAME);
 
         verify(transactionSourceRepository).findById(1L);
         verify(transactionSourceRepository).save(any(TransactionSourceEntity.class));
@@ -137,7 +142,7 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
 
         assertThatThrownBy(() -> transactionSourceService.update(1L, createDTO))
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("TransactionSource not found");
+                .hasMessage("TransactionSource not found with id: 1");
 
         verify(transactionSourceRepository).findById(1L);
     }
@@ -150,7 +155,7 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().getId()).isEqualTo(1L);
-        assertThat(result.get().getName()).isEqualTo("Nubank Credit Card");
+        assertThat(result.get().getName()).isEqualTo(SOURCE_NAME);
 
         verify(transactionSourceRepository).findById(1L);
     }
@@ -182,7 +187,7 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
 
         assertThatThrownBy(() -> transactionSourceService.delete(1L))
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("TransactionSource not found");
+                .hasMessage("TransactionSource not found with id: 1");
 
         verify(transactionSourceRepository).findById(1L);
     }

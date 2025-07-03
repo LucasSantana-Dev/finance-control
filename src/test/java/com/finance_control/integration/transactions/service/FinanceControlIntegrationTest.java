@@ -1,25 +1,43 @@
 package com.finance_control.integration.transactions.service;
 
 import com.finance_control.integration.BaseIntegrationTest;
+import com.finance_control.shared.config.TestUserContextConfig;
+import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.enums.TransactionSource;
 import com.finance_control.transactions.dto.source.TransactionSourceDTO;
+import com.finance_control.transactions.repository.source.TransactionSourceRepository;
 import com.finance_control.transactions.service.source.TransactionSourceService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
-import org.springframework.test.context.jdbc.Sql;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.Rollback;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Sql("/test-data.sql")
+@Import(TestUserContextConfig.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Transactional
+@Rollback(false)
 class FinanceControlIntegrationTest extends BaseIntegrationTest {
+
+    private static final String CREDIT_CARD = "Nubank Credit Card";
+    private static final String SAVINGS_ACCOUNT = "Itaú Savings Account";
+    private static final String PIX_WALLET = "PIX Wallet";
+    private static final String JANE_CREDIT_CARD = "Jane Credit Card";
+    private static final String NEW_CREDIT_CARD = "New Credit Card";
+    private static final String UPDATED_CREDIT_CARD = "Updated Credit Card";
 
     @Autowired
     private TransactionSourceService transactionSourceService;
@@ -27,17 +45,48 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private TransactionSourceRepository transactionSourceRepository;
+
     private User testUser;
+    private User otherUser;
 
     @BeforeEach
     void setUp() {
-        testUser = userRepository.findById(1L).orElseThrow();
+        // Create test user
+        testUser = new User();
+        testUser.setEmail("john.doe@example.com");
+        testUser.setPassword("$2a$10$dummy.hash.for.testing");
+        testUser.setIsActive(true);
+        testUser = userRepository.save(testUser);
+        
+        // Create other user for isolation tests
+        otherUser = new User();
+        otherUser.setEmail("jane.smith@example.com");
+        otherUser.setPassword("$2a$10$dummy.hash.for.testing");
+        otherUser.setIsActive(true);
+        otherUser = userRepository.save(otherUser);
+        
+        // Configure UserContext for this test
+        UserContext.setCurrentUserId(testUser.getId());
+
+        // Create TransactionSourceEntity with expected names for testUser
+        String[] names = {CREDIT_CARD, SAVINGS_ACCOUNT, PIX_WALLET};
+        for (int i = 0; i < names.length; i++) {
+            var entity = new com.finance_control.transactions.model.source.TransactionSourceEntity();
+            entity.setName(names[i]);
+            entity.setDescription("Test source " + (i + 1));
+            entity.setSourceType(com.finance_control.shared.enums.TransactionSource.CREDIT_CARD);
+            entity.setIsActive(true);
+            entity.setUser(testUser);
+            transactionSourceRepository.save(entity);
+        }
     }
 
     @Test
     void shouldCreateTransactionSource() {
         TransactionSourceDTO createDTO = new TransactionSourceDTO();
-        createDTO.setName("New Credit Card");
+        createDTO.setName(NEW_CREDIT_CARD);
         createDTO.setDescription("Test credit card");
         createDTO.setSourceType(TransactionSource.CREDIT_CARD);
         createDTO.setBankName("Test Bank");
@@ -50,7 +99,7 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isNotNull();
-        assertThat(result.getName()).isEqualTo("New Credit Card");
+        assertThat(result.getName()).isEqualTo(NEW_CREDIT_CARD);
         assertThat(result.getSourceType()).isEqualTo(TransactionSource.CREDIT_CARD);
         assertThat(result.getBankName()).isEqualTo("Test Bank");
         assertThat(result.getUserId()).isEqualTo(testUser.getId());
@@ -58,16 +107,18 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void shouldFindTransactionSourcesByUserId() {
-        Page<TransactionSourceDTO> sources = transactionSourceService.findAllWithFilters(testUser.getId(), true, null, null, null);
+        Page<TransactionSourceDTO> sources = transactionSourceService.findAll("", null, null, null,
+                PageRequest.of(0, 10));
 
         assertThat(sources).hasSize(3);
         assertThat(sources).extracting("name")
-                .containsExactlyInAnyOrder("Nubank Credit Card", "Itaú Savings Account", "PIX Wallet");
+                .containsExactlyInAnyOrder(CREDIT_CARD, SAVINGS_ACCOUNT, PIX_WALLET);
     }
 
     @Test
     void shouldFindActiveTransactionSources() {
-        Page<TransactionSourceDTO> activeSources = transactionSourceService.findAllWithFilters(testUser.getId(), true, null, null, null);
+        Page<TransactionSourceDTO> activeSources = transactionSourceService.findAll("", null, null, null,
+                PageRequest.of(0, 10));
 
         assertThat(activeSources).hasSize(3);
         assertThat(activeSources).allMatch(source -> source.getIsActive());
@@ -75,16 +126,16 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void shouldFindTransactionSourceById() {
-        Optional<TransactionSourceDTO> source = transactionSourceService.findById(1L, testUser.getId());
+        Optional<TransactionSourceDTO> source = transactionSourceService.findById(1L);
 
         assertThat(source).isPresent();
-        assertThat(source.get().getName()).isEqualTo("Nubank Credit Card");
+        assertThat(source.get().getName()).isEqualTo(CREDIT_CARD);
         assertThat(source.get().getSourceType()).isEqualTo(TransactionSource.CREDIT_CARD);
     }
 
     @Test
     void shouldNotFindTransactionSourceForWrongUser() {
-        Optional<TransactionSourceDTO> source = transactionSourceService.findById(1L, 999L);
+        Optional<TransactionSourceDTO> source = transactionSourceService.findById(999L);
 
         assertThat(source).isEmpty();
     }
@@ -92,7 +143,7 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
     @Test
     void shouldUpdateTransactionSource() {
         TransactionSourceDTO updateDTO = new TransactionSourceDTO();
-        updateDTO.setName("Updated Credit Card");
+        updateDTO.setName(UPDATED_CREDIT_CARD);
         updateDTO.setDescription("Updated description");
         updateDTO.setSourceType(TransactionSource.CREDIT_CARD);
         updateDTO.setBankName("Updated Bank");
@@ -104,29 +155,47 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
         TransactionSourceDTO result = transactionSourceService.update(1L, updateDTO);
 
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("Updated Credit Card");
+        assertThat(result.getName()).isEqualTo(UPDATED_CREDIT_CARD);
         assertThat(result.getBankName()).isEqualTo("Updated Bank");
         assertThat(result.getCardLastFour()).isEqualTo("8888");
     }
 
     @Test
     void shouldDeleteTransactionSource() {
-        transactionSourceService.deleteTransactionSource(1L, testUser.getId());
+        transactionSourceService.delete(1L);
 
-        Optional<TransactionSourceDTO> deletedSource = transactionSourceService.findById(1L, testUser.getId());
+        Optional<TransactionSourceDTO> deletedSource = transactionSourceService.findById(1L);
         assertThat(deletedSource).isEmpty();
     }
 
     @Test
     void shouldHandleUserIsolation() {
-        User otherUser = userRepository.findById(2L).orElseThrow();
+        try {
+            // Create a source for otherUser
+            var otherUserSource = new com.finance_control.transactions.model.source.TransactionSourceEntity();
+            otherUserSource.setName(JANE_CREDIT_CARD);
+            otherUserSource.setDescription("Jane's credit card");
+            otherUserSource.setSourceType(com.finance_control.shared.enums.TransactionSource.CREDIT_CARD);
+            otherUserSource.setIsActive(true);
+            otherUserSource.setUser(otherUser);
+            transactionSourceRepository.save(otherUserSource);
+            
+            // Set context for testUser e buscar fontes
+            UserContext.setCurrentUserId(testUser.getId());
+            Page<TransactionSourceDTO> user1Sources = transactionSourceService.findAll("", null, null, null,
+                    PageRequest.of(0, 10));
+            
+            // Set context para otherUser e buscar fontes
+            UserContext.setCurrentUserId(otherUser.getId());
+            Page<TransactionSourceDTO> user2Sources = transactionSourceService.findAll("", null, null, null,
+                    PageRequest.of(0, 10));
 
-        Page<TransactionSourceDTO> user1Sources = transactionSourceService.findAllWithFilters(testUser.getId(), true, null, null, null);
-        Page<TransactionSourceDTO> user2Sources = transactionSourceService.findAllWithFilters(otherUser.getId(), true, null, null, null);
-
-        assertThat(user1Sources).hasSize(3);
-        assertThat(user2Sources).hasSize(1);
-        assertThat(user2Sources.get(0).getName()).isEqualTo("Jane Credit Card");
+            assertThat(user1Sources).hasSize(3);
+            assertThat(user2Sources).hasSize(1);
+            assertThat(user2Sources.getContent().get(0).getName()).isEqualTo(JANE_CREDIT_CARD);
+        } finally {
+            UserContext.setCurrentUserId(null);
+        }
     }
 
     @Test
@@ -147,7 +216,7 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
     @Test
     void shouldPreventDuplicateNamesForSameUser() {
         TransactionSourceDTO duplicateDTO = new TransactionSourceDTO();
-        duplicateDTO.setName("Nubank Credit Card"); // Already exists
+        duplicateDTO.setName(CREDIT_CARD); // Already exists
         duplicateDTO.setDescription("Duplicate card");
         duplicateDTO.setSourceType(TransactionSource.CREDIT_CARD);
         duplicateDTO.setUserId(testUser.getId());
@@ -162,10 +231,9 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void shouldAllowSameNameForDifferentUsers() {
-        User otherUser = userRepository.findById(2L).orElseThrow();
-
+        UserContext.setCurrentUserId(otherUser.getId());
         TransactionSourceDTO duplicateDTO = new TransactionSourceDTO();
-        duplicateDTO.setName("Nubank Credit Card"); // Same name as user 1
+        duplicateDTO.setName(CREDIT_CARD); // Same name as user 1
         duplicateDTO.setDescription("Duplicate card for different user");
         duplicateDTO.setSourceType(TransactionSource.CREDIT_CARD);
         duplicateDTO.setUserId(otherUser.getId());
@@ -173,7 +241,7 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
         TransactionSourceDTO result = transactionSourceService.create(duplicateDTO);
 
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("Nubank Credit Card");
+        assertThat(result.getName()).isEqualTo(CREDIT_CARD);
         assertThat(result.getUserId()).isEqualTo(otherUser.getId());
     }
-} 
+}

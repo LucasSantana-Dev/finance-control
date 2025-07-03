@@ -10,6 +10,8 @@ class FinanceControlApplicationTests {
 
 	@Test
 	void contextLoads() {
+		// This test verifies that the Spring application context loads successfully
+		// without any configuration errors. The test passes if the context starts up.
 	}
 
 } 

@@ -31,9 +31,10 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
     @BeforeEach
     void setUp() {
         testUser = new User();
+        testUser.setId(1L);
         testUser.setEmail("john.doe@example.com");
         testUser.setPassword("password123");
-        testUser.setFullName("John Doe");
+        testUser.setIsActive(true);
         testUser = userRepository.save(testUser);
 
         testSourceEntity = new TransactionSourceEntity();
@@ -91,9 +92,10 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         source2 = transactionSourceRepository.save(source2);
 
         User otherUser = new User();
+        otherUser.setId(2L);
         otherUser.setEmail("jane.smith@example.com");
         otherUser.setPassword("password123");
-        otherUser.setFullName("Jane Smith");
+        otherUser.setIsActive(true);
         otherUser = userRepository.save(otherUser);
 
         TransactionSourceEntity otherSource = new TransactionSourceEntity();
@@ -103,7 +105,7 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         otherSource.setIsActive(true);
         transactionSourceRepository.save(otherSource);
 
-        List<TransactionSourceEntity> userSources = transactionSourceRepository.findByUserId(testUser.getId());
+        List<TransactionSourceEntity> userSources = transactionSourceRepository.findAllByUserIdOrderByNameAsc(testUser.getId());
 
         assertThat(userSources).hasSize(2);
         assertThat(userSources).extracting("name")
@@ -121,7 +123,7 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         inactiveSource.setIsActive(false);
         transactionSourceRepository.save(inactiveSource);
 
-        List<TransactionSourceEntity> activeSources = transactionSourceRepository.findByUserIdAndIsActiveTrue(testUser.getId());
+        List<TransactionSourceEntity> activeSources = transactionSourceRepository.findAllByUserIdOrderByNameAsc(testUser.getId());
 
         assertThat(activeSources).hasSize(1);
         assertThat(activeSources.get(0).getName()).isEqualTo("Nubank Credit Card");
@@ -143,9 +145,10 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         TransactionSourceEntity saved = transactionSourceRepository.save(testSourceEntity);
 
         User otherUser = new User();
+        otherUser.setId(2L);
         otherUser.setEmail("jane.smith@example.com");
         otherUser.setPassword("password123");
-        otherUser.setFullName("Jane Smith");
+        otherUser.setIsActive(true);
         otherUser = userRepository.save(otherUser);
 
         Optional<TransactionSourceEntity> found = transactionSourceRepository.findByIdAndUserId(saved.getId(), otherUser.getId());
@@ -157,14 +160,14 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
     void existsByNameAndUserId_ShouldReturnTrue_WhenExists() {
         transactionSourceRepository.save(testSourceEntity);
 
-        boolean exists = transactionSourceRepository.existsByNameAndUserId("Nubank Credit Card", testUser.getId());
+        boolean exists = transactionSourceRepository.existsByNameIgnoreCaseAndUserId("Nubank Credit Card", testUser.getId());
 
         assertThat(exists).isTrue();
     }
 
     @Test
     void existsByNameAndUserId_ShouldReturnFalse_WhenNotExists() {
-        boolean exists = transactionSourceRepository.existsByNameAndUserId("Non-existent Source", testUser.getId());
+        boolean exists = transactionSourceRepository.existsByNameIgnoreCaseAndUserId("Non-existent Source", testUser.getId());
 
         assertThat(exists).isFalse();
     }
@@ -174,12 +177,13 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         transactionSourceRepository.save(testSourceEntity);
 
         User otherUser = new User();
+        otherUser.setId(2L);
         otherUser.setEmail("jane.smith@example.com");
         otherUser.setPassword("password123");
-        otherUser.setFullName("Jane Smith");
+        otherUser.setIsActive(true);
         otherUser = userRepository.save(otherUser);
 
-        boolean exists = transactionSourceRepository.existsByNameAndUserId("Nubank Credit Card", otherUser.getId());
+        boolean exists = transactionSourceRepository.existsByNameIgnoreCaseAndUserId("Nubank Credit Card", otherUser.getId());
 
         assertThat(exists).isFalse();
     }

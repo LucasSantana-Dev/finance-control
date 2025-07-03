@@ -25,6 +25,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class BaseServiceTest {
 
+    private static final String TEST_PASSWORD = "password123";
+
     @Mock
     private BaseRepository<User, Long> repository;
 
@@ -36,7 +38,7 @@ class BaseServiceTest {
     }
 
     @Test
-    void findAll_ShouldApplySorting_WhenSortByIsProvided() {
+    void findAllShouldApplySortingWhenSortByIsProvided() {
         // Given
         String search = "test";
         String sortBy = "fullName";
@@ -45,11 +47,15 @@ class BaseServiceTest {
         
         User user1 = new User();
         user1.setId(1L);
-        user1.setFullName("Alice");
+        user1.setEmail("alice@example.com");
+        user1.setPassword(TEST_PASSWORD);
+        user1.setIsActive(true);
         
         User user2 = new User();
         user2.setId(2L);
-        user2.setFullName("Bob");
+        user2.setEmail("bob@example.com");
+        user2.setPassword(TEST_PASSWORD);
+        user2.setIsActive(true);
         
         List<User> users = List.of(user1, user2);
         Page<User> userPage = new PageImpl<>(users, pageable, 2);
@@ -57,7 +63,7 @@ class BaseServiceTest {
         when(repository.findAll(eq(search), any(Pageable.class))).thenReturn(userPage);
 
         // When
-        Page<UserDTO> result = service.findAll(search, sortBy, sortDirection, pageable);
+        Page<UserDTO> result = service.findAll(search, null, sortBy, sortDirection, pageable);
 
         // Then
         verify(repository).findAll(eq(search), any(Pageable.class));
@@ -66,7 +72,7 @@ class BaseServiceTest {
     }
 
     @Test
-    void findAll_ShouldNotApplySorting_WhenSortByIsNull() {
+    void findAllShouldNotApplySortingWhenSortByIsNull() {
         // Given
         String search = "test";
         String sortBy = null;
@@ -75,7 +81,9 @@ class BaseServiceTest {
         
         User user = new User();
         user.setId(1L);
-        user.setFullName("Test User");
+        user.setEmail("test@example.com");
+        user.setPassword(TEST_PASSWORD);
+        user.setIsActive(true);
         
         List<User> users = List.of(user);
         Page<User> userPage = new PageImpl<>(users, pageable, 1);
@@ -83,7 +91,7 @@ class BaseServiceTest {
         when(repository.findAll(eq(search), eq(pageable))).thenReturn(userPage);
 
         // When
-        Page<UserDTO> result = service.findAll(search, sortBy, sortDirection, pageable);
+        Page<UserDTO> result = service.findAll(search, null, sortBy, sortDirection, pageable);
 
         // Then
         verify(repository).findAll(eq(search), eq(pageable));
@@ -92,7 +100,7 @@ class BaseServiceTest {
     }
 
     @Test
-    void findAll_ShouldNotApplySorting_WhenSortByIsEmpty() {
+    void findAllShouldNotApplySortingWhenSortByIsEmpty() {
         // Given
         String search = "test";
         String sortBy = "";
@@ -101,7 +109,9 @@ class BaseServiceTest {
         
         User user = new User();
         user.setId(1L);
-        user.setFullName("Test User");
+        user.setEmail("test@example.com");
+        user.setPassword(TEST_PASSWORD);
+        user.setIsActive(true);
         
         List<User> users = List.of(user);
         Page<User> userPage = new PageImpl<>(users, pageable, 1);
@@ -109,7 +119,7 @@ class BaseServiceTest {
         when(repository.findAll(eq(search), eq(pageable))).thenReturn(userPage);
 
         // When
-        Page<UserDTO> result = service.findAll(search, sortBy, sortDirection, pageable);
+        Page<UserDTO> result = service.findAll(search, null, sortBy, sortDirection, pageable);
 
         // Then
         verify(repository).findAll(eq(search), eq(pageable));
@@ -127,18 +137,22 @@ class BaseServiceTest {
         @Override
         protected User mapToEntity(UserDTO createDTO) {
             User user = new User();
-            user.setFullName(createDTO.getFullName());
             user.setEmail(createDTO.getEmail());
+            user.setPassword(createDTO.getPassword());
+            user.setIsActive(createDTO.getIsActive());
             return user;
         }
 
         @Override
         protected void updateEntityFromDTO(User entity, UserDTO updateDTO) {
-            if (updateDTO.getFullName() != null) {
-                entity.setFullName(updateDTO.getFullName());
-            }
             if (updateDTO.getEmail() != null) {
                 entity.setEmail(updateDTO.getEmail());
+            }
+            if (updateDTO.getPassword() != null) {
+                entity.setPassword(updateDTO.getPassword());
+            }
+            if (updateDTO.getIsActive() != null) {
+                entity.setIsActive(updateDTO.getIsActive());
             }
         }
 
@@ -146,8 +160,9 @@ class BaseServiceTest {
         protected UserDTO mapToResponseDTO(User entity) {
             UserDTO dto = new UserDTO();
             dto.setId(entity.getId());
-            dto.setFullName(entity.getFullName());
             dto.setEmail(entity.getEmail());
+            dto.setPassword(entity.getPassword());
+            dto.setIsActive(entity.getIsActive());
             return dto;
         }
     }

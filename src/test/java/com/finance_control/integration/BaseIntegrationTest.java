@@ -1,7 +1,9 @@
 package com.finance_control.integration;
 
+import com.finance_control.shared.config.TestSecurityConfig;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Import(TestSecurityConfig.class)
 public abstract class BaseIntegrationTest {
     
     // Common utilities and setup for integration tests
