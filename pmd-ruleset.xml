@@ -15,8 +15,6 @@
 
     <!-- Code Style -->
     <rule ref="category/java/codestyle.xml/UnnecessaryImport" />
-    <rule ref="category/java/codestyle.xml/ShortVariable" />
-    <rule ref="category/java/codestyle.xml/LongVariable" />
 
     <!-- Error Prone -->
     <rule ref="category/java/errorprone.xml/EmptyCatchBlock" />

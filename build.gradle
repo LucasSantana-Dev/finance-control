@@ -938,6 +938,11 @@ sonarqube {
         property 'sonar.projectName', 'Finance Control'
         property 'sonar.projectVersion', version
         
+        // SonarQube server configuration (Docker setup)
+        property 'sonar.host.url', 'http://localhost:9000'
+        property 'sonar.login', System.getenv('SONAR_TOKEN') ?: 'admin'
+        property 'sonar.password', System.getenv('SONAR_PASSWORD') ?: 'admin'
+        
         // Source and test directories
         property 'sonar.sources', 'src/main/java'
         property 'sonar.tests', 'src/test/java'
@@ -971,5 +976,41 @@ sonarqube {
         // Duplicate code
         property 'sonar.cpd.java.minimumTokens', '100'
         property 'sonar.duplicated.lines.density.minimum', '3'
+    }
+}
+
+// Task to check SonarQube availability
+task checkSonarQube {
+    description = 'Checks if SonarQube service is running and provides usage instructions'
+    
+    doLast {
+        def sonarQubeRunning = false
+        try {
+            def process = "docker-compose --profile sonarqube ps sonarqube".execute()
+            process.waitFor()
+            def output = process.text
+            sonarQubeRunning = output.contains("Up")
+        } catch (Exception e) {
+            sonarQubeRunning = false
+        }
+        
+        if (sonarQubeRunning) {
+            println "\n✅ SonarQube service is running!"
+            println "🌐 Access SonarQube at: http://localhost:9000"
+            println "🔑 Default credentials: admin/admin"
+            println "🚀 To run SonarQube analysis: ./gradlew sonarqube"
+            println "📋 Or use the script: ./scripts/dev.sh sonarqube-scan"
+        } else {
+            println "\n⚠️  SonarQube service is not running"
+            println ""
+            println "📋 To start SonarQube:"
+            println "   ./scripts/dev.sh sonarqube-start"
+            println ""
+            println "📋 To run analysis:"
+            println "   ./scripts/dev.sh sonarqube-scan"
+            println ""
+            println "📋 To view logs:"
+            println "   ./scripts/dev.sh sonarqube-logs"
+        }
     }
 } 
