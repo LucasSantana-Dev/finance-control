@@ -76,6 +76,7 @@ build/generated/
 .idea/
 .vscode/
 .cursor/
+.cursorignore
 
 # OS specific files
 .DS_Store
