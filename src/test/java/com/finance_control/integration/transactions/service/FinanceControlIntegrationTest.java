@@ -1,7 +1,6 @@
 package com.finance_control.integration.transactions.service;
 
 import com.finance_control.integration.BaseIntegrationTest;
-import com.finance_control.shared.config.TestUserContextConfig;
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.enums.TransactionSource;
 import com.finance_control.transactions.dto.source.TransactionSourceDTO;
@@ -12,7 +11,6 @@ import com.finance_control.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.annotation.DirtiesContext;
@@ -26,7 +24,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Import(TestUserContextConfig.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Transactional
 @Rollback(false)
