@@ -15,8 +15,8 @@ public final class FinancialGoalValidation {
     private static final String FIELD_NAME = "Goal Name";
     private static final String FIELD_DESCRIPTION = "Description";
     private static final String FIELD_GOAL_TYPE = "Goal Type";
-    private static final String FIELD_TARGET_AMOUNT = "Target Amount";
-    private static final String FIELD_CURRENT_AMOUNT = "Current Amount";
+    private static final String TARGET_AMOUNT_FIELD = "Target Amount";
+    private static final String CURRENT_AMOUNT_FIELD = "Current Amount";
     private static final String FIELD_TARGET_DATE = "Target Date";
     private static final String FIELD_DEADLINE = "Deadline";
     private static final String FIELD_ACCOUNT_ID = "Account ID";
@@ -89,12 +89,12 @@ public final class FinancialGoalValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateTargetAmount(BigDecimal targetAmount) {
-        BaseValidation.validateRequiredObject(targetAmount, FIELD_TARGET_AMOUNT);
+        BaseValidation.validateRequiredObject(targetAmount, TARGET_AMOUNT_FIELD);
         if (targetAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException(FIELD_TARGET_AMOUNT + " must be positive");
+            throw new IllegalArgumentException(TARGET_AMOUNT_FIELD + " must be positive");
         }
         if (targetAmount.scale() > 2) {
-            throw new IllegalArgumentException(FIELD_TARGET_AMOUNT + " cannot have more than 2 decimal places");
+            throw new IllegalArgumentException(TARGET_AMOUNT_FIELD + " cannot have more than 2 decimal places");
         }
     }
     
@@ -105,13 +105,13 @@ public final class FinancialGoalValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateTargetAmountForUpdate(BigDecimal targetAmount) {
-        BaseValidation.validateOptionalObject(targetAmount, FIELD_TARGET_AMOUNT);
+        BaseValidation.validateOptionalObject(targetAmount, TARGET_AMOUNT_FIELD);
         if (targetAmount != null) {
             if (targetAmount.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException(FIELD_TARGET_AMOUNT + " must be positive");
+                throw new IllegalArgumentException(TARGET_AMOUNT_FIELD + " must be positive");
             }
             if (targetAmount.scale() > 2) {
-                throw new IllegalArgumentException(FIELD_TARGET_AMOUNT + " cannot have more than 2 decimal places");
+                throw new IllegalArgumentException(TARGET_AMOUNT_FIELD + " cannot have more than 2 decimal places");
             }
         }
     }
@@ -123,13 +123,13 @@ public final class FinancialGoalValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateCurrentAmount(BigDecimal currentAmount) {
-        BaseValidation.validateOptionalObject(currentAmount, FIELD_CURRENT_AMOUNT);
+        BaseValidation.validateOptionalObject(currentAmount, CURRENT_AMOUNT_FIELD);
         if (currentAmount != null) {
             if (currentAmount.compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException(FIELD_CURRENT_AMOUNT + " cannot be negative");
+                throw new IllegalArgumentException(CURRENT_AMOUNT_FIELD + " cannot be negative");
             }
             if (currentAmount.scale() > 2) {
-                throw new IllegalArgumentException(FIELD_CURRENT_AMOUNT + " cannot have more than 2 decimal places");
+                throw new IllegalArgumentException(CURRENT_AMOUNT_FIELD + " cannot have more than 2 decimal places");
             }
         }
     }
@@ -174,12 +174,12 @@ public final class FinancialGoalValidation {
      * Validates goal name uniqueness for a user.
      * 
      * @param name the name to validate
-     * @param nameExistsPredicate predicate to check if name already exists for the user
+     * @param nameExistsPred predicate to check if name already exists for the user
      * @throws IllegalArgumentException if validation fails
      */
-    public static void validateNameUnique(String name, java.util.function.Predicate<String> nameExistsPredicate) {
+    public static void validateNameUnique(String name, java.util.function.Predicate<String> nameExistsPred) {
         validateName(name);
-        if (nameExistsPredicate.test(name)) {
+        if (nameExistsPred.test(name)) {
             throw new IllegalArgumentException("Goal with name '" + name + "' already exists for this user");
         }
     }

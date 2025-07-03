@@ -236,17 +236,17 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
 
         return spec;
     }
-    
+
     /**
      * Complete a financial goal with detailed completion data.
      * 
-     * @param id the ID of the goal to complete
+     * @param id      the ID of the goal to complete
      * @param request the completion request data
      * @return the completed goal DTO
      */
     public FinancialGoalDTO completeGoal(Long id, GoalCompletionRequest request) {
         FinancialGoal goal = getEntityById(id);
-        
+
         // Update completion fields
         goal.setCurrentAmount(request.getFinalAmount());
         goal.setIsActive(false); // Mark as completed
@@ -256,7 +256,7 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
         goal.setAchievementNotes(request.getAchievementNotes());
         goal.setActualSavings(request.getActualSavings());
         goal.setActualInvestment(request.getActualInvestment());
-        
+
         FinancialGoal savedGoal = financialGoalRepository.save(goal);
         return mapToResponseDTO(savedGoal);
     }
