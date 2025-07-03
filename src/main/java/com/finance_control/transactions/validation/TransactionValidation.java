@@ -17,13 +17,13 @@ public final class TransactionValidation {
     
     private static final String FIELD_DESCRIPTION = "Description";
     private static final String FIELD_AMOUNT = "Amount";
-    private static final String FIELD_INSTALLMENTS = "Installments";
+    private static final String INSTALLMENTS_FIELD = "Installments";
     private static final String FIELD_DATE = "Date";
     private static final String FIELD_CATEGORY_ID = "Category ID";
-    private static final String FIELD_SUBCATEGORY_ID = "Subcategory ID";
-    private static final String FIELD_SOURCE_ENTITY_ID = "Source Entity ID";
+    private static final String SUBCATEGORY_ID_FIELD = "Subcategory ID";
+    private static final String SOURCE_ENTITY_ID_FIELD = "Source Entity ID";
     private static final String FIELD_USER_ID = "User ID";
-    private static final String FIELD_RESPONSIBILITIES = "Responsibilities";
+    private static final String RESPONSIBILITIES_FIELD = "Responsibilities";
     private static final String FIELD_TYPE = "Transaction Type";
     private static final String FIELD_SUBTYPE = "Transaction Subtype";
     private static final String FIELD_SOURCE = "Transaction Source";
@@ -97,9 +97,9 @@ public final class TransactionValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateInstallments(Integer installments) {
-        BaseValidation.validateOptionalObject(installments, FIELD_INSTALLMENTS);
+        BaseValidation.validateOptionalObject(installments, INSTALLMENTS_FIELD);
         if (installments != null && installments <= 0) {
-            throw new IllegalArgumentException(FIELD_INSTALLMENTS + " must be positive");
+            throw new IllegalArgumentException(INSTALLMENTS_FIELD + " must be positive");
         }
     }
     
@@ -143,7 +143,7 @@ public final class TransactionValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateSubcategoryId(Long subcategoryId) {
-        BaseValidation.validateOptionalId(subcategoryId, FIELD_SUBCATEGORY_ID);
+        BaseValidation.validateOptionalId(subcategoryId, SUBCATEGORY_ID_FIELD);
     }
     
     /**
@@ -153,7 +153,7 @@ public final class TransactionValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateSourceEntityId(Long sourceEntityId) {
-        BaseValidation.validateOptionalId(sourceEntityId, FIELD_SOURCE_ENTITY_ID);
+        BaseValidation.validateOptionalId(sourceEntityId, SOURCE_ENTITY_ID_FIELD);
     }
     
     /**
@@ -183,9 +183,9 @@ public final class TransactionValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateResponsibilities(List<?> responsibilities) {
-        BaseValidation.validateRequiredCollection(responsibilities, FIELD_RESPONSIBILITIES);
+        BaseValidation.validateRequiredCollection(responsibilities, RESPONSIBILITIES_FIELD);
         if (responsibilities.isEmpty()) {
-            throw new IllegalArgumentException(FIELD_RESPONSIBILITIES + " cannot be empty");
+            throw new IllegalArgumentException(RESPONSIBILITIES_FIELD + " cannot be empty");
         }
     }
     
@@ -196,9 +196,9 @@ public final class TransactionValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateResponsibilitiesForUpdate(List<?> responsibilities) {
-        BaseValidation.validateOptionalCollection(responsibilities, FIELD_RESPONSIBILITIES);
+        BaseValidation.validateOptionalCollection(responsibilities, RESPONSIBILITIES_FIELD);
         if (responsibilities != null && responsibilities.isEmpty()) {
-            throw new IllegalArgumentException(FIELD_RESPONSIBILITIES + " cannot be empty");
+            throw new IllegalArgumentException(RESPONSIBILITIES_FIELD + " cannot be empty");
         }
     }
     

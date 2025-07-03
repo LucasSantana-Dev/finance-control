@@ -332,11 +332,11 @@ public class TransactionService
             ValidationUtils.validatePercentage(responsibility.getPercentage());
         }
     }
-    
+
     /**
      * Reconcile a transaction with complete reconciliation data.
      * 
-     * @param id the ID of the transaction to reconcile
+     * @param id      the ID of the transaction to reconcile
      * @param request the reconciliation request data
      * @return the reconciled transaction DTO
      * @throws EntityNotFoundException if the transaction is not found
@@ -344,7 +344,7 @@ public class TransactionService
     public TransactionDTO reconcileTransaction(Long id, TransactionReconciliationRequest request) {
         validateId(id);
         Transaction transaction = getEntityById(id);
-        
+
         // Update reconciliation fields
         transaction.setReconciledAmount(request.getReconciledAmount());
         transaction.setReconciliationDate(request.getReconciliationDate());
@@ -352,9 +352,9 @@ public class TransactionService
         transaction.setReconciliationNotes(request.getReconciliationNotes());
         transaction.setBankReference(request.getBankReference());
         transaction.setExternalReference(request.getExternalReference());
-        
+
         transactionRepository.save(transaction);
-        
+
         log.info("Transaction reconciled successfully with ID: {}", id);
         return mapToResponseDTO(transaction);
     }

@@ -27,7 +27,7 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = true)
 public class TransactionResponsiblesDTO extends BaseDTO<Long> {
     
-    private static final String FIELD_RESPONSIBLE_ID = "Responsible ID";
+    private static final String RESPONSIBLE_ID_FIELD = "Responsible ID";
     
     // Responsible entity fields
     @NotBlank(message = "Responsible name is required")
@@ -58,7 +58,7 @@ public class TransactionResponsiblesDTO extends BaseDTO<Long> {
     @Override
     public void validateCreate() {
         TransactionResponsiblesValidation.validateName(name);
-        BaseValidation.validateRequiredId(responsibleId, FIELD_RESPONSIBLE_ID);
+        BaseValidation.validateRequiredId(responsibleId, RESPONSIBLE_ID_FIELD);
         validatePercentage(percentage);
     }
     
@@ -71,7 +71,7 @@ public class TransactionResponsiblesDTO extends BaseDTO<Long> {
     @Override
     public void validateUpdate() {
         TransactionResponsiblesValidation.validateNameForUpdate(name);
-        BaseValidation.validateOptionalId(responsibleId, FIELD_RESPONSIBLE_ID);
+        BaseValidation.validateOptionalId(responsibleId, RESPONSIBLE_ID_FIELD);
         if (percentage != null) {
             validatePercentage(percentage);
         }
@@ -87,7 +87,7 @@ public class TransactionResponsiblesDTO extends BaseDTO<Long> {
     public void validateResponse() {
         super.validateResponse(); // Validate common fields (ID)
         TransactionResponsiblesValidation.validateName(name);
-        BaseValidation.validateRequiredId(responsibleId, FIELD_RESPONSIBLE_ID);
+        BaseValidation.validateRequiredId(responsibleId, RESPONSIBLE_ID_FIELD);
         validatePercentage(percentage);
     }
     

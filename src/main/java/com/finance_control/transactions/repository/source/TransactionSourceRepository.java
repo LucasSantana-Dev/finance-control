@@ -14,10 +14,11 @@ import java.util.Optional;
 @Repository
 public interface TransactionSourceRepository extends BaseRepository<TransactionSourceEntity, Long> {
 
-        @Query("SELECT tse FROM TransactionSourceEntity tse WHERE tse.user.id = :userId AND " +
-               "tse.sourceType = :sourceType")
-        List<TransactionSourceEntity> findByUserIdAndSourceType(@Param("userId") Long userId,
-                        @Param("sourceType") com.finance_control.shared.enums.TransactionSource sourceType);
+        @Query("SELECT tse FROM TransactionSourceEntity tse " +
+               "WHERE tse.user.id = :userId AND tse.sourceType = :sourceType")
+        List<TransactionSourceEntity> findByUserIdAndSourceType(
+                @Param("userId") Long userId,
+                @Param("sourceType") com.finance_control.shared.enums.TransactionSource sourceType);
 
         Optional<TransactionSourceEntity> findByIdAndUserId(Long id, Long userId);
 

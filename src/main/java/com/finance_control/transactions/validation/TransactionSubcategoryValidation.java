@@ -10,8 +10,8 @@ import com.finance_control.shared.validation.BaseValidation;
  */
 public final class TransactionSubcategoryValidation {
     
-    private static final String FIELD_NAME = "Subcategory Name";
-    private static final String FIELD_CATEGORY_ID = "Category ID";
+    private static final String NAME_FIELD = "Subcategory Name";
+    private static final String CATEGORY_ID_FIELD = "Category ID";
     
     private TransactionSubcategoryValidation() {
         // Utility class - prevent instantiation
@@ -24,8 +24,8 @@ public final class TransactionSubcategoryValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateName(String name) {
-        BaseValidation.validateRequiredString(name, FIELD_NAME);
-        BaseValidation.validateStringMaxLength(name, FIELD_NAME, 100);
+        BaseValidation.validateRequiredString(name, NAME_FIELD);
+        BaseValidation.validateStringMaxLength(name, NAME_FIELD, 100);
     }
     
     /**
@@ -35,9 +35,9 @@ public final class TransactionSubcategoryValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateNameForUpdate(String name) {
-        BaseValidation.validateOptionalString(name, FIELD_NAME);
+        BaseValidation.validateOptionalString(name, NAME_FIELD);
         if (name != null) {
-            BaseValidation.validateStringMaxLength(name, FIELD_NAME, 100);
+            BaseValidation.validateStringMaxLength(name, NAME_FIELD, 100);
         }
     }
     
@@ -48,7 +48,7 @@ public final class TransactionSubcategoryValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateCategoryId(Long categoryId) {
-        BaseValidation.validateRequiredId(categoryId, FIELD_CATEGORY_ID);
+        BaseValidation.validateRequiredId(categoryId, CATEGORY_ID_FIELD);
     }
     
     /**
@@ -58,7 +58,7 @@ public final class TransactionSubcategoryValidation {
      * @throws IllegalArgumentException if validation fails
      */
     public static void validateCategoryIdForUpdate(Long categoryId) {
-        BaseValidation.validateOptionalId(categoryId, FIELD_CATEGORY_ID);
+        BaseValidation.validateOptionalId(categoryId, CATEGORY_ID_FIELD);
     }
     
     /**

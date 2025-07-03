@@ -24,15 +24,14 @@ public class TransactionController extends BaseController<Transaction, Long, Tra
         super(transactionService);
         this.transactionService = transactionService;
     }
-    
+
     @PutMapping("/{id}/reconcile")
-    @Operation(summary = "Reconcile transaction", 
-               description = "Complete reconciliation of transaction data")
+    @Operation(summary = "Reconcile transaction", description = "Complete reconciliation of transaction data")
     public ResponseEntity<TransactionDTO> reconcileTransaction(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @Valid @RequestBody TransactionReconciliationRequest request) {
         log.debug("PUT request to reconcile transaction ID: {} with data: {}", id, request);
-        
+
         TransactionDTO reconciledTransaction = transactionService.reconcileTransaction(id, request);
         log.info("Transaction reconciled successfully with ID: {}", id);
         return ResponseEntity.ok(reconciledTransaction);
