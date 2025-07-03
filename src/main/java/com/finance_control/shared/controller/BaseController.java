@@ -1,5 +1,6 @@
 package com.finance_control.shared.controller;
 
+import com.finance_control.shared.model.BaseModel;
 import com.finance_control.shared.service.BaseService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,12 +23,12 @@ import java.util.Map;
  * while offering concrete implementations of all CRUD operations. Controllers extending
  * this class automatically get both functionality and proper Swagger documentation.
  * 
- * @param <T> The entity type managed by this controller
+ * @param <T> The entity type managed by this controller (must extend BaseModel<I>)
  * @param <I> The ID type of the entity (typically Long)
  * @param <D> The DTO type used for all operations (create, update, response)
  */
 @Slf4j
-public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
+public abstract class BaseController<T extends BaseModel<I>, I, D> implements CrudApi<I, D> {
 
     /** The service for business logic operations */
     protected final BaseService<T, I, D> service;
@@ -57,7 +58,8 @@ public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
      */
     @Override
     @GetMapping
-    @Operation(summary = "List entities", description = "Retrieve a paginated list of entities with optional search, filtering, and sorting.")
+    @Operation(summary = "List entities", 
+               description = "Retrieve a paginated list of entities with optional search, filtering, and sorting.")
     public ResponseEntity<Page<D>> findAll(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String sortBy,
@@ -131,14 +133,14 @@ public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
         // Try to convert to Long
         try {
             return Long.valueOf(value);
-        } catch (NumberFormatException _) {
+        } catch (NumberFormatException e) {
             // Not a number, return as string
         }
 
         // Try to convert to Double
         try {
             return Double.valueOf(value);
-        } catch (NumberFormatException _) {
+        } catch (NumberFormatException e) {
             // Not a number, return as string
         }
 
@@ -185,19 +187,20 @@ public abstract class BaseController<T, I, D> implements CrudApi<I, D> {
     }
 
     /**
-     * Updates an existing entity by its ID.
+     * Partially updates an existing entity by its ID.
      * 
      * @param id        the ID of the entity to update
-     * @param updateDTO the DTO containing updated data
+     * @param updateDTO the DTO containing partial update data
      * @return a ResponseEntity containing the updated entity as a response DTO
      */
     @Override
-    @PutMapping("/{id}")
-    @Operation(summary = "Update entity", description = "Update an existing entity by its ID.")
+    @PatchMapping("/{id}")
+    @Operation(summary = "Partially update entity", 
+               description = "Partially update an existing entity by its ID. Only provided fields will be updated.")
     public ResponseEntity<D> update(@PathVariable I id, @Valid @RequestBody D updateDTO) {
-        log.debug("PUT request to update entity with ID: {} and DTO: {}", id, updateDTO);
+        log.debug("PATCH request to partially update entity with ID: {} and DTO: {}", id, updateDTO);
         D result = service.update(id, updateDTO);
-        log.info("Entity updated successfully with ID: {}", id);
+        log.info("Entity partially updated successfully with ID: {}", id);
         return ResponseEntity.ok(result);
     }
 

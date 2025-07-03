@@ -2,7 +2,8 @@ package com.finance_control.shared.service;
 
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.exception.EntityNotFoundException;
-import com.finance_control.shared.model.BaseEntity;
+import com.finance_control.shared.exception.ReflectionException;
+import com.finance_control.shared.model.BaseModel;
 import com.finance_control.shared.repository.BaseRepository;
 import com.finance_control.shared.util.ValidationUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -16,25 +17,35 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 
 /**
  * Abstract base service providing common CRUD operations implementation.
  * This class is designed to be generic and reusable across different domains.
- * Supports user-aware operations and name-based operations through configuration.
+ * Supports user-aware operations and name-based operations through
+ * configuration.
  * 
  * @param <T> The entity type managed by this service
  * @param <I> The ID type of the entity (typically Long)
  * @param <D> The DTO type used for all operations (create, update, response)
  */
 @Slf4j
-public abstract class BaseService<T extends BaseEntity<I>, I, D> {
-    
+public abstract class BaseService<T extends BaseModel<I>, I, D> {
+
     /** The repository for data access operations */
     protected final BaseRepository<T, I> repository;
-    
+
     /** Common field names used across entities */
     protected static final String IS_ACTIVE_FIELD = "isActive";
-    
+
+    /** Error message for missing user context */
+    private static final String USER_CONTEXT_UNAVAILABLE = "User context not available for user-aware service";
+    private static final String USER_ID_FIELD = "userId";
+    private static final String ACCESS_DENIED_MSG = "Access denied: entity {} does not belong to user {}";
+    private static final String USER_OWNERSHIP_VERIFIED_MSG = "User ownership verified for entity {} and user {}";
+
     /**
      * Constructs a new BaseService with the specified repository.
      * 
@@ -43,7 +54,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
     protected BaseService(BaseRepository<T, I> repository) {
         this.repository = repository;
     }
-    
+
     /**
      * Check if this service should be user-aware (filter by current user).
      * Override to return true for user-scoped entities.
@@ -53,7 +64,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
     protected boolean isUserAware() {
         return false;
     }
-    
+
     /**
      * Check if this service should support name-based operations.
      * Override to return true for entities with name fields.
@@ -63,48 +74,75 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
     protected boolean isNameBased() {
         return false;
     }
-    
+
     /**
      * Find all entities with optional filtering, searching, and pagination support.
      * This method provides a unified interface for all entity queries.
      * 
-     * @param search optional search term to filter entities (searches across searchable fields)
-     * @param filters optional map of field-specific filters
-     * @param sortBy optional field name to sort by
-     * @param sortDirection optional sort direction ("asc" or "desc"), defaults to "asc"
-     * @param pageable pagination parameters
+     * @param search        optional search term to filter entities (searches across
+     *                      searchable fields)
+     * @param filters       optional map of field-specific filters
+     * @param sortBy        optional field name to sort by
+     * @param sortDirection optional sort direction ("asc" or "desc"), defaults to
+     *                      "asc"
+     * @param pageable      pagination parameters
      * @return a page of response DTOs
      */
-    public Page<D> findAll(String search, Map<String, Object> filters, String sortBy, String sortDirection, Pageable pageable) {
-        log.debug("Finding all entities with search: '{}', filters: {}, sortBy: '{}', sortDirection: '{}', page: {}", 
-                 search, filters, sortBy, sortDirection, pageable.getPageNumber());
-        
+    public Page<D> findAll(String search, Map<String, Object> filters, String sortBy, String sortDirection,
+            Pageable pageable) {
+        log.debug("Finding all entities with search: '{}', filters: {}, sortBy: '{}', sortDirection: '{}', page: {}",
+                search, filters, sortBy, sortDirection, pageable.getPageNumber());
+
         Pageable finalPageable = createPageableWithSort(pageable, sortBy, sortDirection);
-        
+
         // Add user filter if user-aware
         if (isUserAware()) {
             Long currentUserId = UserContext.getCurrentUserId();
             if (currentUserId == null) {
-                log.error("User context not available for user-aware service");
+                log.error(USER_CONTEXT_UNAVAILABLE);
                 throw new SecurityException("User context not available");
             }
-            
+
             log.debug("Adding user filter for user ID: {}", currentUserId);
-            if (filters != null) {
-                filters.put("userId", currentUserId);
-            } else {
-                filters = Map.of("userId", currentUserId);
+            if (filters != null && !filters.containsKey(USER_ID_FIELD)) {
+                filters.put(USER_ID_FIELD, currentUserId);
             }
         }
-        
-        // Use the repository's findAll method with search if no specific filters are provided
+
+        // Use the repository's findAll method with search if no specific filters are
+        // provided
         if (filters == null || filters.isEmpty()) {
             log.debug("Using repository findAll with search");
-            Page<T> entities = repository.findAll(search, finalPageable);
+            Page<T> entities;
+            
+            // Try to call findAll with userId if the repository supports it
+            try {
+                if (isUserAware()) {
+                    Long currentUserId = UserContext.getCurrentUserId();
+                    if (currentUserId == null) {
+                        log.error(USER_CONTEXT_UNAVAILABLE);
+                        throw new SecurityException("User context not available");
+                    }
+                    
+                    // Try to call the overloaded findAll method with userId
+                    entities = (Page<T>) repository.getClass()
+                            .getMethod("findAll", String.class, Long.class, Pageable.class)
+                            .invoke(repository, search, currentUserId, finalPageable);
+                } else {
+                    entities = repository.findAll(search, finalPageable);
+                }
+            } catch (NoSuchMethodException e) {
+                // Fallback to the standard findAll method if userId overload doesn't exist
+                entities = repository.findAll(search, finalPageable);
+            } catch (Exception e) {
+                log.warn("Error calling findAll with userId, falling back to standard method: {}", e.getMessage());
+                entities = repository.findAll(search, finalPageable);
+            }
+            
             log.debug("Found {} entities", entities.getTotalElements());
             return entities.map(this::mapToResponseDTO);
         }
-        
+
         // If specific filters are provided, use specifications
         log.debug("Using specifications with filters");
         Specification<T> spec = createSpecificationFromFilters(search, filters);
@@ -112,14 +150,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         log.debug("Found {} entities with specifications", entities.getTotalElements());
         return entities.map(this::mapToResponseDTO);
     }
-    
-    /**
-     * Legacy method for backward compatibility.
-     */
-    public Page<D> findAll(String search, String sortBy, String sortDirection, Pageable pageable) {
-        return findAll(search, null, sortBy, sortDirection, pageable);
-    }
-    
+
     /**
      * Find entity by ID.
      * 
@@ -130,31 +161,31 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         log.debug("Finding entity by ID: {}", id);
         validateId(id);
         Optional<T> entity = repository.findById(id);
-        
+
         // Check user ownership if user-aware
         if (isUserAware() && entity.isPresent()) {
             Long currentUserId = UserContext.getCurrentUserId();
             if (currentUserId == null) {
-                log.error("User context not available for user-aware service");
+                log.error(USER_CONTEXT_UNAVAILABLE);
                 throw new SecurityException("User context not available");
             }
-            
+
             if (!belongsToUser(entity.get(), currentUserId)) {
-                log.warn("Access denied: entity {} does not belong to user {}", id, currentUserId);
+                log.warn(ACCESS_DENIED_MSG, id, currentUserId);
                 throw new SecurityException("Access denied: entity does not belong to current user");
             }
-            log.debug("User ownership verified for entity {} and user {}", id, currentUserId);
+            log.debug(USER_OWNERSHIP_VERIFIED_MSG, id, currentUserId);
         }
-        
+
         if (entity.isPresent()) {
             log.debug("Entity found with ID: {}", id);
         } else {
             log.debug("Entity not found with ID: {}", id);
         }
-        
+
         return entity.map(this::mapToResponseDTO);
     }
-    
+
     /**
      * Create a new entity.
      * 
@@ -165,29 +196,29 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         log.debug("Creating new entity with DTO: {}", createDTO);
         validateCreateDTO(createDTO);
         T entity = mapToEntity(createDTO);
-        
+
         // Set user ID if user-aware
         if (isUserAware()) {
             Long currentUserId = UserContext.getCurrentUserId();
             if (currentUserId == null) {
-                log.error("User context not available for user-aware service");
+                log.error(USER_CONTEXT_UNAVAILABLE);
                 throw new SecurityException("User context not available");
             }
             log.debug("Setting user ID {} for new entity", currentUserId);
             setUserId(entity, currentUserId);
         }
-        
+
         validateEntity(entity);
         log.debug("Saving entity to repository");
         T savedEntity = repository.save(entity);
         log.info("Entity created successfully with ID: {}", savedEntity.getId());
         return mapToResponseDTO(savedEntity);
     }
-    
+
     /**
      * Update an existing entity.
      * 
-     * @param id the ID of the entity to update
+     * @param id        the ID of the entity to update
      * @param updateDTO the DTO containing updated data
      * @return the updated entity as a response DTO
      * @throws EntityNotFoundException if the entity with the given ID is not found
@@ -196,28 +227,28 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         log.debug("Updating entity with ID: {} and DTO: {}", id, updateDTO);
         validateId(id);
         validateUpdateDTO(updateDTO);
-        
+
         T entity = repository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("Entity not found for update with ID: {}", id);
                     return new EntityNotFoundException(getEntityName(), "id", id);
                 });
-        
+
         // Check user ownership if user-aware
         if (isUserAware()) {
             Long currentUserId = UserContext.getCurrentUserId();
             if (currentUserId == null) {
-                log.error("User context not available for user-aware service");
+                log.error(USER_CONTEXT_UNAVAILABLE);
                 throw new SecurityException("User context not available");
             }
-            
+
             if (!belongsToUser(entity, currentUserId)) {
-                log.warn("Access denied: entity {} does not belong to user {}", id, currentUserId);
+                log.warn(ACCESS_DENIED_MSG, id, currentUserId);
                 throw new SecurityException("Access denied: entity does not belong to current user");
             }
-            log.debug("User ownership verified for entity {} and user {}", id, currentUserId);
+            log.debug(USER_OWNERSHIP_VERIFIED_MSG, id, currentUserId);
         }
-        
+
         updateEntityFromDTO(entity, updateDTO);
         validateEntity(entity);
         log.debug("Saving updated entity to repository");
@@ -225,7 +256,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         log.info("Entity updated successfully with ID: {}", id);
         return mapToResponseDTO(savedEntity);
     }
-    
+
     /**
      * Delete an entity by ID.
      * 
@@ -240,26 +271,26 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
                     log.warn("Entity not found for deletion with ID: {}", id);
                     return new EntityNotFoundException(getEntityName(), "id", id);
                 });
-        
+
         // Check user ownership if user-aware
         if (isUserAware()) {
             Long currentUserId = UserContext.getCurrentUserId();
             if (currentUserId == null) {
-                log.error("User context not available for user-aware service");
+                log.error(USER_CONTEXT_UNAVAILABLE);
                 throw new SecurityException("User context not available");
             }
-            
+
             if (!belongsToUser(entity, currentUserId)) {
-                log.warn("Access denied: entity {} does not belong to user {}", id, currentUserId);
+                log.warn(ACCESS_DENIED_MSG, id, currentUserId);
                 throw new SecurityException("Access denied: entity does not belong to current user");
             }
-            log.debug("User ownership verified for entity {} and user {}", id, currentUserId);
+            log.debug(USER_OWNERSHIP_VERIFIED_MSG, id, currentUserId);
         }
-        
+
         repository.deleteById(id);
         log.info("Entity deleted successfully with ID: {}", id);
     }
-    
+
     /**
      * Check if entity exists by ID.
      * 
@@ -270,7 +301,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         validateId(id);
         return repository.existsById(id);
     }
-    
+
     /**
      * Find entity by name (if name-based).
      * 
@@ -281,15 +312,15 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         if (!isNameBased()) {
             throw new UnsupportedOperationException("This service does not support name-based operations");
         }
-        
+
         ValidationUtils.validateString(name, "Name");
-        
+
         if (isUserAware()) {
             Long currentUserId = UserContext.getCurrentUserId();
             if (currentUserId == null) {
                 throw new SecurityException("User context not available");
             }
-            
+
             if (repository instanceof NameBasedRepository) {
                 return ((NameBasedRepository<T, I>) repository).findByNameIgnoreCaseAndUserId(name, currentUserId)
                         .map(this::mapToResponseDTO);
@@ -300,10 +331,10 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
                         .map(this::mapToResponseDTO);
             }
         }
-        
+
         throw new UnsupportedOperationException("Repository does not support name-based operations");
     }
-    
+
     /**
      * Check if entity exists by name (if name-based).
      * 
@@ -314,15 +345,15 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         if (!isNameBased()) {
             throw new UnsupportedOperationException("This service does not support name-based operations");
         }
-        
+
         ValidationUtils.validateString(name, "Name");
-        
+
         if (isUserAware()) {
             Long currentUserId = UserContext.getCurrentUserId();
             if (currentUserId == null) {
                 throw new SecurityException("User context not available");
             }
-            
+
             if (repository instanceof NameBasedRepository) {
                 return ((NameBasedRepository<T, I>) repository).existsByNameIgnoreCaseAndUserId(name, currentUserId);
             }
@@ -331,10 +362,10 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
                 return ((NameBasedRepository<T, I>) repository).existsByNameIgnoreCase(name);
             }
         }
-        
+
         throw new UnsupportedOperationException("Repository does not support name-based operations");
     }
-    
+
     /**
      * Find all entities ordered by name (if name-based).
      * 
@@ -344,13 +375,13 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         if (!isNameBased()) {
             throw new UnsupportedOperationException("This service does not support name-based operations");
         }
-        
+
         if (isUserAware()) {
             Long currentUserId = UserContext.getCurrentUserId();
             if (currentUserId == null) {
                 throw new SecurityException("User context not available");
             }
-            
+
             if (repository instanceof NameBasedRepository) {
                 return ((NameBasedRepository<T, I>) repository).findAllByUserIdOrderByNameAsc(currentUserId)
                         .stream()
@@ -365,14 +396,14 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
                         .toList();
             }
         }
-        
+
         throw new UnsupportedOperationException("Repository does not support name-based operations");
     }
-    
+
     /**
      * Count entities with optional filtering and searching.
      * 
-     * @param search optional search term to filter entities
+     * @param search  optional search term to filter entities
      * @param filters optional map of field-specific filters
      * @return the count of entities matching the criteria
      */
@@ -383,45 +414,37 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
             if (currentUserId == null) {
                 throw new SecurityException("User context not available");
             }
-            
-            if (filters != null) {
-                filters.put("userId", currentUserId);
-            } else {
-                filters = Map.of("userId", currentUserId);
+
+            if (filters != null && !filters.containsKey(USER_ID_FIELD)) {
+                filters.put(USER_ID_FIELD, currentUserId);
             }
         }
-        
+
         if (filters == null || filters.isEmpty()) {
             // For search-only counting, we need to use specifications
             Specification<T> spec = createSpecificationFromFilters(search, null);
             return repository.count(spec);
         }
-        
+
         Specification<T> spec = createSpecificationFromFilters(search, filters);
         return repository.count(spec);
     }
-    
+
     /**
      * Find all entities without pagination.
      * 
-     * @param search optional search term to filter entities
-     * @param filters optional map of field-specific filters
-     * @param sortBy optional field name to sort by
-     * @param sortDirection optional sort direction ("asc" or "desc"), defaults to "asc"
+     * @param search        optional search term to filter entities
+     * @param filters       optional map of field-specific filters
+     * @param sortBy        optional field name to sort by
+     * @param sortDirection optional sort direction ("asc" or "desc"), defaults to
+     *                      "asc"
      * @return a list of response DTOs
      */
     public List<D> findAll(String search, Map<String, Object> filters, String sortBy, String sortDirection) {
         Pageable pageable = Pageable.unpaged();
         return findAll(search, filters, sortBy, sortDirection, pageable).getContent();
     }
-    
-    /**
-     * Legacy method for backward compatibility.
-     */
-    public List<D> findAll(String search, String sortBy, String sortDirection) {
-        return findAll(search, null, sortBy, sortDirection);
-    }
-    
+
     /**
      * Get entity by ID for internal use (returns entity, not DTO).
      * 
@@ -433,7 +456,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         return repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(getEntityName(), "id", id));
     }
-    
+
     /**
      * Maps a DTO to an entity.
      * 
@@ -441,15 +464,15 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
      * @return the mapped entity
      */
     protected abstract T mapToEntity(D dto);
-    
+
     /**
      * Updates an entity with data from a DTO.
      * 
      * @param entity the entity to update
-     * @param dto the DTO containing update data
+     * @param dto    the DTO containing update data
      */
     protected abstract void updateEntityFromDTO(T entity, D dto);
-    
+
     /**
      * Maps an entity to a response DTO.
      * 
@@ -457,7 +480,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
      * @return the mapped response DTO
      */
     protected abstract D mapToResponseDTO(T entity);
-    
+
     /**
      * Validates a DTO before entity creation.
      * Default implementation validates name if name-based.
@@ -472,7 +495,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
             validateNameUnique(name);
         }
     }
-    
+
     /**
      * Validates a DTO before entity update.
      * Default implementation validates name if name-based.
@@ -486,7 +509,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
             ValidationUtils.validateString(name, "Name");
         }
     }
-    
+
     /**
      * Validates an entity before saving.
      * Default implementation does nothing.
@@ -497,7 +520,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
     protected void validateEntity(T entity) {
         // Default implementation - override if needed
     }
-    
+
     /**
      * Returns the entity name for error messages.
      * Override this method to provide a more specific entity name.
@@ -507,7 +530,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
     protected String getEntityName() {
         return "Entity";
     }
-    
+
     /**
      * Validates an ID value.
      * 
@@ -521,64 +544,87 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
             throw new IllegalArgumentException("ID cannot be null");
         }
     }
-    
+
     /**
      * Creates a specification from search term and filters.
      * Override this method to provide custom specification logic.
      * 
-     * @param search the search term
+     * @param search  the search term
      * @param filters the filters map
      * @return the specification
      */
     protected Specification<T> createSpecificationFromFilters(String search, Map<String, Object> filters) {
-        // Ensure userId filter is always included for user-aware services
+        ensureUserFilter(filters);
+
+        return (root, query, criteriaBuilder) -> {
+            var predicates = new java.util.ArrayList<Predicate>();
+
+            addSearchPredicates(root, criteriaBuilder, predicates, search);
+            addFilterPredicates(root, criteriaBuilder, predicates, filters);
+
+            return predicates.isEmpty() ? null
+                    : criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private void ensureUserFilter(Map<String, Object> filters) {
         if (isUserAware()) {
             Long currentUserId = UserContext.getCurrentUserId();
             if (currentUserId == null) {
                 throw new SecurityException("User context not available");
             }
-            
-            if (filters != null && !filters.containsKey("userId")) {
-                filters.put("userId", currentUserId);
+
+            if (filters != null && !filters.containsKey(USER_ID_FIELD)) {
+                filters.put(USER_ID_FIELD, currentUserId);
             }
         }
-        
-        return (root, query, criteriaBuilder) -> {
-            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
-            
-            // Handle search term across searchable fields
-            if (search != null && !search.trim().isEmpty()) {
-                predicates.add(criteriaBuilder.or(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), "%" + search.toLowerCase() + "%"),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), "%" + search.toLowerCase() + "%")
-                ));
-            }
-            
-            // Handle specific filters
-            if (filters != null) {
-                filters.forEach((key, value) -> {
-                    if (value != null) {
-                        switch (key) {
-                            case "userId" -> predicates.add(criteriaBuilder.equal(root.get("user").get("id"), value));
-                            case "name" -> predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), 
-                                "%" + value.toString().toLowerCase() + "%"));
-                            case IS_ACTIVE_FIELD -> predicates.add((Boolean) value ?
-                                criteriaBuilder.isTrue(root.get(IS_ACTIVE_FIELD)) : criteriaBuilder.isFalse(root.get(IS_ACTIVE_FIELD)));
-                        }
-                    }
-                });
-            }
-            
-            return predicates.isEmpty() ? null : 
-                criteriaBuilder.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
-        };
     }
-    
+
+    private void addSearchPredicates(Root<T> root,
+            CriteriaBuilder criteriaBuilder,
+            List<Predicate> predicates,
+            String search) {
+        if (search != null && !search.trim().isEmpty()) {
+            predicates.add(criteriaBuilder.or(
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), "%" + search.toLowerCase() + "%"),
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("description")),
+                            "%" + search.toLowerCase() + "%")));
+        }
+    }
+
+    private void addFilterPredicates(Root<T> root,
+            CriteriaBuilder criteriaBuilder,
+            List<Predicate> predicates,
+            Map<String, Object> filters) {
+        if (filters != null) {
+            filters.forEach((key, value) -> {
+                if (value != null) {
+                    addFilterPredicate(root, criteriaBuilder, predicates, key, value);
+                }
+            });
+        }
+    }
+
+    private void addFilterPredicate(Root<T> root,
+            CriteriaBuilder criteriaBuilder,
+            List<Predicate> predicates,
+            String key, Object value) {
+        switch (key) {
+            case USER_ID_FIELD -> predicates.add(criteriaBuilder.equal(root.get("user").get("id"), value));
+            case "name" -> predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("name")),
+                    "%" + value.toString().toLowerCase() + "%"));
+            case IS_ACTIVE_FIELD -> predicates.add(Boolean.TRUE.equals(value) ? 
+                    criteriaBuilder.isTrue(root.get(IS_ACTIVE_FIELD))
+                    : criteriaBuilder.isFalse(root.get(IS_ACTIVE_FIELD)));
+            default -> log.debug("Ignoring unknown filter key: {}", key);
+        }
+    }
+
     /**
      * Creates a pageable with sorting.
      * 
-     * @param pageable the base pageable
-     * @param sortBy the field to sort by
+     * @param pageable      the base pageable
+     * @param sortBy        the field to sort by
      * @param sortDirection the sort direction
      * @return the pageable with sorting
      */
@@ -586,23 +632,23 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
         if (sortBy == null || sortBy.trim().isEmpty()) {
             return pageable;
         }
-        
+
         Sort.Direction direction = Sort.Direction.ASC;
         if (sortDirection != null && sortDirection.equalsIgnoreCase("desc")) {
             direction = Sort.Direction.DESC;
         }
-        
+
         Sort sort = Sort.by(direction, sortBy);
-        
+
         if (pageable.isPaged()) {
             return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         } else {
             return PageRequest.of(0, Integer.MAX_VALUE, sort);
         }
     }
-    
+
     // Name-based operations (only used if isNameBased() returns true)
-    
+
     /**
      * Validates that the name is unique before creating an entity.
      * 
@@ -614,11 +660,11 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
             throw new IllegalArgumentException(getEntityName() + " with this name already exists");
         }
     }
-    
+
     /**
      * Validates that the name is unique before updating an entity.
      * 
-     * @param name the name to validate
+     * @param name        the name to validate
      * @param currentName the current name of the entity being updated
      * @throws IllegalArgumentException if the name already exists
      */
@@ -627,7 +673,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
             throw new IllegalArgumentException(getEntityName() + " with this name already exists");
         }
     }
-    
+
     /**
      * Gets the name from a DTO using reflection.
      * Subclasses can override this if they need custom logic.
@@ -638,11 +684,11 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
     protected String getNameFromDTO(Object dto) {
         return getFieldValue(dto, "getName", String.class);
     }
-    
+
     /**
      * Generic method to get a field value using reflection.
      * 
-     * @param obj the object to get the field from
+     * @param obj        the object to get the field from
      * @param methodName the getter method name
      * @param returnType the expected return type
      * @return the field value
@@ -653,12 +699,12 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
             Method method = obj.getClass().getMethod(methodName);
             return (V) method.invoke(obj);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get field value using " + methodName, e);
+            throw new ReflectionException("Failed to get field value using " + methodName, e);
         }
     }
-    
+
     // User-aware operations (only used if isUserAware() returns true)
-    
+
     /**
      * Checks if an entity belongs to the specified user.
      * This method must be implemented by subclasses if isUserAware() returns true.
@@ -670,7 +716,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
     protected boolean belongsToUser(T entity, Long userId) {
         throw new UnsupportedOperationException("User ownership check not implemented");
     }
-    
+
     /**
      * Sets the user ID on an entity during creation.
      * This method must be implemented by subclasses if isUserAware() returns true.
@@ -681,7 +727,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
     protected void setUserId(T entity, Long userId) {
         throw new UnsupportedOperationException("User ID setting not implemented");
     }
-    
+
     /**
      * Repository interface for name-based operations.
      * 
@@ -689,7 +735,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
      * @param <I> The ID type
      */
     public interface NameBasedRepository<T, I> extends BaseRepository<T, I> {
-        
+
         /**
          * Find entity by name (case-insensitive).
          * 
@@ -697,7 +743,7 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
          * @return an Optional containing the entity if found, empty otherwise
          */
         Optional<T> findByNameIgnoreCase(String name);
-        
+
         /**
          * Check if entity exists by name (case-insensitive).
          * 
@@ -705,32 +751,32 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
          * @return true if entity exists, false otherwise
          */
         boolean existsByNameIgnoreCase(String name);
-        
+
         /**
          * Find all entities ordered by name (ascending).
          * 
          * @return a list of entities ordered by name
          */
         List<T> findAllByOrderByNameAsc();
-        
+
         /**
          * Find entity by name and user ID (case-insensitive).
          * 
-         * @param name the name to search for
+         * @param name   the name to search for
          * @param userId the user ID
          * @return an Optional containing the entity if found, empty otherwise
          */
         Optional<T> findByNameIgnoreCaseAndUserId(String name, Long userId);
-        
+
         /**
          * Check if entity exists by name and user ID (case-insensitive).
          * 
-         * @param name the name to check
+         * @param name   the name to check
          * @param userId the user ID
          * @return true if entity exists, false otherwise
          */
         boolean existsByNameIgnoreCaseAndUserId(String name, Long userId);
-        
+
         /**
          * Find all entities by user ID ordered by name (ascending).
          * 
@@ -739,4 +785,4 @@ public abstract class BaseService<T extends BaseEntity<I>, I, D> {
          */
         List<T> findAllByUserIdOrderByNameAsc(Long userId);
     }
-} 
+}

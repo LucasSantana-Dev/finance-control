@@ -71,4 +71,27 @@ public final class ValidationUtils {
             throw new IllegalArgumentException(fieldName + " cannot be null or empty");
         }
     }
+
+    public static void validateRequired(String value, String fieldName) {
+        if (!isValidString(value)) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+    }
+
+    public static void validateLength(String value, int minLength, int maxLength, String fieldName) {
+        if (value != null && (value.length() < minLength || value.length() > maxLength)) {
+            throw new IllegalArgumentException(fieldName + " must be between " + minLength + 
+                    " and " + maxLength + " characters");
+        }
+    }
+
+    public static void validateUrl(String url, String fieldName) {
+        if (url != null && !url.trim().isEmpty()) {
+            try {
+                new java.net.URL(url);
+            } catch (Exception e) {
+                throw new IllegalArgumentException(fieldName + " must be a valid URL");
+            }
+        }
+    }
 }

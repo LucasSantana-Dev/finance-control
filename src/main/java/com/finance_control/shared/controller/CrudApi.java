@@ -84,18 +84,20 @@ public interface CrudApi<I, D> {
     ResponseEntity<D> create(@Valid @RequestBody D createDTO);
 
     /**
-     * Updates an existing entity with the provided data.
+     * Partially updates an existing entity with the provided data.
      * 
-     * <p>The request body is validated using Bean Validation annotations
-     * before processing. The entity must exist for the update to succeed.</p>
+     * <p>This endpoint allows partial updates, meaning only the fields provided
+     * in the request body will be updated. Fields not included in the request
+     * will remain unchanged. The request body is validated using Bean Validation
+     * annotations before processing. The entity must exist for the update to succeed.</p>
      * 
      * @param id the unique identifier of the entity to update
-     * @param updateDTO the data transfer object containing entity update data
+     * @param updateDTO the data transfer object containing partial entity update data
      * @return the updated entity
      * @throws EntityNotFoundException if the entity with the given ID does not exist
      * @throws ValidationException if the update data fails validation
      */
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     ResponseEntity<D> update(@PathVariable I id, @Valid @RequestBody D updateDTO);
 
     /**
