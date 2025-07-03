@@ -1,11 +1,14 @@
 package com.finance_control.users.controller;
 
 import com.finance_control.shared.controller.BaseController;
+import com.finance_control.users.dto.PasswordResetRequest;
 import com.finance_control.users.dto.UserDTO;
+import com.finance_control.users.dto.UserStatusRequest;
 import com.finance_control.users.model.User;
 import com.finance_control.users.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
@@ -57,5 +60,30 @@ public class UserController extends BaseController<User, Long, UserDTO> {
     public ResponseEntity<Void> reactivate(@PathVariable Long id) {
         userService.reactivate(id);
         return ResponseEntity.ok().build();
+    }
+    
+    @PutMapping("/{id}/password")
+    @Operation(summary = "Reset user password", description = "Reset user password by administrator")
+    public ResponseEntity<Void> resetPassword(@PathVariable Long id, @Valid @RequestBody PasswordResetRequest request) {
+        log.debug("PUT request to reset password for user ID: {}", id);
+        
+        if (!request.isPasswordConfirmationValid()) {
+            log.warn("Password confirmation does not match for user ID: {}", id);
+            return ResponseEntity.badRequest().build();
+        }
+        
+        userService.resetPassword(id, request.getNewPassword(), request.getReason());
+        log.info("Password reset successfully for user ID: {}", id);
+        return ResponseEntity.ok().build();
+    }
+    
+    @PutMapping("/{id}/status")
+    @Operation(summary = "Update user status", description = "Activate or deactivate user account by administrator")
+    public ResponseEntity<UserDTO> updateStatus(@PathVariable Long id, @Valid @RequestBody UserStatusRequest request) {
+        log.debug("PUT request to update status for user ID: {} - active: {}", id, request.getActive());
+        
+        UserDTO updatedUser = userService.updateStatus(id, request.getActive(), request.getReason());
+        log.info("User status updated successfully for user ID: {} - active: {}", id, request.getActive());
+        return ResponseEntity.ok(updatedUser);
     }
 }

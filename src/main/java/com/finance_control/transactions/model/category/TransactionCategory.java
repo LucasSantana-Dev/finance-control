@@ -1,6 +1,6 @@
 package com.finance_control.transactions.model.category;
 
-import com.finance_control.shared.model.BaseEntity;
+import com.finance_control.shared.model.BaseModel;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -18,7 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class TransactionCategory extends BaseEntity<Long> {
+public class TransactionCategory extends BaseModel<Long> {
     @NotBlank
     @Column(nullable = false)
     private String name;

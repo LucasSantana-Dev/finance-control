@@ -9,7 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
-public class TransactionResponsiblesService extends BaseService<TransactionResponsibles, Long, TransactionResponsiblesDTO> {
+public class TransactionResponsiblesService 
+        extends BaseService<TransactionResponsibles, Long, TransactionResponsiblesDTO> {
 
     public TransactionResponsiblesService(TransactionResponsiblesRepository transactionResponsibleRepository) {
         super(transactionResponsibleRepository);

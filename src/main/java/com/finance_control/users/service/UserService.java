@@ -36,8 +36,8 @@ import lombok.extern.slf4j.Slf4j;
 public class UserService extends BaseService<User, Long, UserDTO> {
 
     private static final String FIELD_EMAIL = "email";
-    private static final String FIELD_FULL_NAME = "fullName";
     private static final String FIELD_IS_ACTIVE = "isActive";
+    private static final String FIELD_FULL_NAME = "fullName";
 
     /** The user repository for data access operations */
     private final UserRepository userRepository;
@@ -56,25 +56,18 @@ public class UserService extends BaseService<User, Long, UserDTO> {
      * Find users with dynamic filtering.
      * 
      * @param email    optional email filter (case-insensitive)
-     * @param fullName optional full name filter (case-insensitive)
      * @param isActive optional active status filter
      * @param pageable pagination parameters
      * @return a page of user DTOs
      */
-    public Page<UserDTO> findAllWithFilters(String email, String fullName, Boolean isActive, Pageable pageable) {
-        Specification<User> spec = (root, _, criteriaBuilder) -> {
+    public Page<UserDTO> findAllWithFilters(String email, Boolean isActive, Pageable pageable) {
+        Specification<User> spec = (root, query, criteriaBuilder) -> {
             var predicates = new ArrayList<Predicate>();
 
             if (email != null && !email.trim().isEmpty()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get(FIELD_EMAIL)),
                         "%" + email.toLowerCase() + "%"));
-            }
-
-            if (fullName != null && !fullName.trim().isEmpty()) {
-                predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get(FIELD_FULL_NAME)),
-                        "%" + fullName.toLowerCase() + "%"));
             }
 
             if (isActive != null) {
@@ -86,10 +79,10 @@ public class UserService extends BaseService<User, Long, UserDTO> {
                     : criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
 
-        // Default sorting by full name if no sort is specified
+        // Default sorting by email if no sort is specified
         if (pageable.getSort().isUnsorted()) {
             pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
-                    Sort.by(Sort.Direction.ASC, FIELD_FULL_NAME));
+                    Sort.by(Sort.Direction.ASC, FIELD_EMAIL));
         }
 
         return userRepository.findAll(spec, pageable)
@@ -105,7 +98,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
      */
     public Optional<UserDTO> findByEmail(String email) {
         UserValidation.validateEmail(email);
-        Specification<User> spec = (root, _, criteriaBuilder) -> criteriaBuilder.like(
+        Specification<User> spec = (root, query, criteriaBuilder) -> criteriaBuilder.like(
                 criteriaBuilder.lower(root.get(FIELD_EMAIL)),
                 email.toLowerCase());
 
@@ -129,22 +122,22 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     @Override
     protected User mapToEntity(UserDTO createDTO) {
         User user = new User();
-        user.setFullName(createDTO.getFullName());
         user.setEmail(createDTO.getEmail());
         user.setPassword(createDTO.getPassword());
+        user.setIsActive(createDTO.getIsActive());
         return user;
     }
 
     @Override
     protected void updateEntityFromDTO(User entity, UserDTO updateDTO) {
-        if (updateDTO.getFullName() != null) {
-            entity.setFullName(updateDTO.getFullName());
-        }
         if (updateDTO.getEmail() != null) {
             entity.setEmail(updateDTO.getEmail());
         }
         if (updateDTO.getPassword() != null) {
             entity.setPassword(updateDTO.getPassword());
+        }
+        if (updateDTO.getIsActive() != null) {
+            entity.setIsActive(updateDTO.getIsActive());
         }
     }
 
@@ -161,13 +154,11 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     @Override
     protected void validateCreateDTO(UserDTO createDTO) {
         UserValidation.validateEmailUnique(createDTO.getEmail(), userRepository::existsByEmail);
-        UserValidation.validateFullName(createDTO.getFullName());
         UserValidation.validatePassword(createDTO.getPassword());
     }
 
     @Override
     protected void validateUpdateDTO(UserDTO updateDTO) {
-        UserValidation.validateFullNameForUpdate(updateDTO.getFullName());
         UserValidation.validateEmailForUpdate(updateDTO.getEmail());
         UserValidation.validatePasswordForUpdate(updateDTO.getPassword());
     }
@@ -201,22 +192,61 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         User user = getEntityById(id);
         user.setIsActive(true);
         userRepository.save(user);
+        log.info("User reactivated with ID: {}", id);
+    }
+    
+    /**
+     * Reset a user's password by administrator.
+     * 
+     * @param id the ID of the user
+     * @param newPassword the new password
+     * @param reason the reason for the password reset
+     * @throws EntityNotFoundException if the user is not found
+     */
+    public void resetPassword(Long id, String newPassword, String reason) {
+        validateId(id);
+        User user = getEntityById(id);
+        
+        // TODO: Implement password encoding
+        user.setPassword(newPassword);
+        userRepository.save(user);
+        
+        log.info("Password reset for user ID: {} - Reason: {}", id, reason);
+    }
+    
+    /**
+     * Update a user's active status.
+     * 
+     * @param id the ID of the user
+     * @param active the new active status
+     * @param reason the reason for the status change
+     * @return the updated user DTO
+     * @throws EntityNotFoundException if the user is not found
+     */
+    public UserDTO updateStatus(Long id, Boolean active, String reason) {
+        validateId(id);
+        User user = getEntityById(id);
+        user.setIsActive(active);
+        userRepository.save(user);
+        
+        log.info("User status updated for ID: {} - Active: {} - Reason: {}", id, active, reason);
+        return mapToResponseDTO(user);
     }
 
-        @Override
+    @Override
     protected Specification<User> createSpecificationFromFilters(String search,
             Map<String, Object> filters) {
-        return (root, _, criteriaBuilder) -> {
+        return (root, query, criteriaBuilder) -> {
             var predicates = new ArrayList<Predicate>();
-            
+
             addSearchPredicates(predicates, search, root, criteriaBuilder);
             addFilterPredicates(predicates, filters, root, criteriaBuilder);
-            
+
             return predicates.isEmpty() ? null
                     : criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
-    
+
     private void addSearchPredicates(List<Predicate> predicates, String search,
             Root<User> root, CriteriaBuilder criteriaBuilder) {
         if (search != null && !search.trim().isEmpty()) {
@@ -227,7 +257,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
                             "%" + search.toLowerCase() + "%")));
         }
     }
-    
+
     private void addFilterPredicates(List<Predicate> predicates,
             Map<String, Object> filters, Root<User> root,
             CriteriaBuilder criteriaBuilder) {
@@ -239,7 +269,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
             });
         }
     }
-    
+
     private void addFilterPredicate(List<Predicate> predicates, String key,
             Object value, Root<User> root,
             CriteriaBuilder criteriaBuilder) {

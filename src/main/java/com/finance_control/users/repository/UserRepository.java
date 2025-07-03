@@ -45,7 +45,6 @@ public interface UserRepository extends BaseRepository<User, Long> {
     @Override
     @Query("SELECT u FROM User u WHERE " +
             "(:search IS NULL OR :search = '' OR " +
-            "LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<User> findAll(@Param("search") String search, Pageable pageable);
 }

@@ -3,14 +3,16 @@ package com.finance_control.transactions.model;
 import com.finance_control.shared.enums.TransactionType;
 import com.finance_control.shared.enums.TransactionSubtype;
 import com.finance_control.shared.enums.TransactionSource;
-import com.finance_control.shared.model.BaseEntity;
+import com.finance_control.shared.model.BaseModel;
 import com.finance_control.users.model.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
@@ -26,11 +28,13 @@ import java.util.List;
 
 @Entity
 @Table(name = "transactions")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"user", "category", "subcategory", "sourceEntity", "responsibilities"})
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class Transaction extends BaseEntity<Long> {
+public class Transaction extends BaseModel<Long> {
     
     @Enumerated(EnumType.STRING)
     @NotNull
@@ -78,6 +82,25 @@ public class Transaction extends BaseEntity<Long> {
     
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private List<TransactionResponsibility> responsibilities = new ArrayList<>();
+    
+    // Reconciliation fields
+    @Column(name = "reconciled_amount", precision = 19, scale = 2)
+    private BigDecimal reconciledAmount;
+    
+    @Column(name = "reconciliation_date")
+    private LocalDateTime reconciliationDate;
+    
+    @Column(name = "is_reconciled")
+    private Boolean reconciled = false;
+    
+    @Column(name = "reconciliation_notes", length = 1000)
+    private String reconciliationNotes;
+    
+    @Column(name = "bank_reference", length = 100)
+    private String bankReference;
+    
+    @Column(name = "external_reference", length = 100)
+    private String externalReference;
     
     public void addResponsible(TransactionResponsibles responsible, BigDecimal percentage) {
         TransactionResponsibility responsibility = new TransactionResponsibility(this, responsible, percentage);

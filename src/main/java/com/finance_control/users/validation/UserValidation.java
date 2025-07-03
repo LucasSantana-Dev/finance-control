@@ -11,11 +11,9 @@ import com.finance_control.shared.validation.BaseValidation;
 public final class UserValidation {
 
     private static final String EMAIL_FIELD = "Email";
-    private static final String FULL_NAME_FIELD = "Full name";
     private static final String PASSWORD_FIELD = "Password";
 
     private static final int MIN_PASSWORD_LENGTH = 8;
-    private static final int MAX_FULL_NAME_LENGTH = 100;
 
     private UserValidation() {
         throw new UnsupportedOperationException("Utility class cannot be instantiated");
@@ -35,20 +33,7 @@ public final class UserValidation {
         }
     }
 
-    /**
-     * Validates full name format and length.
-     * 
-     * @param fullName the full name to validate
-     * @throws IllegalArgumentException if validation fails
-     */
-    public static void validateFullName(String fullName) {
-        BaseValidation.validateRequiredString(fullName, FULL_NAME_FIELD);
-        BaseValidation.validateStringMaxLength(fullName, FULL_NAME_FIELD, MAX_FULL_NAME_LENGTH);
 
-        if (!fullName.matches("^[a-zA-ZÀ-ÿ\\s]+$")) {
-            throw new IllegalArgumentException("Full name can only contain letters and spaces");
-        }
-    }
 
     /**
      * Validates password strength and length.
@@ -78,17 +63,7 @@ public final class UserValidation {
         }
     }
 
-    /**
-     * Validates full name for update operations (can be null).
-     * 
-     * @param fullName the full name to validate
-     * @throws IllegalArgumentException if validation fails
-     */
-    public static void validateFullNameForUpdate(String fullName) {
-        if (fullName != null) {
-            validateFullName(fullName);
-        }
-    }
+
 
     /**
      * Validates password for update operations (can be null).

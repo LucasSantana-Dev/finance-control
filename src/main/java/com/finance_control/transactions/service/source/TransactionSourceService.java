@@ -25,10 +25,11 @@ public class TransactionSourceService extends
     private static final String FIELD_IS_ACTIVE = "isActive";
     private static final String FIELD_SOURCE_TYPE = "sourceType";
     private static final String FIELD_NAME = "name";
-    
+
     private final UserRepository userRepository;
 
-    public TransactionSourceService(TransactionSourceRepository transactionSourceRepository, UserRepository userRepository) {
+    public TransactionSourceService(TransactionSourceRepository transactionSourceRepository,
+            UserRepository userRepository) {
         super(transactionSourceRepository);
         this.userRepository = userRepository;
     }
@@ -37,16 +38,16 @@ public class TransactionSourceService extends
     protected boolean isUserAware() {
         return true;
     }
-    
+
     @Override
     protected boolean isNameBased() {
         return true;
     }
-    
+
     @Override
     protected TransactionSourceEntity mapToEntity(TransactionSourceDTO createDTO) {
         TransactionSourceEntity entity = new TransactionSourceEntity();
-        
+
         // Set additional fields specific to TransactionSource
         entity.setName(createDTO.getName());
         entity.setDescription(createDTO.getDescription());
@@ -57,7 +58,7 @@ public class TransactionSourceService extends
         entity.setCardLastFour(createDTO.getCardLastFour());
         entity.setAccountBalance(createDTO.getAccountBalance());
         entity.setIsActive(true);
-        
+
         return entity;
     }
 
@@ -102,22 +103,23 @@ public class TransactionSourceService extends
     protected boolean belongsToUser(TransactionSourceEntity entity, Long userId) {
         return entity.getUser().getId().equals(userId);
     }
-    
+
     @Override
     protected void setUserId(TransactionSourceEntity entity, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
         entity.setUser(user);
     }
-    
+
     @Override
-    protected Specification<TransactionSourceEntity> createSpecificationFromFilters(String search, Map<String, Object> filters) {
+    protected Specification<TransactionSourceEntity> createSpecificationFromFilters(String search,
+            Map<String, Object> filters) {
         Specification<TransactionSourceEntity> spec = super.createSpecificationFromFilters(search, filters);
-        
+
         if (filters != null) {
             if (filters.containsKey(FIELD_IS_ACTIVE)) {
                 Boolean isActive = (Boolean) filters.get(FIELD_IS_ACTIVE);
-                spec = spec.and((root, _, cb) -> cb.equal(root.get(FIELD_IS_ACTIVE), isActive));
+                spec = spec.and((root, query, cb) -> cb.equal(root.get(FIELD_IS_ACTIVE), isActive));
             }
             if (filters.containsKey(FIELD_SOURCE_TYPE)) {
                 TransactionSource sourceType = (TransactionSource) filters.get(FIELD_SOURCE_TYPE);
@@ -130,7 +132,7 @@ public class TransactionSourceService extends
                 }
             }
         }
-        
+
         return spec;
     }
 }

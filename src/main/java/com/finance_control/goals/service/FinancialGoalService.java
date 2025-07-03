@@ -1,6 +1,7 @@
 package com.finance_control.goals.service;
 
 import com.finance_control.goals.dto.FinancialGoalDTO;
+import com.finance_control.goals.dto.GoalCompletionRequest;
 import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.goals.repository.FinancialGoalRepository;
 import com.finance_control.shared.service.BaseService;
@@ -36,7 +37,7 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
         this.userRepository = userRepository;
         this.transactionSourceRepository = transactionSourceRepository;
     }
-    
+
     @Override
     protected boolean isUserAware() {
         return true;
@@ -214,24 +215,49 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
         Specification<FinancialGoal> spec = super.createSpecificationFromFilters(search, filters);
 
         if (filters != null) {
-                    if (filters.containsKey(IS_ACTIVE_FIELD)) {
-            Boolean isActive = (Boolean) filters.get(IS_ACTIVE_FIELD);
-            spec = spec.and(
-                    (root, _, cb) -> cb.equal(root.get(IS_ACTIVE_FIELD), isActive));
-        }
+            if (filters.containsKey(IS_ACTIVE_FIELD)) {
+                Boolean isActive = (Boolean) filters.get(IS_ACTIVE_FIELD);
+                spec = spec.and(
+                        (root, query, cb) -> cb.equal(root.get(IS_ACTIVE_FIELD), isActive));
+            }
             if (filters.containsKey(GOAL_TYPE_FIELD)) {
                 String goalType = (String) filters.get(GOAL_TYPE_FIELD);
-                spec = spec.and((root, _, cb) -> cb.equal(root.get(GOAL_TYPE_FIELD), goalType));
+                spec = spec.and((root, query, cb) -> cb.equal(root.get(GOAL_TYPE_FIELD), goalType));
             }
             if (filters.containsKey("name")) {
                 String name = (String) filters.get("name");
                 if (name != null && !name.trim().isEmpty()) {
                     spec = spec
-                            .and((root, _, cb) -> cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
+                            .and((root, query, cb) -> cb.like(cb.lower(root.get("name")),
+                                    "%" + name.toLowerCase() + "%"));
                 }
             }
         }
 
         return spec;
+    }
+    
+    /**
+     * Complete a financial goal with detailed completion data.
+     * 
+     * @param id the ID of the goal to complete
+     * @param request the completion request data
+     * @return the completed goal DTO
+     */
+    public FinancialGoalDTO completeGoal(Long id, GoalCompletionRequest request) {
+        FinancialGoal goal = getEntityById(id);
+        
+        // Update completion fields
+        goal.setCurrentAmount(request.getFinalAmount());
+        goal.setIsActive(false); // Mark as completed
+        goal.setCompletedDate(request.getCompletionDate());
+        goal.setCompleted(request.getCompleted());
+        goal.setCompletionNotes(request.getCompletionNotes());
+        goal.setAchievementNotes(request.getAchievementNotes());
+        goal.setActualSavings(request.getActualSavings());
+        goal.setActualInvestment(request.getActualInvestment());
+        
+        FinancialGoal savedGoal = financialGoalRepository.save(goal);
+        return mapToResponseDTO(savedGoal);
     }
 }

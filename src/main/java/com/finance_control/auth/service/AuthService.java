@@ -4,11 +4,13 @@ import com.finance_control.auth.exception.AuthenticationException;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
     
     private final UserRepository userRepository;
@@ -36,4 +38,23 @@ public class AuthService {
         
         return user.getId();
     }
+    
+    /**
+     * Changes the password for the current authenticated user.
+     * 
+     * @param currentPassword the current password for validation
+     * @param newPassword the new password to set
+     * @throws AuthenticationException if current password is invalid
+     */
+    public void changePassword(String currentPassword, String newPassword) {
+        // TODO: Get current user from security context
+        // For now, this is a placeholder implementation
+        log.info("Password change requested");
+        
+        // Validate current password
+        // Update password
+        // Log the change
+    }
+    
+
 } 

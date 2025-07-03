@@ -1,7 +1,7 @@
 package com.finance_control.transactions.model.source;
 
 import com.finance_control.shared.enums.TransactionSource;
-import com.finance_control.shared.model.BaseEntity;
+import com.finance_control.shared.model.BaseModel;
 import com.finance_control.users.model.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -21,7 +21,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class TransactionSourceEntity extends BaseEntity<Long> {
+public class TransactionSourceEntity extends BaseModel<Long> {
     
     @NotBlank
     @Column(nullable = false)

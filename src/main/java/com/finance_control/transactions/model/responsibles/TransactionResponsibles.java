@@ -1,6 +1,6 @@
 package com.finance_control.transactions.model.responsibles;
 
-import com.finance_control.shared.model.BaseEntity;
+import com.finance_control.shared.model.BaseModel;
 import com.finance_control.transactions.model.Transaction;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
@@ -22,7 +22,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class TransactionResponsibles extends BaseEntity<Long> {
+public class TransactionResponsibles extends BaseModel<Long> {
     
     @NotBlank
     @Column(nullable = false)
@@ -39,7 +39,7 @@ public class TransactionResponsibles extends BaseEntity<Long> {
     @NoArgsConstructor
     @AllArgsConstructor
     @EqualsAndHashCode(callSuper = true)
-    public static class TransactionResponsibility extends BaseEntity<Long> {
+    public static class TransactionResponsibility extends BaseModel<Long> {
         
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "transaction_id", nullable = false)
@@ -69,7 +69,8 @@ public class TransactionResponsibles extends BaseEntity<Long> {
             }
         }
 
-        public TransactionResponsibility(Transaction transaction, TransactionResponsibles responsible, BigDecimal percentage) {
+        public TransactionResponsibility(Transaction transaction, TransactionResponsibles responsible, 
+                                       BigDecimal percentage) {
             this.transaction = transaction;
             this.responsible = responsible;
             this.percentage = percentage;

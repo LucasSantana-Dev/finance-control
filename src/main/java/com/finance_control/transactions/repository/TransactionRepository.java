@@ -33,11 +33,16 @@ public interface TransactionRepository extends BaseRepository<Transaction, Long>
     List<Transaction> findByUserIdWithResponsibilities(@Param("userId") Long userId);
     
     @Override
-    @Query("SELECT t FROM Transaction t WHERE " +
-           "(:search IS NULL OR :search = '' OR " +
-           "LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(t.type) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(t.subtype) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(t.source) LIKE LOWER(CONCAT('%', :search, '%')))")
-    Page<Transaction> findAll(@Param("search") String search, Pageable pageable);
+    @Query(
+        "SELECT t FROM Transaction t WHERE " +
+        "(:search IS NULL OR :search = '' OR " +
+        "LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+        "LOWER(t.type) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+        "LOWER(t.subtype) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+        "LOWER(t.source) LIKE LOWER(CONCAT('%', :search, '%')) )"
+    )
+    Page<Transaction> findAll(
+        @Param("search") String search,
+        Pageable pageable
+    );
 } 

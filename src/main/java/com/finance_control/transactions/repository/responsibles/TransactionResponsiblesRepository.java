@@ -1,6 +1,6 @@
 package com.finance_control.transactions.repository.responsibles;
 
-import com.finance_control.shared.service.BaseService;
+import com.finance_control.shared.repository.BaseRepository;
 import com.finance_control.transactions.model.responsibles.TransactionResponsibles;
 import org.springframework.stereotype.Repository;
 
@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface TransactionResponsiblesRepository
-        extends BaseService.NameBasedRepository<TransactionResponsibles, Long> {
+        extends BaseRepository<TransactionResponsibles, Long> {
 
     List<TransactionResponsibles> findAllByOrderByNameAsc();
 

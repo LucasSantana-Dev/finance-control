@@ -11,7 +11,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/transaction-subcategories")
-public class TransactionSubcategoryController extends BaseController<TransactionSubcategory, Long, TransactionSubcategoryDTO> {
+public class TransactionSubcategoryController
+        extends BaseController<TransactionSubcategory, Long, TransactionSubcategoryDTO> {
 
     private final TransactionSubcategoryService transactionSubcategoryService;
 
@@ -21,14 +22,17 @@ public class TransactionSubcategoryController extends BaseController<Transaction
     }
 
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<TransactionSubcategoryDTO>> getTransactionSubcategoriesByCategory(@PathVariable Long categoryId) {
+    public ResponseEntity<List<TransactionSubcategoryDTO>> getTransactionSubcategoriesByCategory(
+            @PathVariable Long categoryId) {
         List<TransactionSubcategoryDTO> subcategories = transactionSubcategoryService.findByCategoryId(categoryId);
         return ResponseEntity.ok(subcategories);
     }
 
     @GetMapping("/category/{categoryId}/usage")
-    public ResponseEntity<List<TransactionSubcategoryDTO>> getTransactionSubcategoriesByCategoryOrderByUsage(@PathVariable Long categoryId) {
-        List<TransactionSubcategoryDTO> subcategories = transactionSubcategoryService.findByCategoryIdOrderByUsage(categoryId);
+    public ResponseEntity<List<TransactionSubcategoryDTO>> getTransactionSubcategoriesByCategoryOrderByUsage(
+            @PathVariable Long categoryId) {
+        List<TransactionSubcategoryDTO> subcategories = 
+                transactionSubcategoryService.findByCategoryIdOrderByUsage(categoryId);
         return ResponseEntity.ok(subcategories);
     }
 

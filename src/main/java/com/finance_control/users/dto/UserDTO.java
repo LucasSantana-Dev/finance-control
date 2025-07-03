@@ -18,10 +18,6 @@ public class UserDTO extends BaseDTO<Long> {
     @Email(message = "Email must be valid")
     private String email;
     
-    @NotBlank(message = "Full name is required")
-    @Size(max = 100, message = "Full name cannot exceed 100 characters")
-    private String fullName;
-    
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
     
@@ -36,7 +32,6 @@ public class UserDTO extends BaseDTO<Long> {
     @Override
     public void validateCreate() {
         UserValidation.validateEmail(email);
-        UserValidation.validateFullName(fullName);
         UserValidation.validatePassword(password);
     }
     
@@ -49,7 +44,6 @@ public class UserDTO extends BaseDTO<Long> {
     @Override
     public void validateUpdate() {
         UserValidation.validateEmailForUpdate(email);
-        UserValidation.validateFullNameForUpdate(fullName);
         UserValidation.validatePasswordForUpdate(password);
     }
     
@@ -64,7 +58,6 @@ public class UserDTO extends BaseDTO<Long> {
         super.validateResponse(); // Validate common fields (ID)
         
         UserValidation.validateEmail(email);
-        UserValidation.validateFullName(fullName);
         
         if (isActive == null) {
             isActive = true; // Default to active if not set

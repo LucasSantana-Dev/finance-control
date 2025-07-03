@@ -1,7 +1,7 @@
 package com.finance_control.goals.model;
 
 import com.finance_control.shared.enums.GoalType;
-import com.finance_control.shared.model.BaseEntity;
+import com.finance_control.shared.model.BaseModel;
 import com.finance_control.transactions.model.source.TransactionSourceEntity;
 import com.finance_control.users.model.User;
 import jakarta.persistence.*;
@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "financial_goals")
@@ -23,7 +24,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class FinancialGoal extends BaseEntity<Long> {
+public class FinancialGoal extends BaseModel<Long> {
 
     @NotBlank
     @Column(nullable = false)
@@ -61,6 +62,25 @@ public class FinancialGoal extends BaseEntity<Long> {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    // Completion fields
+    @Column(name = "completed_date")
+    private LocalDateTime completedDate;
+    
+    @Column(name = "is_completed")
+    private Boolean completed = false;
+    
+    @Column(name = "completion_notes", length = 1000)
+    private String completionNotes;
+    
+    @Column(name = "achievement_notes", length = 1000)
+    private String achievementNotes;
+    
+    @Column(name = "actual_savings", precision = 19, scale = 2)
+    private BigDecimal actualSavings;
+    
+    @Column(name = "actual_investment", precision = 19, scale = 2)
+    private BigDecimal actualInvestment;
 
     public BigDecimal getProgressPercentage() {
         if (targetAmount == null || targetAmount.compareTo(BigDecimal.ZERO) == 0) {

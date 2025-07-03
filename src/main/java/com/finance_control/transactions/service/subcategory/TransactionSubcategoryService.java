@@ -208,7 +208,7 @@ public class TransactionSubcategoryService extends
     @Override
     protected Specification<TransactionSubcategory> createSpecificationFromFilters(
             String search, Map<String, Object> filters) {
-        return (root, _, criteriaBuilder) -> {
+        return (root, query, criteriaBuilder) -> {
             var predicates = new ArrayList<Predicate>();
 
             addSearchPredicates(predicates, search, root, criteriaBuilder);
