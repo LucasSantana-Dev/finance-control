@@ -94,59 +94,104 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
                 search, filters, sortBy, sortDirection, pageable.getPageNumber());
 
         Pageable finalPageable = createPageableWithSort(pageable, sortBy, sortDirection);
+        addUserFilterIfNeeded(filters);
 
-        // Add user filter if user-aware
-        if (isUserAware()) {
-            Long currentUserId = UserContext.getCurrentUserId();
-            if (currentUserId == null) {
-                log.error(USER_CONTEXT_UNAVAILABLE);
-                throw new SecurityException("User context not available");
-            }
-
-            log.debug("Adding user filter for user ID: {}", currentUserId);
-            if (filters != null && !filters.containsKey(USER_ID_FIELD)) {
-                filters.put(USER_ID_FIELD, currentUserId);
-            }
+        if (hasNoFilters(filters)) {
+            return findAllWithSearchOnly(search, finalPageable);
         }
 
-        // Use the repository's findAll method with search if no specific filters are
-        // provided
-        if (filters == null || filters.isEmpty()) {
-            log.debug("Using repository findAll with search");
-            Page<T> entities;
-            
-            // Try to call findAll with userId if the repository supports it
-            try {
-                if (isUserAware()) {
-                    Long currentUserId = UserContext.getCurrentUserId();
-                    if (currentUserId == null) {
-                        log.error(USER_CONTEXT_UNAVAILABLE);
-                        throw new SecurityException("User context not available");
-                    }
-                    
-                    // Try to call the overloaded findAll method with userId
-                    entities = (Page<T>) repository.getClass()
-                            .getMethod("findAll", String.class, Long.class, Pageable.class)
-                            .invoke(repository, search, currentUserId, finalPageable);
-                } else {
-                    entities = repository.findAll(search, finalPageable);
-                }
-            } catch (NoSuchMethodException e) {
-                // Fallback to the standard findAll method if userId overload doesn't exist
-                entities = repository.findAll(search, finalPageable);
-            } catch (Exception e) {
-                log.warn("Error calling findAll with userId, falling back to standard method: {}", e.getMessage());
-                entities = repository.findAll(search, finalPageable);
-            }
-            
-            log.debug("Found {} entities", entities.getTotalElements());
-            return entities.map(this::mapToResponseDTO);
+        return findAllWithSpecifications(search, filters, finalPageable);
+    }
+
+    /**
+     * Adds user filter to filters map if service is user-aware.
+     * 
+     * @param filters the filters map to modify
+     */
+    private void addUserFilterIfNeeded(Map<String, Object> filters) {
+        if (!isUserAware()) {
+            return;
         }
 
-        // If specific filters are provided, use specifications
+        Long currentUserId = UserContext.getCurrentUserId();
+        if (currentUserId == null) {
+            log.error(USER_CONTEXT_UNAVAILABLE);
+            throw new SecurityException("User context not available");
+        }
+
+        log.debug("Adding user filter for user ID: {}", currentUserId);
+        if (filters != null && !filters.containsKey(USER_ID_FIELD)) {
+            filters.put(USER_ID_FIELD, currentUserId);
+        }
+    }
+
+    /**
+     * Checks if filters map is null or empty.
+     * 
+     * @param filters the filters map to check
+     * @return true if filters is null or empty
+     */
+    private boolean hasNoFilters(Map<String, Object> filters) {
+        return filters == null || filters.isEmpty();
+    }
+
+    /**
+     * Finds entities using search-only approach (no specific filters).
+     * 
+     * @param search the search term
+     * @param pageable the pageable parameters
+     * @return a page of response DTOs
+     */
+    private Page<D> findAllWithSearchOnly(String search, Pageable pageable) {
+        log.debug("Using repository findAll with search");
+        Page<T> entities = executeFindAllWithSearch(search, pageable);
+        log.debug("Found {} entities", entities.getTotalElements());
+        return entities.map(this::mapToResponseDTO);
+    }
+
+    /**
+     * Executes the findAll method with search, handling user-aware repositories.
+     * 
+     * @param search the search term
+     * @param pageable the pageable parameters
+     * @return a page of entities
+     */
+    @SuppressWarnings("unchecked")
+    private Page<T> executeFindAllWithSearch(String search, Pageable pageable) {
+        if (!isUserAware()) {
+            return repository.findAll(search, pageable);
+        }
+
+        Long currentUserId = UserContext.getCurrentUserId();
+        if (currentUserId == null) {
+            log.error(USER_CONTEXT_UNAVAILABLE);
+            throw new SecurityException("User context not available");
+        }
+
+        try {
+            return (Page<T>) repository.getClass()
+                    .getMethod("findAll", String.class, Long.class, Pageable.class)
+                    .invoke(repository, search, currentUserId, pageable);
+        } catch (NoSuchMethodException e) {
+            return repository.findAll(search, pageable);
+        } catch (Exception e) {
+            log.warn("Error calling findAll with userId, falling back to standard method: {}", e.getMessage());
+            return repository.findAll(search, pageable);
+        }
+    }
+
+    /**
+     * Finds entities using specifications approach.
+     * 
+     * @param search the search term
+     * @param filters the filters map
+     * @param pageable the pageable parameters
+     * @return a page of response DTOs
+     */
+    private Page<D> findAllWithSpecifications(String search, Map<String, Object> filters, Pageable pageable) {
         log.debug("Using specifications with filters");
         Specification<T> spec = createSpecificationFromFilters(search, filters);
-        Page<T> entities = repository.findAll(spec, finalPageable);
+        Page<T> entities = repository.findAll(spec, pageable);
         log.debug("Found {} entities with specifications", entities.getTotalElements());
         return entities.map(this::mapToResponseDTO);
     }

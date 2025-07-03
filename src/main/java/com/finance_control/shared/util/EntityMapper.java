@@ -5,12 +5,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.finance_control.shared.exception.EntityMappingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for mapping between entities and DTOs using reflection.
  * Reduces boilerplate code in service classes.
  */
 public class EntityMapper {
+
+    private static final Logger log = LoggerFactory.getLogger(EntityMapper.class);
 
     private EntityMapper() {
         // Utility class - prevent instantiation
@@ -43,7 +47,7 @@ public class EntityMapper {
                     Object value = getter.invoke(source);
                     setter.invoke(target, value);
                 } catch (Exception e) {
-                    // Skip fields that can't be mapped
+                    log.debug("Skipping field '{}' due to mapping error: {}", fieldName, e.getMessage());
                 }
             }
         }
@@ -78,7 +82,7 @@ public class EntityMapper {
                     Object value = getter.invoke(source);
                     setter.invoke(target, value);
                 } catch (Exception e) {
-                    // Skip fields that can't be mapped
+                    log.debug("Skipping field '{}' due to mapping error: {}", fieldName, e.getMessage());
                 }
             }
         }

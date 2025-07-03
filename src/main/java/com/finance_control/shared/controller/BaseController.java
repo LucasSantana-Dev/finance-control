@@ -134,14 +134,14 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
         try {
             return Long.valueOf(value);
         } catch (NumberFormatException e) {
-            // Not a number, return as string
+            log.debug("Value '{}' is not a valid Long number, trying Double", value);
         }
 
         // Try to convert to Double
         try {
             return Double.valueOf(value);
         } catch (NumberFormatException e) {
-            // Not a number, return as string
+            log.debug("Value '{}' is not a valid Double number, returning as String", value);
         }
 
         return value;
