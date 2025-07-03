@@ -1,0 +1,183 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Script Rules - Finance Control
+
+## Script Prioritization in Agent Executions
+
+### 1. Main Rule: Always Use Scripts
+**ALWAYS** use scripts in `/scripts/` for any terminal operation, especially during agent executions.
+
+### 2. Priority Commands
+
+#### Initialization and Development
+```bash
+# ✅ ALWAYS use these commands
+./scripts/dev.sh start    # Start application
+./scripts/dev.sh dev      # Open development shell
+./scripts/dev.sh build    # Build project
+./scripts/dev.sh test     # Run tests
+./scripts/dev.sh quality  # Quality checks
+./scripts/dev.sh logs     # View logs
+./scripts/dev.sh stop     # Stop services
+./scripts/dev.sh clean    # Clean everything
+```
+
+#### ❌ NEVER use direct commands
+```bash
+# ❌ AVOID these commands
+docker-compose up -d
+docker-compose down
+./gradlew build
+./gradlew test
+./gradlew checkstyleMain
+```
+
+### 3. Agent Workflow
+
+#### For Any Development Operation:
+1. **ALWAYS** start with `./scripts/dev.sh start`
+2. **ALWAYS** use `./scripts/dev.sh dev` for development shell
+3. **ALWAYS** use `./scripts/dev.sh build` for compilation
+4. **ALWAYS** use `./scripts/dev.sh test` for tests
+5. **ALWAYS** use `./scripts/dev.sh quality` for checks
+
+#### For Debugging and Logs:
+1. **ALWAYS** use `./scripts/dev.sh logs` to view logs
+2. **ALWAYS** use `./scripts/dev.sh stop` to stop services
+3. **ALWAYS** use `./scripts/dev.sh clean` for complete cleanup
+
+### 4. Script Advantages
+
+#### Coloring and Visual Feedback
+- Scripts provide colored feedback for better readability
+- Categorized messages: [INFO], [SUCCESS], [WARNING], [ERROR]
+- Visual status of operation progress
+
+#### Environment Consistency
+- Ensure everything runs in Docker
+- Isolated and reproducible environment
+- No local dependencies
+
+#### Simplicity and Standardization
+- Standardized commands for the entire team
+- Integrated documentation in scripts
+- Consistent error handling
+
+### 5. Agent-Specific Rules
+
+#### When Executing Terminal Commands:
+1. **MAXIMUM PRIORITY**: Use scripts in `/scripts/`
+2. **FALLBACK**: Only if scripts don't exist, use direct commands
+3. **DOCUMENTATION**: Always explain why you're using a specific script
+
+#### When Suggesting Commands:
+1. **ALWAYS** suggest the script command first
+2. **ALWAYS** explain what the script does
+3. **ALWAYS** mention the script advantages
+
+#### When Debugging:
+1. **ALWAYS** start with `./scripts/dev.sh logs`
+2. **ALWAYS** check status with `./scripts/dev.sh start`
+3. **ALWAYS** clean with `./scripts/dev.sh clean` if necessary
+
+### 6. Correct Usage Examples
+
+#### Scenario: Build and Test
+```bash
+# ✅ CORRECT - Use scripts
+./scripts/dev.sh build
+./scripts/dev.sh test
+
+# ❌ INCORRECT - Direct commands
+./gradlew build
+./gradlew test
+```
+
+#### Scenario: Check Logs
+```bash
+# ✅ CORRECT - Use script
+./scripts/dev.sh logs
+
+# ❌ INCORRECT - Direct command
+docker-compose logs -f app
+```
+
+#### Scenario: Complete Cleanup
+```bash
+# ✅ CORRECT - Use script
+./scripts/dev.sh clean
+
+# ❌ INCORRECT - Direct commands
+docker-compose down -v
+docker system prune -f
+```
+
+### 7. Benefits for the Agent
+
+#### Improved Visual Feedback
+- ANSI colors for message categorization
+- Clear operation status
+- Quick error identification
+
+#### Standardized Operations
+- Consistent commands across all executions
+- Uniform error handling
+- Integrated documentation
+
+#### Reliable Environment
+- No local dependencies
+- Isolated Docker environment
+- Guaranteed reproducibility
+
+### 8. Emergency Commands
+
+#### If Scripts Fail:
+```bash
+# Only in case of script failure
+docker-compose down
+docker system prune -f
+./scripts/dev.sh start
+```
+
+#### For Advanced Debugging:
+```bash
+# Only for specific debugging
+docker-compose exec app bash
+docker-compose logs app --tail=100
+```
+
+### 9. Commit Rules
+
+#### When Committing Script Changes:
+- **ALWAYS** test the script before committing
+- **ALWAYS** document changes in README.md
+- **ALWAYS** verify it doesn't break existing flow
+
+#### Commit Messages for Scripts:
+```
+feat(scripts): add backup command
+
+- Implement automatic database backup
+- Add disk space validation
+- Include colored logs for visual feedback
+```
+
+### 10. Monitoring and Maintenance
+
+#### Regular Verification:
+- Test all scripts weekly
+- Check if Docker Compose is updated
+- Validate if dependencies are correct
+
+#### Updates:
+- Keep scripts aligned with project changes
+- Update documentation when necessary
+- Test in different environments
+
+---
+
+**REMEMBER**: Scripts exist to simplify and standardize development. **ALWAYS** use them as the first option in any agent terminal execution.
+
