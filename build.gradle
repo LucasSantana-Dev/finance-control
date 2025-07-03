@@ -15,6 +15,12 @@ description = 'Finance Control Project'
 sourceCompatibility = '21'
 targetCompatibility = '21'
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 repositories {
     mavenCentral()
 }
@@ -87,7 +93,7 @@ tasks.withType(Checkstyle) {
 
 pmd {
     toolVersion = '7.0.0'
-    ruleSets = ['category/java/bestpractices.xml', 'category/java/codestyle.xml', 'category/java/design.xml', 'category/java/documentation.xml', 'category/java/errorprone.xml', 'category/java/multithreading.xml', 'category/java/performance.xml', 'category/java/security.xml']
+    ruleSetFiles = files('pmd-ruleset.xml')
     ignoreFailures = true
     consoleOutput = true
     maxFailures = 0
@@ -130,6 +136,39 @@ spotbugs {
     toolVersion = '4.8.3'
     excludeFilter = file('spotbugs-exclude.xml')
     ignoreFailures = true
+}
+
+// Configure SpotBugs task with colored output
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    
+    logging.captureStandardOutput(org.gradle.api.logging.LogLevel.INFO)
+    
+    doFirst {
+        println "🔍 Running SpotBugs..."
+    }
+    
+    doLast {
+        def violations = 0
+        try {
+            def report = file("${buildDir}/reports/spotbugs/main.xml")
+            if (report.exists()) {
+                def xml = new XmlSlurper().parse(report)
+                violations = xml.BugInstance.size()
+            }
+        } catch (Exception e) {
+            // Ignore parsing errors
+        }
+        
+        if (violations == 0) {
+            println "✅ SpotBugs: No violations found"
+        } else {
+            println "⚠️  SpotBugs: ${violations} violations found"
+        }
+    }
 }
 
 test {
@@ -280,11 +319,140 @@ tasks.withType(JavaCompile) {
     }
 }
 
-
-
 tasks.withType(Test) {
     testLogging {
         events "passed", "skipped", "failed"
+    }
+}
+
+// Task to generate quality report without tests
+task generateQualityReportNoTests {
+    description = 'Generates a quality report without test results and coverage'
+    doLast {
+        def reportFile = file("${buildDir}/quality-report-no-tests.txt")
+        reportFile.parentFile.mkdirs()
+        def report = new StringBuilder()
+        report.append("=" * 80).append("\n")
+        report.append("QUALITY REPORT (NO TESTS) - Finance Control Project\n")
+        report.append("Generated: ${new Date()}\n")
+        report.append("=" * 80).append("\n\n")
+        report.append("CHECKSTYLE VIOLATIONS\n")
+        report.append("-" * 40).append("\n")
+        def checkstyleReport = file("${buildDir}/reports/checkstyle/main/checkstyle-report.xml")
+        if (checkstyleReport.exists()) {
+            def violations = parseCheckstyleReport(checkstyleReport)
+            if (violations.isEmpty()) {
+                report.append("✓ No Checkstyle violations found\n")
+            } else {
+                violations.each { violation ->
+                    report.append("✗ ${violation.file}:${violation.line} - ${violation.message}\n")
+                }
+            }
+        } else {
+            report.append("Checkstyle report not found\n")
+        }
+        report.append("\n")
+        report.append("PMD VIOLATIONS\n")
+        report.append("-" * 40).append("\n")
+        def pmdReport = file("${buildDir}/reports/pmd/main.xml")
+        if (pmdReport.exists()) {
+            def violations = parsePmdReport(pmdReport)
+            if (violations.isEmpty()) {
+                report.append("✓ No PMD violations found\n")
+            } else {
+                violations.each { violation ->
+                    report.append("✗ ${violation.file}:${violation.line} - ${violation.rule} - ${violation.message}\n")
+                }
+            }
+        } else {
+            report.append("PMD report not found\n")
+        }
+        report.append("\n")
+        report.append("SPOTBUGS VIOLATIONS\n")
+        report.append("-" * 40).append("\n")
+        def spotbugsReport = file("${buildDir}/reports/spotbugs/main.xml")
+        if (spotbugsReport.exists()) {
+            def violations = parseSpotbugsReport(spotbugsReport)
+            if (violations.isEmpty()) {
+                report.append("✓ No SpotBugs violations found\n")
+            } else {
+                violations.each { violation ->
+                    report.append("✗ ${violation.type} - ${violation.message}\n")
+                }
+            }
+        } else {
+            report.append("SpotBugs report not found\n")
+        }
+        report.append("\n")
+        report.append("TEST RESULTS\n")
+        report.append("-" * 40).append("\n")
+        report.append("SKIPPED - Tests were not executed (--no-test flag used)\n")
+        report.append("\n")
+        report.append("COVERAGE RESULTS\n")
+        report.append("-" * 40).append("\n")
+        report.append("SKIPPED - Coverage analysis was not executed (--no-test flag used)\n")
+        report.append("\n")
+        report.append("\n" + "=" * 80).append("\n")
+        report.append("END OF REPORT\n")
+        reportFile.text = report.toString()
+        println "\n📊 QUALITY REPORT GENERATED (NO TESTS)"
+        println "📄 Report location: ${reportFile.absolutePath}"
+        def totalViolations = 0
+        def checkstyleViolations = 0
+        def pmdViolations = 0
+        def spotbugsViolations = 0
+        try {
+            def checkstyleReportFile = file("${buildDir}/reports/checkstyle/main/checkstyle-report.xml")
+            if (checkstyleReportFile.exists()) {
+                def xml = new XmlSlurper().parse(checkstyleReportFile)
+                checkstyleViolations = xml.file.error.size()
+            }
+        } catch (Exception e) {}
+        try {
+            def pmdReportFile = file("${buildDir}/reports/pmd/main.xml")
+            if (pmdReportFile.exists()) {
+                def xml = new XmlSlurper().parse(pmdReportFile)
+                pmdViolations = xml.file.violation.size()
+            }
+        } catch (Exception e) {}
+        try {
+            def spotbugsReportFile = file("${buildDir}/reports/spotbugs/main.xml")
+            if (spotbugsReportFile.exists()) {
+                def xml = new XmlSlurper().parse(spotbugsReportFile)
+                spotbugsViolations = xml.BugInstance.size()
+            }
+        } catch (Exception e) {}
+        totalViolations = checkstyleViolations + pmdViolations + spotbugsViolations
+        println "\n🔍 VIOLATIONS SUMMARY"
+        println "${'='*40}"
+        println "🔍 Checkstyle: ${checkstyleViolations} violations"
+        println "🔍 PMD: ${pmdViolations} violations"
+        println "🔍 SpotBugs: ${spotbugsViolations} violations"
+        println "${'='*40}"
+        println "📊 TOTAL: ${totalViolations} violations"
+        if (totalViolations == 0) {
+            println "🎉 EXCELLENT! No quality violations found!"
+        } else {
+            println "⚠️  Please review and fix the violations above"
+        }
+    }
+}
+
+// Task to run quality checks without tests
+task qualityCheckNoTests {
+    dependsOn checkstyleMain, pmdMain, spotbugsMain, generateQualityReportNoTests
+    description = 'Runs code quality checks without tests'
+    // Configure colored output
+    logging.captureStandardOutput(org.gradle.api.logging.LogLevel.INFO)
+    doFirst {
+        println "\n${'='*60}"
+        println "🚀 STARTING QUALITY CHECKS (NO TESTS)"
+        println "${'='*60}"
+    }
+    doLast {
+        println "\n${'='*60}"
+        println "✅ QUALITY CHECKS COMPLETED (NO TESTS)"
+        println "${'='*60}"
     }
 }
 
@@ -440,7 +608,7 @@ task generateQualityReport {
         
         totalViolations = checkstyleViolations + pmdViolations + spotbugsViolations
         
-        println "\n�� VIOLATIONS SUMMARY"
+        println "\n🔍 VIOLATIONS SUMMARY"
         println "${'='*40}"
         println "🔍 Checkstyle: ${checkstyleViolations} violations"
         println "🔍 PMD: ${pmdViolations} violations"
@@ -542,10 +710,10 @@ task qualityCheckScript(type: Exec) {
     group = 'scripts'
     description = 'Runs quality checks using the bash script'
     workingDir = projectDir
-    commandLine = ['bash', 'scripts/quality-check.sh']
+    commandLine = ['bash', 'scripts/quality/quality-check.sh']
     
     doFirst {
-        def scriptFile = file('scripts/quality-check.sh')
+        def scriptFile = file('scripts/quality/quality-check.sh')
         if (!scriptFile.canExecute()) {
             scriptFile.setExecutable(true)
         }
@@ -556,10 +724,10 @@ task qualityCheckScriptVerbose(type: Exec) {
     group = 'scripts'
     description = 'Runs quality checks with detailed output'
     workingDir = projectDir
-    commandLine = ['bash', 'scripts/quality-check.sh', '--verbose']
+    commandLine = ['bash', 'scripts/quality/quality-check.sh', '--verbose']
     
     doFirst {
-        def scriptFile = file('scripts/quality-check.sh')
+        def scriptFile = file('scripts/quality/quality-check.sh')
         if (!scriptFile.canExecute()) {
             scriptFile.setExecutable(true)
         }
@@ -702,8 +870,6 @@ allprojects {
             println "PMD log will be saved to: ${logFile.absolutePath}"
         }
     }
-    
-
 }
 
 // Task to show quality violations summary
@@ -763,4 +929,47 @@ task demoColors {
 // Configuração do Spring Boot
 springBoot {
     buildInfo()
+}
+
+// SonarQube configuration
+sonarqube {
+    properties {
+        property 'sonar.projectKey', 'finance-control'
+        property 'sonar.projectName', 'Finance Control'
+        property 'sonar.projectVersion', version
+        
+        // Source and test directories
+        property 'sonar.sources', 'src/main/java'
+        property 'sonar.tests', 'src/test/java'
+        
+        // Java version
+        property 'sonar.java.source', '21'
+        property 'sonar.java.target', '21'
+        
+        // Encoding
+        property 'sonar.sourceEncoding', 'UTF-8'
+        
+        // Integration with other tools
+        property 'sonar.java.checkstyle.reportPaths', 'build/reports/checkstyle/main.xml'
+        property 'sonar.java.pmd.reportPaths', 'build/reports/pmd/main.xml'
+        property 'sonar.java.spotbugs.reportPaths', 'build/reports/spotbugs/main.xml'
+        property 'sonar.coverage.jacoco.xmlReportPaths', 'build/reports/jacoco/test/jacocoTestReport.xml'
+        
+        // Exclusions
+        property 'sonar.exclusions', '**/target/**,**/generated/**,**/config/**,**/dto/**,**/model/**,**/exception/**,**/enums/**,**/util/**,**/validation/**'
+        property 'sonar.test.exclusions', '**/target/**,**/generated/**'
+        
+        // Quality thresholds
+        property 'sonar.complexity.function.threshold', '10'
+        property 'sonar.size.limit.function', '150'
+        property 'sonar.size.limit.class', '2000'
+        
+        // Coverage thresholds
+        property 'sonar.coverage.exclusions', '**/config/**,**/dto/**,**/model/**,**/exception/**,**/enums/**,**/util/**,**/validation/**,**/FinanceControlApplication.java'
+        property 'sonar.test.coverage.minimum', '80'
+        
+        // Duplicate code
+        property 'sonar.cpd.java.minimumTokens', '100'
+        property 'sonar.duplicated.lines.density.minimum', '3'
+    }
 } 
