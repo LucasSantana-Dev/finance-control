@@ -3,15 +3,15 @@ services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-finance_control}
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,15 +23,15 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        DEV_MODE: "${DEV_MODE:-false}"
+        DEV_MODE: "${DEV_MODE}"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-finance_control}
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:${DB_PORT}/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       JAVA_OPTS: "${JAVA_OPTS:-}"
     ports:
-      - "${APPLICATION_PORT:-8080}:8080"
+      - "${APPLICATION_PORT}:8080"
       - "5005:5005"
     depends_on:
       db:
@@ -68,6 +68,7 @@ services:
       target: base
     environment:
       GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+      SKIP_TESTS: "${SKIP_TESTS:-false}"
     volumes:
       - .:/app
       - gradle-cache:/root/.gradle
@@ -76,7 +77,16 @@ services:
     working_dir: /app
     profiles:
       - quality
-    command: ./gradlew qualityCheck --console=rich
+    command: >
+      sh -c "
+        if [ \"$$SKIP_TESTS\" = \"true\" ]; then
+          echo 'Running quality checks without tests...'
+          ./gradlew checkstyleMain pmdMain spotbugsMain --console=rich
+        else
+          echo 'Running full quality checks...'
+          ./gradlew qualityCheck --console=rich
+        fi
+      "
 
   # Test service
   test:
@@ -87,7 +97,8 @@ services:
     environment:
       GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
       SPRING_PROFILES_ACTIVE: test
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-finance_control}_test
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:${DB_PORT}/${POSTGRES_DB}_test
+      SKIP_TESTS: "${SKIP_TESTS:-false}"
     volumes:
       - .:/app
       - gradle-cache:/root/.gradle
@@ -99,7 +110,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ./gradlew test --console=rich
+    command: >
+      sh -c "
+        if [ \"$$SKIP_TESTS\" = \"true\" ]; then
+          echo 'Skipping test compilation...'
+          ./gradlew test --console=rich --no-build-cache
+        else
+          echo 'Running tests with compilation...'
+          ./gradlew test --console=rich
+        fi
+      "
 
   # Build service
   build:
@@ -109,6 +129,7 @@ services:
       target: base
     environment:
       GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
+      SKIP_TESTS: "${SKIP_TESTS:-false}"
     volumes:
       - .:/app
       - gradle-cache:/root/.gradle
@@ -117,7 +138,16 @@ services:
     working_dir: /app
     profiles:
       - build
-    command: ./gradlew build --console=rich
+    command: >
+      sh -c "
+        if [ \"$$SKIP_TESTS\" = \"true\" ]; then
+          echo 'Building without tests...'
+          ./gradlew build -x test --console=rich
+        else
+          echo 'Building with tests...'
+          ./gradlew build --console=rich
+        fi
+      "
 
   # Environment check service
   check-env:
@@ -135,7 +165,7 @@ services:
     working_dir: /app
     profiles:
       - check-env
-    command: ./scripts/check-environment.sh
+    command: ./scripts/environment/check-environment.sh
 
   # Fix environment service
   fix-env:
@@ -153,7 +183,7 @@ services:
     working_dir: /app
     profiles:
       - fix-env
-    command: ./scripts/fix-environment.sh
+    command: ./scripts/environment/fix-environment.sh
 
   # Test fixes service
   test-fixes:
@@ -171,7 +201,7 @@ services:
     working_dir: /app
     profiles:
       - test-fixes
-    command: ./scripts/test-fixes.sh
+    command: ./scripts/environment/test-fixes.sh
 
   # Shell service for interactive development
   shell:
