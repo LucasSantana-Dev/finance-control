@@ -11,9 +11,9 @@ The `docker-compose.yml` has been enhanced to provide better integration with th
 - **Purpose**: Interactive development container
 - **Usage**: 
   ```bash
-  ./scripts/docker-compose-run.sh dev
+  ./scripts/docker/docker-compose-run.sh dev
   docker-compose exec dev ./gradlew build
-  docker-compose exec dev ./scripts/quality-check.sh
+  docker-compose exec dev ./scripts/quality/quality-check.sh
   ```
 
 ### 2. Quality Check Service (`quality`)
@@ -21,7 +21,7 @@ The `docker-compose.yml` has been enhanced to provide better integration with th
 - **Purpose**: Run quality checks in isolated container
 - **Usage**:
   ```bash
-  ./scripts/docker-compose-run.sh quality
+  ./scripts/docker/docker-compose-run.sh quality
   ```
 
 ### 3. Test Service (`test`)
@@ -29,7 +29,7 @@ The `docker-compose.yml` has been enhanced to provide better integration with th
 - **Purpose**: Run tests with database dependency
 - **Usage**:
   ```bash
-  ./scripts/docker-compose-run.sh test
+  ./scripts/docker/docker-compose-run.sh test
   ```
 
 ### 4. Build Service (`build`)
@@ -37,7 +37,15 @@ The `docker-compose.yml` has been enhanced to provide better integration with th
 - **Purpose**: Run full build in isolated container
 - **Usage**:
   ```bash
-  ./scripts/docker-compose-run.sh build
+  ./scripts/docker/docker-compose-run.sh build
+  ```
+
+### 5. Application Service (`app`)
+- **Profile**: `app`
+- **Purpose**: Start the full application
+- **Usage**:
+  ```bash
+  ./scripts/docker/docker-compose-run.sh app
   ```
 
 ## Improvements Made
@@ -62,38 +70,37 @@ The `docker-compose.yml` has been enhanced to provide better integration with th
 
 ### 5. **Profiles**
 - Services organized into profiles for selective startup
-- `dev`, `quality`, `test`, `build` profiles available
+- `dev`, `quality`, `test`, `build`, `app` profiles available
 
 ## Usage Examples
 
 ### Quick Commands
 ```bash
 # Start development environment
-./scripts/docker-compose-run.sh dev
+./scripts/docker/docker-compose-run.sh dev
 
 # Run quality checks
-./scripts/docker-compose-run.sh quality
+./scripts/docker/docker-compose-run.sh quality
 
 # Run tests
-./scripts/docker-compose-run.sh test
+./scripts/docker/docker-compose-run.sh test
 
 # Run build
-./scripts/docker-compose-run.sh build
+./scripts/docker/docker-compose-run.sh build
 
 # Start full application
-./scripts/docker-compose-run.sh app
+./scripts/docker/docker-compose-run.sh app
 ```
 
 ### Interactive Development
 ```bash
 # Start dev container
-./scripts/docker-compose-run.sh dev
+./scripts/docker/docker-compose-run.sh dev
 
 # Run commands in container
 docker-compose exec dev ./gradlew build
-docker-compose exec dev ./gradlew qualityCheck
-docker-compose exec dev ./scripts/quality-check.sh
-docker-compose exec dev ./scripts/gradle-with-logs.sh test
+docker-compose exec dev ./scripts/quality/quality-check.sh
+docker-compose exec dev ./scripts/build/gradle-with-logs.sh test
 ```
 
 ### Docker Desktop Integration

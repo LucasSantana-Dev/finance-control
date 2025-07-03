@@ -39,13 +39,13 @@ cd finance-control
 ### 2. Build and Start
 ```bash
 # Build the Docker image
-./scripts/docker-manager.sh build
+./scripts/docker/docker-manager.sh build
 
 # Start development environment
-./scripts/docker-manager.sh dev
+./scripts/docker/docker-manager.sh dev
 
 # Open shell in container
-./scripts/docker-manager.sh shell
+./scripts/docker/docker-manager.sh shell
 ```
 
 ### 3. Run Commands
@@ -53,7 +53,7 @@ cd finance-control
 # Inside the container shell:
 ./gradlew build
 ./gradlew test
-./scripts/quality-check.sh
+./scripts/quality/quality-check.sh
 ```
 
 ## 🛠️ Available Scripts
@@ -62,7 +62,7 @@ cd finance-control
 The main script for all Docker operations:
 
 ```bash
-./scripts/docker-manager.sh <command>
+./scripts/docker/docker-manager.sh <command>
 ```
 
 #### Build Commands
@@ -103,7 +103,7 @@ The main script for all Docker operations:
 Alternative script for running commands in Docker:
 
 ```bash
-./scripts/docker-run.sh <command>
+./scripts/docker/docker-run.sh <command>
 ```
 
 #### Available Commands
@@ -163,17 +163,17 @@ Alternative script for running commands in Docker:
 #### Environment Check (check-env)
 - **Profile**: `check-env`
 - **Purpose**: Validate environment
-- **Command**: `./scripts/check-environment.sh`
+- **Command**: `./scripts/environment/check-environment.sh`
 
 #### Environment Fix (fix-env)
 - **Profile**: `fix-env`
 - **Purpose**: Fix environment issues
-- **Command**: `./scripts/fix-environment.sh`
+- **Command**: `./scripts/environment/fix-environment.sh`
 
 #### Test Fixes (test-fixes)
 - **Profile**: `test-fixes`
 - **Purpose**: Test build fixes
-- **Command**: `./scripts/test-fixes.sh`
+- **Command**: `./scripts/environment/test-fixes.sh`
 
 #### Interactive Shell (shell)
 - **Profile**: `shell`
@@ -249,51 +249,51 @@ finance-control/
 ### 1. Initial Setup
 ```bash
 # Build the base image
-./scripts/docker-manager.sh build
+./scripts/docker/docker-manager.sh build
 
 # Start development environment
-./scripts/docker-manager.sh dev
+./scripts/docker/docker-manager.sh dev
 
 # Open shell in container
-./scripts/docker-manager.sh shell
+./scripts/docker/docker-manager.sh shell
 ```
 
 ### 2. Daily Development
 ```bash
 # Start development environment
-./scripts/docker-manager.sh dev
+./scripts/docker/docker-manager.sh dev
 
 # Run commands in container
-./scripts/docker-manager.sh gradle build
-./scripts/docker-manager.sh gradle test
-./scripts/docker-manager.sh quality
+./scripts/docker/docker-manager.sh gradle build
+./scripts/docker/docker-manager.sh gradle test
+./scripts/docker/docker-manager.sh quality
 
 # Or open shell for interactive work
-./scripts/docker-manager.sh shell
+./scripts/docker/docker-manager.sh shell
 ```
 
 ### 3. Testing
 ```bash
 # Run tests
-./scripts/docker-manager.sh test
+./scripts/docker/docker-manager.sh test
 
 # Run quality checks
-./scripts/docker-manager.sh quality
+./scripts/docker/docker-manager.sh quality
 
 # Run environment check
-./scripts/docker-manager.sh check-env
+./scripts/docker/docker-manager.sh check-env
 ```
 
 ### 4. Application Deployment
 ```bash
 # Start application with database
-./scripts/docker-manager.sh app
+./scripts/docker/docker-manager.sh app
 
 # Check logs
-./scripts/docker-manager.sh logs app
+./scripts/docker/docker-manager.sh logs app
 
 # Follow logs
-./scripts/docker-manager.sh logs-follow app
+./scripts/docker/docker-manager.sh logs-follow app
 ```
 
 ## 🐛 Troubleshooting
@@ -331,23 +331,23 @@ sudo usermod -aG docker $USER
 #### Build Failures
 ```bash
 # Clean and rebuild
-./scripts/docker-manager.sh cleanup
-./scripts/docker-manager.sh rebuild
+./scripts/docker/docker-manager.sh cleanup
+./scripts/docker/docker-manager.sh rebuild
 
 # Check logs
-./scripts/docker-manager.sh logs build
+./scripts/docker/docker-manager.sh logs build
 ```
 
 #### Database Connection Issues
 ```bash
 # Check database status
-./scripts/docker-manager.sh status
+./scripts/docker/docker-manager.sh status
 
 # Restart database
-./scripts/docker-manager.sh restart db
+./scripts/docker/docker-manager.sh restart db
 
 # Check database logs
-./scripts/docker-manager.sh logs db
+./scripts/docker/docker-manager.sh logs db
 ```
 
 ### Debug Commands
@@ -404,17 +404,17 @@ docker volume inspect <volume-name>
 ### Application Logs
 ```bash
 # View application logs
-./scripts/docker-manager.sh logs app
+./scripts/docker/docker-manager.sh logs app
 
 # Follow logs in real-time
-./scripts/docker-manager.sh logs-follow app
+./scripts/docker/docker-manager.sh logs-follow app
 
 # View logs for specific service
-./scripts/docker-manager.sh logs db
+./scripts/docker/docker-manager.sh logs db
 ```
 
 ### Build Logs
-- Build logs are saved to `build/logs/`
+- Build logs are saved to `logs/`
 - Timestamped log files for each operation
 - Quality check reports in `build/reports/`
 
@@ -454,7 +454,7 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ### Scripts Help
 ```bash
 # Show help for docker-manager
-./scripts/docker-manager.sh help
+./scripts/docker/docker-manager.sh help
 
 # Show help for specific script
 ./scripts/help.sh docker-manager

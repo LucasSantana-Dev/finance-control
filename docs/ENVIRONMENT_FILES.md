@@ -108,8 +108,8 @@ DEV_MODE=false
 
 **Linux/macOS**:
 ```bash
-chmod +x scripts/setup-env.sh
-./scripts/setup-env.sh
+chmod +x scripts/environment/setup-env.sh
+./scripts/environment/setup-env.sh
 ```
 
 **Windows (PowerShell)**:

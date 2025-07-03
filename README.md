@@ -141,7 +141,7 @@ cd finance-control
 ./gradlew sonarqube        # SonarQube analysis
 
 # Quality check with script
-./scripts/quality-check.sh
+./scripts/quality/quality-check.sh
 ```
 
 ### Coverage Requirements
