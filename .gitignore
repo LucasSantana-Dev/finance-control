@@ -106,3 +106,7 @@ replay_pid*
 
 # Logs
 logs/
+
+# Backup files
+*.backup
+build.gradle.backup

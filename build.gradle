@@ -12,8 +12,6 @@ plugins {
 group = 'com.finance-control'
 version = '0.0.1-SNAPSHOT'
 description = 'Finance Control Project'
-sourceCompatibility = '21'
-targetCompatibility = '21'
 
 java {
     toolchain {
@@ -49,6 +47,10 @@ dependencies {
     testImplementation 'org.seleniumhq.selenium:selenium-chrome-driver'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
+
+    // MapStruct for DTO-Entity mapping (Industry Standard)
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
 }
 
 checkstyle {
@@ -64,25 +66,25 @@ tasks.withType(Checkstyle) {
         xml.required = true
         html.required = true
     }
-    
+
     logging.captureStandardOutput(org.gradle.api.logging.LogLevel.INFO)
-    
+
     doFirst {
         println "🔍 Running Checkstyle..."
     }
-    
+
     doLast {
         def violations = 0
         try {
             def report = file("${buildDir}/reports/checkstyle/main/checkstyle-report.xml")
             if (report.exists()) {
-                def xml = new XmlSlurper().parse(report)
-                violations = xml.file.error.size()
+                def text = report.text
+                violations = text.split('<error').length - 1
             }
         } catch (Exception e) {
             // Ignore parsing errors
         }
-        
+
         if (violations == 0) {
             println "✅ Checkstyle: No violations found"
         } else {
@@ -105,25 +107,25 @@ tasks.withType(Pmd) {
         xml.required = true
         html.required = true
     }
-    
+
     logging.captureStandardOutput(org.gradle.api.logging.LogLevel.INFO)
-    
+
     doFirst {
         println "🔍 Running PMD..."
     }
-    
+
     doLast {
         def violations = 0
         try {
             def report = file("${buildDir}/reports/pmd/main.xml")
             if (report.exists()) {
-                def xml = new XmlSlurper().parse(report)
-                violations = xml.file.violation.size()
+                def text = report.text
+                violations = text.split('<violation').length - 1
             }
         } catch (Exception e) {
             // Ignore parsing errors
         }
-        
+
         if (violations == 0) {
             println "✅ PMD: No violations found"
         } else {
@@ -144,25 +146,25 @@ tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
         xml.required = true
         html.required = true
     }
-    
+
     logging.captureStandardOutput(org.gradle.api.logging.LogLevel.INFO)
-    
+
     doFirst {
         println "🔍 Running SpotBugs..."
     }
-    
+
     doLast {
         def violations = 0
         try {
             def report = file("${buildDir}/reports/spotbugs/main.xml")
             if (report.exists()) {
-                def xml = new XmlSlurper().parse(report)
-                violations = xml.BugInstance.size()
+                def text = report.text
+                violations = text.split('<BugInstance').length - 1
             }
         } catch (Exception e) {
             // Ignore parsing errors
         }
-        
+
         if (violations == 0) {
             println "✅ SpotBugs: No violations found"
         } else {
@@ -175,7 +177,7 @@ test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
     enabled = true
-    
+
     // Detailed test logging
     testLogging {
         events "passed", "skipped", "failed", "standardOut", "standardError"
@@ -183,7 +185,7 @@ test {
         showCauses true
         showStackTraces true
         exceptionFormat = 'full'
-        
+
         // Log test results to file
         afterSuite { desc, result ->
             if (!desc.parent) {
@@ -194,44 +196,18 @@ test {
             }
         }
     }
-    
+
     // Generate test reports
     reports {
         html.required = true
         junitXml.required = true
     }
-    
-    // Output test results to file
-    doLast {
-        def testResultsFile = file("${buildDir}/test-results/test-results.txt")
-        testResultsFile.parentFile.mkdirs()
-        testResultsFile.text = """
-Test Results Summary
-===================
-Total Tests: ${testResults.allTestCount}
-Passed: ${testResults.successfulTestCount}
-Failed: ${testResults.failedTestCount}
-Skipped: ${testResults.skippedTestCount}
-Duration: ${testResults.duration}
-        """.trim()
-        
-        // Print colored test summary
-        println "\n🧪 TEST RESULTS SUMMARY"
-        println "${'='*40}"
-        println "Total Tests: ${testResults.allTestCount}"
-        println "✅ Passed: ${testResults.successfulTestCount}"
-        if (testResults.failedTestCount > 0) {
-            println "❌ Failed: ${testResults.failedTestCount}"
-        } else {
-            println "✅ Failed: ${testResults.failedTestCount}"
-        }
-        if (testResults.skippedTestCount > 0) {
-            println "⏭️  Skipped: ${testResults.skippedTestCount}"
-        } else {
-            println "✅ Skipped: ${testResults.skippedTestCount}"
-        }
-        println "⏱️  Duration: ${testResults.duration}"
-        println "${'='*40}"
+
+    // Modern Gradle test configuration
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = true
     }
 }
 
@@ -307,7 +283,7 @@ gradle.startParameter.consoleOutput = org.gradle.api.logging.configuration.Conso
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
     options.compilerArgs += ['--enable-preview']
-    
+
     // Enable colored output for compilation
     logging.captureStandardOutput(org.gradle.api.logging.LogLevel.INFO)
 }
@@ -404,22 +380,22 @@ task generateQualityReportNoTests {
         try {
             def checkstyleReportFile = file("${buildDir}/reports/checkstyle/main/checkstyle-report.xml")
             if (checkstyleReportFile.exists()) {
-                def xml = new XmlSlurper().parse(checkstyleReportFile)
-                checkstyleViolations = xml.file.error.size()
+                def text = checkstyleReportFile.text
+                checkstyleViolations = text.split('<error').length - 1
             }
         } catch (Exception e) {}
         try {
             def pmdReportFile = file("${buildDir}/reports/pmd/main.xml")
             if (pmdReportFile.exists()) {
-                def xml = new XmlSlurper().parse(pmdReportFile)
-                pmdViolations = xml.file.violation.size()
+                def text = pmdReportFile.text
+                pmdViolations = text.split('<violation').length - 1
             }
         } catch (Exception e) {}
         try {
             def spotbugsReportFile = file("${buildDir}/reports/spotbugs/main.xml")
             if (spotbugsReportFile.exists()) {
-                def xml = new XmlSlurper().parse(spotbugsReportFile)
-                spotbugsViolations = xml.BugInstance.size()
+                def text = spotbugsReportFile.text
+                spotbugsViolations = text.split('<BugInstance').length - 1
             }
         } catch (Exception e) {}
         totalViolations = checkstyleViolations + pmdViolations + spotbugsViolations
@@ -460,16 +436,16 @@ task qualityCheckNoTests {
 task qualityCheck {
     dependsOn checkstyleMain, pmdMain, spotbugsMain, test, jacocoTestReport, jacocoTestCoverageVerification
     description = 'Runs all code quality checks'
-    
+
     // Configure colored output
     logging.captureStandardOutput(org.gradle.api.logging.LogLevel.INFO)
-    
+
     doFirst {
         println "\n${'='*60}"
         println "🚀 STARTING QUALITY CHECKS"
         println "${'='*60}"
     }
-    
+
     doLast {
         generateQualityReport()
         println "\n${'='*60}"
@@ -481,17 +457,17 @@ task qualityCheck {
 // Task to generate comprehensive quality report
 task generateQualityReport {
     description = 'Generates a comprehensive quality report with all violations and test results'
-    
+
     doLast {
         def reportFile = file("${buildDir}/quality-report.txt")
         reportFile.parentFile.mkdirs()
-        
+
         def report = new StringBuilder()
         report.append("=" * 80).append("\n")
         report.append("QUALITY REPORT - Finance Control Project\n")
         report.append("Generated: ${new Date()}\n")
         report.append("=" * 80).append("\n\n")
-        
+
         // Checkstyle violations
         report.append("CHECKSTYLE VIOLATIONS\n")
         report.append("-" * 40).append("\n")
@@ -509,7 +485,7 @@ task generateQualityReport {
             report.append("Checkstyle report not found\n")
         }
         report.append("\n")
-        
+
         // PMD violations
         report.append("PMD VIOLATIONS\n")
         report.append("-" * 40).append("\n")
@@ -527,7 +503,7 @@ task generateQualityReport {
             report.append("PMD report not found\n")
         }
         report.append("\n")
-        
+
         // SpotBugs violations
         report.append("SPOTBUGS VIOLATIONS\n")
         report.append("-" * 40).append("\n")
@@ -545,7 +521,7 @@ task generateQualityReport {
             report.append("SpotBugs report not found\n")
         }
         report.append("\n")
-        
+
         // Test results
         report.append("TEST RESULTS\n")
         report.append("-" * 40).append("\n")
@@ -555,7 +531,7 @@ task generateQualityReport {
         } else {
             report.append("Test results not found\n")
         }
-        
+
         // JaCoCo coverage
         report.append("COVERAGE RESULTS\n")
         report.append("-" * 40).append("\n")
@@ -567,47 +543,47 @@ task generateQualityReport {
         } else {
             report.append("JaCoCo report not found\n")
         }
-        
+
         report.append("\n" + "=" * 80).append("\n")
         report.append("END OF REPORT\n")
-        
+
         reportFile.text = report.toString()
         println "\n📊 QUALITY REPORT GENERATED"
         println "📄 Report location: ${reportFile.absolutePath}"
-        
+
         // Print summary with colors
         def totalViolations = 0
         def checkstyleViolations = 0
         def pmdViolations = 0
         def spotbugsViolations = 0
-        
+
         // Count violations
         try {
             def checkstyleReportFile = file("${buildDir}/reports/checkstyle/main/checkstyle-report.xml")
             if (checkstyleReportFile.exists()) {
-                def xml = new XmlSlurper().parse(checkstyleReportFile)
-                checkstyleViolations = xml.file.error.size()
+                def text = checkstyleReportFile.text
+                checkstyleViolations = text.split('<error').length - 1
             }
         } catch (Exception e) {}
-        
+
         try {
             def pmdReportFile = file("${buildDir}/reports/pmd/main.xml")
             if (pmdReportFile.exists()) {
-                def xml = new XmlSlurper().parse(pmdReportFile)
-                pmdViolations = xml.file.violation.size()
+                def text = pmdReportFile.text
+                pmdViolations = text.split('<violation').length - 1
             }
         } catch (Exception e) {}
-        
+
         try {
             def spotbugsReportFile = file("${buildDir}/reports/spotbugs/main.xml")
             if (spotbugsReportFile.exists()) {
-                def xml = new XmlSlurper().parse(spotbugsReportFile)
-                spotbugsViolations = xml.BugInstance.size()
+                def text = spotbugsReportFile.text
+                spotbugsViolations = text.split('<BugInstance').length - 1
             }
         } catch (Exception e) {}
-        
+
         totalViolations = checkstyleViolations + pmdViolations + spotbugsViolations
-        
+
         println "\n🔍 VIOLATIONS SUMMARY"
         println "${'='*40}"
         println "🔍 Checkstyle: ${checkstyleViolations} violations"
@@ -615,7 +591,7 @@ task generateQualityReport {
         println "🔍 SpotBugs: ${spotbugsViolations} violations"
         println "${'='*40}"
         println "📊 TOTAL: ${totalViolations} violations"
-        
+
         if (totalViolations == 0) {
             println "🎉 EXCELLENT! No quality violations found!"
         } else {
@@ -628,15 +604,13 @@ task generateQualityReport {
 def parseCheckstyleReport(File reportFile) {
     def violations = []
     try {
-        def xml = new XmlSlurper().parse(reportFile)
-        xml.file.each { file ->
-            file.error.each { error ->
-                violations << [
-                    file: file.@name,
-                    line: error.@line,
-                    message: error.@message
-                ]
-            }
+        def text = reportFile.text
+        def errorMatches = text.findAll(/<error[^>]*line="([^"]*)"[^>]*message="([^"]*)"[^>]*\/>/) { match, line, message ->
+            violations << [
+                file: reportFile.name,
+                line: line,
+                message: message
+            ]
         }
     } catch (Exception e) {
         println "Error parsing Checkstyle report: ${e.message}"
@@ -647,16 +621,14 @@ def parseCheckstyleReport(File reportFile) {
 def parsePmdReport(File reportFile) {
     def violations = []
     try {
-        def xml = new XmlSlurper().parse(reportFile)
-        xml.file.each { file ->
-            file.violation.each { violation ->
-                violations << [
-                    file: file.@name,
-                    line: violation.@beginline,
-                    rule: violation.@rule,
-                    message: violation.text()
-                ]
-            }
+        def text = reportFile.text
+        def violationMatches = text.findAll(/<violation[^>]*beginline="([^"]*)"[^>]*rule="([^"]*)"[^>]*>([^<]*)<\/violation>/) { match, line, rule, message ->
+            violations << [
+                file: reportFile.name,
+                line: line,
+                rule: rule,
+                message: message
+            ]
         }
     } catch (Exception e) {
         println "Error parsing PMD report: ${e.message}"
@@ -667,11 +639,11 @@ def parsePmdReport(File reportFile) {
 def parseSpotbugsReport(File reportFile) {
     def violations = []
     try {
-        def xml = new XmlSlurper().parse(reportFile)
-        xml.BugInstance.each { bug ->
+        def text = reportFile.text
+        def bugMatches = text.findAll(/<BugInstance[^>]*type="([^"]*)"[^>]*>[\s\S]*?<LongMessage>([^<]*)<\/LongMessage>/) { match, type, message ->
             violations << [
-                type: bug.@type,
-                message: bug.LongMessage.text()
+                type: type,
+                message: message
             ]
         }
     } catch (Exception e) {
@@ -683,21 +655,19 @@ def parseSpotbugsReport(File reportFile) {
 def parseJacocoReport(File reportFile) {
     def coverage = [lineCoverage: 0, branchCoverage: 0]
     try {
-        def xml = new XmlSlurper().parse(reportFile)
-        def counter = xml.counter.find { it.@type == 'LINE' }
-        if (counter) {
-            def covered = counter.@covered.toInteger()
-            def missed = counter.@missed.toInteger()
-            def total = covered + missed
-            coverage.lineCoverage = total > 0 ? Math.round((covered / total) * 100) : 0
+        def text = reportFile.text
+        def lineMatch = text.find(/<counter type="LINE" covered="(\d+)" missed="(\d+)"/) { match, covered, missed ->
+            def coveredInt = covered.toInteger()
+            def missedInt = missed.toInteger()
+            def total = coveredInt + missedInt
+            coverage.lineCoverage = total > 0 ? Math.round((coveredInt / total) * 100) : 0
         }
-        
-        counter = xml.counter.find { it.@type == 'BRANCH' }
-        if (counter) {
-            def covered = counter.@covered.toInteger()
-            def missed = counter.@missed.toInteger()
-            def total = covered + missed
-            coverage.branchCoverage = total > 0 ? Math.round((covered / total) * 100) : 0
+
+        def branchMatch = text.find(/<counter type="BRANCH" covered="(\d+)" missed="(\d+)"/) { match, covered, missed ->
+            def coveredInt = covered.toInteger()
+            def missedInt = missed.toInteger()
+            def total = coveredInt + missedInt
+            coverage.branchCoverage = total > 0 ? Math.round((coveredInt / total) * 100) : 0
         }
     } catch (Exception e) {
         println "Error parsing JaCoCo report: ${e.message}"
@@ -711,7 +681,7 @@ task qualityCheckScript(type: Exec) {
     description = 'Runs quality checks using the bash script'
     workingDir = projectDir
     commandLine = ['bash', 'scripts/quality/quality-check.sh']
-    
+
     doFirst {
         def scriptFile = file('scripts/quality/quality-check.sh')
         if (!scriptFile.canExecute()) {
@@ -725,7 +695,7 @@ task qualityCheckScriptVerbose(type: Exec) {
     description = 'Runs quality checks with detailed output'
     workingDir = projectDir
     commandLine = ['bash', 'scripts/quality/quality-check.sh', '--verbose']
-    
+
     doFirst {
         def scriptFile = file('scripts/quality/quality-check.sh')
         if (!scriptFile.canExecute()) {
@@ -782,7 +752,7 @@ task dockerTest(type: Exec) {
     description = 'Runs tests in Docker'
     workingDir = projectDir
     commandLine = ['docker-compose', 'exec', 'app', './gradlew', 'test']
-    
+
     doFirst {
         def scriptFile = file('gradlew')
         if (!scriptFile.canExecute()) {
@@ -797,17 +767,17 @@ task dockerTest(type: Exec) {
 task buildWithLogging {
     description = 'Runs the full build with detailed logging saved to file'
     dependsOn clean, qualityCheck
-    
+
     doFirst {
         def logFile = file("${buildDir}/build.log")
         logFile.parentFile.mkdirs()
         println "Build log will be saved to: ${logFile.absolutePath}"
     }
-    
+
     doLast {
         def logFile = file("${buildDir}/build.log")
         def summaryFile = file("${buildDir}/build-summary.txt")
-        
+
         // Create build summary
         summaryFile.text = """
 BUILD SUMMARY - Finance Control Project
@@ -832,7 +802,7 @@ To view the quality report: cat ${buildDir}/quality-report.txt
 To view test results: cat ${buildDir}/test-results/test-results.txt
 To view build log: cat ${buildDir}/build.log
         """.trim()
-        
+
         println "Build summary saved to: ${summaryFile.absolutePath}"
     }
 }
@@ -846,7 +816,7 @@ allprojects {
             println "Compilation log will be saved to: ${logFile.absolutePath}"
         }
     }
-    
+
     tasks.withType(Test) {
         doFirst {
             def logFile = file("${buildDir}/logs/test.log")
@@ -854,7 +824,7 @@ allprojects {
             println "Test log will be saved to: ${logFile.absolutePath}"
         }
     }
-    
+
     tasks.withType(Checkstyle) {
         doFirst {
             def logFile = file("${buildDir}/logs/checkstyle.log")
@@ -862,7 +832,7 @@ allprojects {
             println "Checkstyle log will be saved to: ${logFile.absolutePath}"
         }
     }
-    
+
     tasks.withType(Pmd) {
         doFirst {
             def logFile = file("${buildDir}/logs/pmd.log")
@@ -875,13 +845,13 @@ allprojects {
 // Task to show quality violations summary
 task showViolations {
     description = 'Shows a summary of all quality violations'
-    
+
     doLast {
         def qualityReport = file("${buildDir}/quality-report.txt")
         if (qualityReport.exists()) {
             println "\n🔍 QUALITY VIOLATIONS SUMMARY"
             println "${'='*50}"
-            
+
             def violationCount = 0
             qualityReport.eachLine { line ->
                 if (line.startsWith("✗")) {
@@ -889,10 +859,10 @@ task showViolations {
                     violationCount++
                 }
             }
-            
+
             println "${'='*50}"
             println "📊 Total violations found: ${violationCount}"
-            
+
             if (violationCount == 0) {
                 println "🎉 No violations found!"
             } else {
@@ -907,7 +877,7 @@ task showViolations {
 // Task to demonstrate colored output
 task demoColors {
     description = 'Demonstrates colored output capabilities'
-    
+
     doLast {
         println "\n🎨 COLORED OUTPUT DEMONSTRATION"
         println "${'='*50}"
@@ -937,42 +907,42 @@ sonarqube {
         property 'sonar.projectKey', 'finance-control'
         property 'sonar.projectName', 'Finance Control'
         property 'sonar.projectVersion', version
-        
+
         // SonarQube server configuration (Docker setup)
         property 'sonar.host.url', 'http://localhost:9000'
         property 'sonar.login', System.getenv('SONAR_TOKEN') ?: 'admin'
         property 'sonar.password', System.getenv('SONAR_PASSWORD') ?: 'admin'
-        
+
         // Source and test directories
         property 'sonar.sources', 'src/main/java'
         property 'sonar.tests', 'src/test/java'
-        
+
         // Java version
         property 'sonar.java.source', '21'
         property 'sonar.java.target', '21'
-        
+
         // Encoding
         property 'sonar.sourceEncoding', 'UTF-8'
-        
+
         // Integration with other tools
         property 'sonar.java.checkstyle.reportPaths', 'build/reports/checkstyle/main.xml'
         property 'sonar.java.pmd.reportPaths', 'build/reports/pmd/main.xml'
         property 'sonar.java.spotbugs.reportPaths', 'build/reports/spotbugs/main.xml'
         property 'sonar.coverage.jacoco.xmlReportPaths', 'build/reports/jacoco/test/jacocoTestReport.xml'
-        
+
         // Exclusions
         property 'sonar.exclusions', '**/target/**,**/generated/**,**/config/**,**/dto/**,**/model/**,**/exception/**,**/enums/**,**/util/**,**/validation/**'
         property 'sonar.test.exclusions', '**/target/**,**/generated/**'
-        
+
         // Quality thresholds
         property 'sonar.complexity.function.threshold', '10'
         property 'sonar.size.limit.function', '150'
         property 'sonar.size.limit.class', '2000'
-        
+
         // Coverage thresholds
         property 'sonar.coverage.exclusions', '**/config/**,**/dto/**,**/model/**,**/exception/**,**/enums/**,**/util/**,**/validation/**,**/FinanceControlApplication.java'
         property 'sonar.test.coverage.minimum', '80'
-        
+
         // Duplicate code
         property 'sonar.cpd.java.minimumTokens', '100'
         property 'sonar.duplicated.lines.density.minimum', '3'
@@ -982,7 +952,7 @@ sonarqube {
 // Task to check SonarQube availability
 task checkSonarQube {
     description = 'Checks if SonarQube service is running and provides usage instructions'
-    
+
     doLast {
         def sonarQubeRunning = false
         try {
@@ -993,7 +963,7 @@ task checkSonarQube {
         } catch (Exception e) {
             sonarQubeRunning = false
         }
-        
+
         if (sonarQubeRunning) {
             println "\n✅ SonarQube service is running!"
             println "🌐 Access SonarQube at: http://localhost:9000"
@@ -1013,4 +983,4 @@ task checkSonarQube {
             println "   ./scripts/dev.sh sonarqube-logs"
         }
     }
-} 
+}
