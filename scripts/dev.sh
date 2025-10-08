@@ -109,7 +109,7 @@ start_services() {
     fi
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose up -d; then
+        if docker compose up -d; then
             echo -e "${GREEN}[SUCCESS]${NC} Services started successfully!"
             return 0
         else
@@ -133,7 +133,7 @@ stop_services() {
     echo -e "${BLUE}[INFO]${NC} Stopping services..."
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose down; then
+        if docker compose down; then
             echo -e "${GREEN}[SUCCESS]${NC} Services stopped successfully!"
             return 0
         else
@@ -152,7 +152,7 @@ stop_services() {
 # Function to clean everything
 clean_services() {
     echo -e "${BLUE}[INFO]${NC} Cleaning all containers, networks, and volumes..."
-    docker-compose down -v
+    docker compose down -v
     docker system prune -f
     echo -e "${GREEN}[SUCCESS]${NC} Cleanup completed!"
 }
@@ -171,12 +171,12 @@ clean_up() {
     
     if [ "$skip_tests" = true ]; then
         print_status "Cleaning up containers and volumes (skipping test cleanup)..."
-        SKIP_TESTS=true docker-compose down -v --remove-orphans
+        SKIP_TESTS=true docker compose down -v --remove-orphans
         docker system prune -f
         print_success "Cleanup completed (test cleanup skipped)!"
     else
         print_status "Cleaning up containers and volumes..."
-        docker-compose down -v --remove-orphans
+        docker compose down -v --remove-orphans
         docker system prune -f
         print_success "Cleanup completed!"
     fi
@@ -190,7 +190,7 @@ show_logs() {
     echo -e "${BLUE}[INFO]${NC} Showing logs..."
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose logs -f; then
+        if docker compose logs -f; then
             # If logs command succeeds, exit normally
             return 0
         else
@@ -201,7 +201,7 @@ show_logs() {
             else
                 echo -e "${RED}[ERROR]${NC} Failed to show logs after $max_retries attempts"
                 echo -e "${BLUE}[INFO]${NC} Checking if services are running..."
-                if ! docker-compose ps | grep -q "Up"; then
+                if ! docker compose ps | grep -q "Up"; then
                     echo -e "${YELLOW}[WARNING]${NC} No services are running. Start services first with: $0 start"
                 fi
                 return 1
@@ -218,7 +218,7 @@ build_project() {
     echo -e "${BLUE}[INFO]${NC} Building project..."
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose run --rm build; then
+        if docker compose run --rm build; then
             echo -e "${GREEN}[SUCCESS]${NC} Project built successfully!"
             return 0
         else
@@ -255,7 +255,7 @@ run_tests() {
             print_status "⏱️  Test timeout set to ${test_timeout}s (10 minutes)"
             
             # Run tests with timeout
-            if gtimeout $test_timeout SKIP_TESTS=true docker-compose --profile test up test --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker-compose --profile test up test --abort-on-container-exit; then
+            if gtimeout $test_timeout SKIP_TESTS=true docker compose --profile test up test --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker compose --profile test up test --abort-on-container-exit; then
                 print_success "Tests completed (compilation skipped)!"
                 return 0
             else
@@ -272,7 +272,7 @@ run_tests() {
             print_status "⏱️  Test timeout set to ${test_timeout}s (10 minutes)"
             
             # Run tests with timeout
-            if gtimeout $test_timeout docker-compose --profile test up test --abort-on-container-exit 2>/dev/null || docker-compose --profile test up test --abort-on-container-exit; then
+            if gtimeout $test_timeout docker compose --profile test up test --abort-on-container-exit 2>/dev/null || docker compose --profile test up test --abort-on-container-exit; then
                 print_success "Tests completed successfully!"
                 return 0
             else
@@ -322,7 +322,7 @@ run_quality() {
             print_status "⏱️  Quality check timeout set to ${quality_timeout}s (15 minutes)"
             
             # Run quality checks with timeout (macOS compatible)
-            if gtimeout $quality_timeout SKIP_TESTS=true docker-compose --profile quality up quality --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker-compose --profile quality up quality --abort-on-container-exit; then
+            if gtimeout $quality_timeout SKIP_TESTS=true docker compose --profile quality up quality --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker compose --profile quality up quality --abort-on-container-exit; then
                 print_success "Quality checks completed (tests skipped)!"
                 return 0
             else
@@ -339,7 +339,7 @@ run_quality() {
             print_status "⏱️  Quality check timeout set to ${quality_timeout}s (15 minutes)"
             
             # Run quality checks with timeout (macOS compatible)
-            if gtimeout $quality_timeout docker-compose --profile quality up quality --abort-on-container-exit 2>/dev/null || docker-compose --profile quality up quality --abort-on-container-exit; then
+            if gtimeout $quality_timeout docker compose --profile quality up quality --abort-on-container-exit 2>/dev/null || docker compose --profile quality up quality --abort-on-container-exit; then
                 print_success "Quality checks completed successfully!"
                 return 0
             else
@@ -376,7 +376,7 @@ open_dev_shell() {
     echo -e "${BLUE}[INFO]${NC} Opening development shell..."
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose run --rm dev bash; then
+        if docker compose run --rm dev bash; then
             return 0
         else
             retry_count=$((retry_count + 1))
@@ -400,7 +400,7 @@ check_environment() {
     echo -e "${BLUE}[INFO]${NC} Checking environment..."
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose run --rm check-env; then
+        if docker compose run --rm check-env; then
             echo -e "${GREEN}[SUCCESS]${NC} Environment check completed!"
             return 0
         else
@@ -429,11 +429,11 @@ start_app() {
     
     if [ "$skip_tests" = true ]; then
         print_status "Starting application (skipping tests)..."
-        SKIP_TESTS=true docker-compose up -d
+        SKIP_TESTS=true docker compose up -d
         print_success "Application started (tests skipped)!"
     else
         print_status "Starting application..."
-        docker-compose up -d
+        docker compose up -d
         print_success "Application started!"
     fi
     
@@ -448,9 +448,9 @@ start_dev() {
     print_status "Starting development shell..."
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose --profile dev up -d dev; then
+        if docker compose --profile dev up -d dev; then
             print_success "Development container started!"
-            print_status "Connect with: docker-compose exec dev bash"
+            print_status "Connect with: docker compose exec dev bash"
             print_status "Or run: $0 dev"
             return 0
         else
@@ -486,7 +486,7 @@ run_build() {
             print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
             
             # Run build with timeout
-            if gtimeout $build_timeout SKIP_TESTS=true docker-compose --profile build up build --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker-compose --profile build up build --abort-on-container-exit; then
+            if gtimeout $build_timeout SKIP_TESTS=true docker compose --profile build up build --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker compose --profile build up build --abort-on-container-exit; then
                 print_success "Application built successfully (tests skipped)!"
                 return 0
             else
@@ -503,7 +503,7 @@ run_build() {
             print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
             
             # Run build with timeout
-            if gtimeout $build_timeout docker-compose --profile build up build --abort-on-container-exit 2>/dev/null || docker-compose --profile build up build --abort-on-container-exit; then
+            if gtimeout $build_timeout docker compose --profile build up build --abort-on-container-exit 2>/dev/null || docker compose --profile build up build --abort-on-container-exit; then
                 print_success "Application built successfully!"
                 return 0
             else
@@ -630,7 +630,7 @@ run_quality_local() {
     fi
     
     # Check if SonarQube is available
-    if docker-compose --profile sonarqube ps sonarqube | grep -q "Up"; then
+    if docker compose --profile sonarqube ps sonarqube | grep -q "Up"; then
         echo ""
         print_status "🚀 SonarQube is running!"
         print_status "Access SonarQube at: http://localhost:9000"
@@ -715,7 +715,7 @@ start_sonarqube() {
     print_status "🚀 Starting SonarQube service..."
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose --profile sonarqube up -d sonarqube; then
+        if docker compose --profile sonarqube up -d sonarqube; then
             print_success "SonarQube service started!"
             print_status "Access SonarQube at: http://localhost:9000"
             print_status "Default credentials: ${SONAR_DB_USER}/${SONAR_DB_PASSWORD}"
@@ -741,7 +741,7 @@ stop_sonarqube() {
     print_status "🛑 Stopping SonarQube service..."
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose --profile sonarqube down sonarqube; then
+        if docker compose --profile sonarqube down sonarqube; then
             print_success "SonarQube service stopped!"
             return 0
         else
@@ -764,7 +764,7 @@ show_sonarqube_logs() {
     print_status "📋 Showing SonarQube logs..."
     
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose --profile sonarqube logs -f sonarqube; then
+        if docker compose --profile sonarqube logs -f sonarqube; then
             return 0
         else
             retry_count=$((retry_count + 1))
@@ -774,7 +774,7 @@ show_sonarqube_logs() {
             else
                 print_error "Failed to show SonarQube logs after $max_retries attempts"
                 print_status "Checking if SonarQube is running..."
-                if ! docker-compose --profile sonarqube ps sonarqube | grep -q "Up"; then
+                if ! docker compose --profile sonarqube ps sonarqube | grep -q "Up"; then
                     print_warning "SonarQube is not running. Start it first with: $0 sonarqube-start"
                 fi
                 return 1
@@ -801,7 +801,7 @@ run_sonarqube_scan() {
     print_status "🔍 Running SonarQube analysis..."
     
     # Check if SonarQube is running
-    if ! docker-compose --profile sonarqube ps sonarqube | grep -q "Up"; then
+    if ! docker compose --profile sonarqube ps sonarqube | grep -q "Up"; then
         print_warning "SonarQube is not running. Starting it first..."
         start_sonarqube
         print_status "Waiting for SonarQube to be ready..."
