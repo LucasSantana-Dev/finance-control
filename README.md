@@ -33,7 +33,9 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Database migrations**: Flyway-based schema versioning
 - **Audit trails**: Automatic creation and update timestamps
 - **Validation**: Comprehensive input validation and error handling
-- **Testing**: Unit, integration, and E2E test coverage
+- **Testing**: Unit, integration, and E2E test coverage with 80% minimum coverage
+- **DTO Mapping**: Type-safe MapStruct mappers for all entities
+- **JPA Auditing**: Automatic timestamp management for all entities
 
 ## 🏗️ Architecture
 
@@ -46,6 +48,7 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Build Tool**: Gradle 8.7+
 - **Code Quality**: Checkstyle, PMD, SpotBugs, SonarQube
 - **Coverage**: JaCoCo with 80% minimum requirement
+- **Mapping**: MapStruct 1.5.5.Final for type-safe DTO-entity conversion
 
 ### Project Structure
 ```
@@ -64,9 +67,10 @@ src/main/java/com/finance_control/
 ### Design Patterns
 - **Layered Architecture**: Controller → Service → Repository → Entity
 - **Base Classes**: Reusable base classes for common operations
-- **DTO Pattern**: Data transfer objects for API communication
+- **DTO Pattern**: Data transfer objects for API communication with MapStruct mapping
 - **Specification Pattern**: Dynamic query building
-- **Audit Pattern**: Automatic timestamp management
+- **Audit Pattern**: Automatic timestamp management with JPA auditing
+- **Mapper Pattern**: Type-safe DTO-entity conversion with MapStruct
 
 ## 🚀 Quick Start
 
@@ -209,6 +213,26 @@ src/test/java/com/finance_control/
 # All tests with coverage
 ./gradlew test jacocoTestReport
 ```
+
+### Test Infrastructure
+The project includes comprehensive test coverage with multiple testing strategies:
+
+- **Unit Tests**: Fast, isolated tests for individual components
+  - Service layer tests with mocked dependencies
+  - Repository tests with in-memory H2 database
+  - Controller tests with MockMvc
+  - Model validation tests
+
+- **Integration Tests**: Full application context tests
+  - TestContainers with real PostgreSQL database
+  - End-to-end service integration testing
+  - Database transaction testing
+  - JPA auditing verification
+
+- **Test Coverage**: 80% minimum coverage requirement
+  - JaCoCo coverage reports
+  - Branch and line coverage analysis
+  - Quality gates enforcement
 
 ## 🛠️ Development
 
