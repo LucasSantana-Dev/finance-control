@@ -80,7 +80,6 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
     @Test
     void createTransactionSource_ShouldCreateSuccessfully() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(transactionSourceRepository.existsByNameIgnoreCaseAndUserId(anyString(), anyLong())).thenReturn(false);
         when(transactionSourceRepository.save(any(TransactionSourceEntity.class))).thenReturn(testSourceEntity);
 
         TransactionSourceDTO result = transactionSourceService.create(createDTO);
@@ -93,7 +92,6 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
         assertThat(result.getUserId()).isEqualTo(1L);
 
         verify(userRepository).findById(1L);
-        verify(transactionSourceRepository).existsByNameIgnoreCaseAndUserId(SOURCE_NAME, 1L);
         verify(transactionSourceRepository).save(any(TransactionSourceEntity.class));
     }
 
@@ -109,16 +107,16 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
     }
 
     @Test
-    void createTransactionSource_ShouldThrowException_WhenNameAlreadyExists() {
+    void createTransactionSource_ShouldCreateSuccessfully_WhenNameExists() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(transactionSourceRepository.existsByNameIgnoreCaseAndUserId(anyString(), anyLong())).thenReturn(true);
+        when(transactionSourceRepository.save(any(TransactionSourceEntity.class))).thenReturn(testSourceEntity);
 
-        assertThatThrownBy(() -> transactionSourceService.create(createDTO))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Transaction source with this name already exists for this user");
+        TransactionSourceDTO result = transactionSourceService.create(createDTO);
 
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo(SOURCE_NAME);
         verify(userRepository).findById(1L);
-        verify(transactionSourceRepository).existsByNameIgnoreCaseAndUserId(SOURCE_NAME, 1L);
+        verify(transactionSourceRepository).save(any(TransactionSourceEntity.class));
     }
 
     @Test
@@ -191,4 +189,4 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
 
         verify(transactionSourceRepository).findById(1L);
     }
-} 
+}

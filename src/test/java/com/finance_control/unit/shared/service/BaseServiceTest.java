@@ -39,33 +39,33 @@ class BaseServiceTest {
 
     @Test
     void findAllShouldApplySortingWhenSortByIsProvided() {
-        // Given
+
         String search = "test";
         String sortBy = "fullName";
         String sortDirection = "desc";
         Pageable pageable = PageRequest.of(0, 10);
-        
+
         User user1 = new User();
         user1.setId(1L);
         user1.setEmail("alice@example.com");
         user1.setPassword(TEST_PASSWORD);
         user1.setIsActive(true);
-        
+
         User user2 = new User();
         user2.setId(2L);
         user2.setEmail("bob@example.com");
         user2.setPassword(TEST_PASSWORD);
         user2.setIsActive(true);
-        
+
         List<User> users = List.of(user1, user2);
         Page<User> userPage = new PageImpl<>(users, pageable, 2);
-        
+
         when(repository.findAll(eq(search), any(Pageable.class))).thenReturn(userPage);
 
-        // When
+
         Page<UserDTO> result = service.findAll(search, null, sortBy, sortDirection, pageable);
 
-        // Then
+
         verify(repository).findAll(eq(search), any(Pageable.class));
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(2);
@@ -73,27 +73,27 @@ class BaseServiceTest {
 
     @Test
     void findAllShouldNotApplySortingWhenSortByIsNull() {
-        // Given
+
         String search = "test";
         String sortBy = null;
         String sortDirection = "asc";
         Pageable pageable = PageRequest.of(0, 10);
-        
+
         User user = new User();
         user.setId(1L);
         user.setEmail("test@example.com");
         user.setPassword(TEST_PASSWORD);
         user.setIsActive(true);
-        
+
         List<User> users = List.of(user);
         Page<User> userPage = new PageImpl<>(users, pageable, 1);
-        
+
         when(repository.findAll(eq(search), eq(pageable))).thenReturn(userPage);
 
-        // When
+
         Page<UserDTO> result = service.findAll(search, null, sortBy, sortDirection, pageable);
 
-        // Then
+
         verify(repository).findAll(eq(search), eq(pageable));
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
@@ -101,27 +101,27 @@ class BaseServiceTest {
 
     @Test
     void findAllShouldNotApplySortingWhenSortByIsEmpty() {
-        // Given
+
         String search = "test";
         String sortBy = "";
         String sortDirection = "asc";
         Pageable pageable = PageRequest.of(0, 10);
-        
+
         User user = new User();
         user.setId(1L);
         user.setEmail("test@example.com");
         user.setPassword(TEST_PASSWORD);
         user.setIsActive(true);
-        
+
         List<User> users = List.of(user);
         Page<User> userPage = new PageImpl<>(users, pageable, 1);
-        
+
         when(repository.findAll(eq(search), eq(pageable))).thenReturn(userPage);
 
-        // When
+
         Page<UserDTO> result = service.findAll(search, null, sortBy, sortDirection, pageable);
 
-        // Then
+
         verify(repository).findAll(eq(search), eq(pageable));
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
@@ -129,7 +129,7 @@ class BaseServiceTest {
 
     // Test implementation of BaseService
     private static class TestBaseService extends BaseService<User, Long, UserDTO> {
-        
+
         public TestBaseService(BaseRepository<User, Long> repository) {
             super(repository);
         }
@@ -166,4 +166,4 @@ class BaseServiceTest {
             return dto;
         }
     }
-} 
+}
