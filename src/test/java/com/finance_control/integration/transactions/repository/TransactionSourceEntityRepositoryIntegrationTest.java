@@ -31,7 +31,6 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
     @BeforeEach
     void setUp() {
         testUser = new User();
-        testUser.setId(1L);
         testUser.setEmail("john.doe@example.com");
         testUser.setPassword("password123");
         testUser.setIsActive(true);
@@ -92,7 +91,6 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         source2 = transactionSourceRepository.save(source2);
 
         User otherUser = new User();
-        otherUser.setId(2L);
         otherUser.setEmail("jane.smith@example.com");
         otherUser.setPassword("password123");
         otherUser.setIsActive(true);
@@ -145,7 +143,6 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         TransactionSourceEntity saved = transactionSourceRepository.save(testSourceEntity);
 
         User otherUser = new User();
-        otherUser.setId(2L);
         otherUser.setEmail("jane.smith@example.com");
         otherUser.setPassword("password123");
         otherUser.setIsActive(true);
@@ -177,7 +174,6 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         transactionSourceRepository.save(testSourceEntity);
 
         User otherUser = new User();
-        otherUser.setId(2L);
         otherUser.setEmail("jane.smith@example.com");
         otherUser.setPassword("password123");
         otherUser.setIsActive(true);
