@@ -30,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -70,7 +71,7 @@ public class TransactionService
 
     /**
      * Retrieves a paginated list of transactions with dynamic filtering.
-     * 
+     *
      * @param search        optional search term for description
      * @param sortBy        optional field name to sort by
      * @param sortDirection optional sort direction ("asc" or "desc"), defaults to
@@ -102,8 +103,14 @@ public class TransactionService
     protected Transaction mapToEntity(TransactionDTO createDTO) {
         Transaction transaction = new Transaction();
 
-        // Map common fields using reflection
-        EntityMapper.mapCommonFields(createDTO, transaction);
+        // Map simple fields manually (avoid EntityMapper to prevent DTO list being copied to entity)
+        transaction.setDescription(createDTO.getDescription());
+        transaction.setAmount(createDTO.getAmount());
+        transaction.setType(createDTO.getType());
+        transaction.setSubtype(createDTO.getSubtype());
+        transaction.setSource(createDTO.getSource());
+        transaction.setInstallments(createDTO.getInstallments());
+        transaction.setDate(createDTO.getDate());
 
         // Set default date if not provided
         if (transaction.getDate() == null) {
@@ -123,9 +130,10 @@ public class TransactionService
             transaction.setSourceEntity(getSourceEntityById(createDTO.getSourceEntityId()));
         }
 
-        // Set responsibilities
+        // Set responsibilities (properly convert DTOs to entities)
         if (createDTO.getResponsibilities() != null) {
-            for (TransactionResponsiblesDTO respDTO : createDTO.getResponsibilities()) {
+            List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>(createDTO.getResponsibilities());
+            for (TransactionResponsiblesDTO respDTO : responsibilities) {
                 TransactionResponsibles responsible = getResponsibleById(respDTO.getResponsibleId());
                 transaction.addResponsible(responsible, respDTO.getPercentage(), respDTO.getNotes());
             }
@@ -335,7 +343,7 @@ public class TransactionService
 
     /**
      * Reconcile a transaction with complete reconciliation data.
-     * 
+     *
      * @param id      the ID of the transaction to reconcile
      * @param request the reconciliation request data
      * @return the reconciled transaction DTO

@@ -66,24 +66,27 @@ public class FinancialGoal extends BaseModel<Long> {
     // Completion fields
     @Column(name = "completed_date")
     private LocalDateTime completedDate;
-    
+
     @Column(name = "is_completed")
     private Boolean completed = false;
-    
+
     @Column(name = "completion_notes", length = 1000)
     private String completionNotes;
-    
+
     @Column(name = "achievement_notes", length = 1000)
     private String achievementNotes;
-    
+
     @Column(name = "actual_savings", precision = 19, scale = 2)
     private BigDecimal actualSavings;
-    
+
     @Column(name = "actual_investment", precision = 19, scale = 2)
     private BigDecimal actualInvestment;
 
     public BigDecimal getProgressPercentage() {
         if (targetAmount == null || targetAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        if (currentAmount == null) {
             return BigDecimal.ZERO;
         }
         return currentAmount.divide(targetAmount, 4, RoundingMode.HALF_UP)
@@ -95,6 +98,9 @@ public class FinancialGoal extends BaseModel<Long> {
     }
 
     public boolean isCompleted() {
-        return currentAmount != null && currentAmount.compareTo(targetAmount) >= 0;
+        if (currentAmount == null || targetAmount == null) {
+            return false;
+        }
+        return currentAmount.compareTo(targetAmount) >= 0;
     }
 }

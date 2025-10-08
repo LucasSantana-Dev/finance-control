@@ -14,6 +14,12 @@ import java.util.List;
 @Repository
 public interface FinancialGoalRepository extends BaseRepository<FinancialGoal, Long> {
 
+    @Query("SELECT g FROM FinancialGoal g WHERE g.user.id = :userId " +
+           "AND (:search IS NULL OR :search = '' OR " +
+           "LOWER(g.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(g.description) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<FinancialGoal> findAll(@Param("search") String search, @Param("userId") Long userId, Pageable pageable);
+
        Page<FinancialGoal> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
        List<FinancialGoal> findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(Long userId);
