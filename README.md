@@ -372,4 +372,4 @@ Quality reports are generated in `build/reports/`:
 - **PMD**: `build/reports/pmd/`
 - **SpotBugs**: `build/reports/spotbugs/`
 - **JaCoCo**: `build/reports/jacoco/`
-- **SonarQube**: Available via SonarQube server 
+- **SonarQube**: Available via SonarQube server

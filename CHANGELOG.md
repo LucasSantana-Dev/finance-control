@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `TransactionResponsiblesMapper` for responsibility DTOs
   - `UserMapper` for user entity conversions
 - **JPA Auditing Configuration**: Added `JpaConfig` for automatic timestamp management
-- **Comprehensive Test Suite**: 
+- **Comprehensive Test Suite**:
   - Unit tests for Auth, Goals, Transactions, and Users
   - Integration tests with TestContainers
   - Enhanced test coverage targeting 80% minimum
