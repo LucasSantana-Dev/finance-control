@@ -255,7 +255,7 @@ run_tests() {
             print_status "⏱️  Test timeout set to ${test_timeout}s (10 minutes)"
             
             # Run tests with timeout
-            if timeout $test_timeout SKIP_TESTS=true docker-compose --profile test up test --abort-on-container-exit; then
+            if gtimeout $test_timeout SKIP_TESTS=true docker-compose --profile test up test --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker-compose --profile test up test --abort-on-container-exit; then
                 print_success "Tests completed (compilation skipped)!"
                 return 0
             else
@@ -272,7 +272,7 @@ run_tests() {
             print_status "⏱️  Test timeout set to ${test_timeout}s (10 minutes)"
             
             # Run tests with timeout
-            if timeout $test_timeout docker-compose --profile test up test --abort-on-container-exit; then
+            if gtimeout $test_timeout docker-compose --profile test up test --abort-on-container-exit 2>/dev/null || docker-compose --profile test up test --abort-on-container-exit; then
                 print_success "Tests completed successfully!"
                 return 0
             else
@@ -321,8 +321,8 @@ run_quality() {
             print_status "Running quality checks in Docker (skipping tests)..."
             print_status "⏱️  Quality check timeout set to ${quality_timeout}s (15 minutes)"
             
-            # Run quality checks with timeout
-            if timeout $quality_timeout SKIP_TESTS=true docker-compose --profile quality up quality --abort-on-container-exit; then
+            # Run quality checks with timeout (macOS compatible)
+            if gtimeout $quality_timeout SKIP_TESTS=true docker-compose --profile quality up quality --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker-compose --profile quality up quality --abort-on-container-exit; then
                 print_success "Quality checks completed (tests skipped)!"
                 return 0
             else
@@ -338,8 +338,8 @@ run_quality() {
             print_status "Running quality checks in Docker..."
             print_status "⏱️  Quality check timeout set to ${quality_timeout}s (15 minutes)"
             
-            # Run quality checks with timeout
-            if timeout $quality_timeout docker-compose --profile quality up quality --abort-on-container-exit; then
+            # Run quality checks with timeout (macOS compatible)
+            if gtimeout $quality_timeout docker-compose --profile quality up quality --abort-on-container-exit 2>/dev/null || docker-compose --profile quality up quality --abort-on-container-exit; then
                 print_success "Quality checks completed successfully!"
                 return 0
             else
@@ -486,7 +486,7 @@ run_build() {
             print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
             
             # Run build with timeout
-            if timeout $build_timeout SKIP_TESTS=true docker-compose --profile build up build --abort-on-container-exit; then
+            if gtimeout $build_timeout SKIP_TESTS=true docker-compose --profile build up build --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker-compose --profile build up build --abort-on-container-exit; then
                 print_success "Application built successfully (tests skipped)!"
                 return 0
             else
@@ -503,7 +503,7 @@ run_build() {
             print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
             
             # Run build with timeout
-            if timeout $build_timeout docker-compose --profile build up build --abort-on-container-exit; then
+            if gtimeout $build_timeout docker-compose --profile build up build --abort-on-container-exit 2>/dev/null || docker-compose --profile build up build --abort-on-container-exit; then
                 print_success "Application built successfully!"
                 return 0
             else
@@ -830,7 +830,7 @@ run_sonarqube_scan() {
         print_status "🔨 Building project for SonarQube analysis (skipping tests)..."
         print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
         
-        if timeout $build_timeout ./gradlew clean build -x test; then
+        if gtimeout $build_timeout ./gradlew clean build -x test 2>/dev/null || ./gradlew clean build -x test; then
             print_success "✅ Build completed successfully (tests skipped)"
         else
             local exit_code=$?
@@ -846,7 +846,7 @@ run_sonarqube_scan() {
         print_status "🔨 Building project for SonarQube analysis..."
         print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
         
-        if timeout $build_timeout ./gradlew clean build; then
+        if gtimeout $build_timeout ./gradlew clean build 2>/dev/null || ./gradlew clean build; then
             print_success "✅ Build completed successfully"
         else
             local exit_code=$?
@@ -865,7 +865,7 @@ run_sonarqube_scan() {
     print_status "⏱️  SonarQube analysis timeout set to ${sonar_timeout}s (15 minutes)"
     
     while [ $retry_count -lt $max_retries ]; do
-        if timeout $sonar_timeout ./gradlew sonarqube; then
+        if gtimeout $sonar_timeout ./gradlew sonarqube 2>/dev/null || ./gradlew sonarqube; then
             print_success "✅ SonarQube analysis completed successfully"
             print_status "📊 View results at: http://localhost:9000"
             return 0
