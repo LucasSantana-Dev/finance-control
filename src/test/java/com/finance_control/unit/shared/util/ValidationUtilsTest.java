@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ValidationUtilsTest extends BaseUnitTest {
@@ -134,7 +133,7 @@ class ValidationUtilsTest extends BaseUnitTest {
     void validateDateRange_ShouldThrowException_WhenStartDateAfterEndDate() {
         LocalDateTime startDate = LocalDateTime.now().plusDays(1);
         LocalDateTime endDate = LocalDateTime.now();
-        
+
         assertThatThrownBy(() -> ValidationUtils.validateDateRange(startDate, endDate))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Start date must be before or equal to end date");
@@ -204,4 +203,4 @@ class ValidationUtilsTest extends BaseUnitTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Test must be a valid URL");
     }
-} 
+}

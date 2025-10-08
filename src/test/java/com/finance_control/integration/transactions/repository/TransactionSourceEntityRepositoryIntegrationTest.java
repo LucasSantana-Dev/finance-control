@@ -81,7 +81,7 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
 
     @Test
     void findByUserId_ShouldReturnUserSources() {
-        TransactionSourceEntity source1 = transactionSourceRepository.save(testSourceEntity);
+        transactionSourceRepository.save(testSourceEntity);
 
         TransactionSourceEntity source2 = new TransactionSourceEntity();
         source2.setName("Itaú Account");
@@ -114,7 +114,7 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
 
     @Test
     void findByUserIdAndIsActiveTrue_ShouldReturnOnlyActiveSources() {
-        TransactionSourceEntity activeSource = transactionSourceRepository.save(testSourceEntity);
+        transactionSourceRepository.save(testSourceEntity);
 
         TransactionSourceEntity inactiveSource = new TransactionSourceEntity();
         inactiveSource.setName("Inactive Source");
@@ -190,7 +190,7 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
 
     @Test
     void findByUserIdAndSourceType_ShouldReturnSourcesByType() {
-        TransactionSourceEntity creditCard = transactionSourceRepository.save(testSourceEntity);
+        transactionSourceRepository.save(testSourceEntity);
 
         TransactionSourceEntity bankAccount = new TransactionSourceEntity();
         bankAccount.setName("Itaú Account");
@@ -205,4 +205,4 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         assertThat(creditCards).hasSize(1);
         assertThat(creditCards.get(0).getSourceType()).isEqualTo(TransactionSource.CREDIT_CARD);
     }
-} 
+}

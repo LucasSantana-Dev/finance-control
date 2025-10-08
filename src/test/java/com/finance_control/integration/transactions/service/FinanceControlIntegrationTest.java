@@ -18,11 +18,9 @@ import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @Transactional
@@ -56,14 +54,14 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
         testUser.setPassword("$2a$10$dummy.hash.for.testing");
         testUser.setIsActive(true);
         testUser = userRepository.save(testUser);
-        
+
         // Create other user for isolation tests
         otherUser = new User();
         otherUser.setEmail("jane.smith@example.com");
         otherUser.setPassword("$2a$10$dummy.hash.for.testing");
         otherUser.setIsActive(true);
         otherUser = userRepository.save(otherUser);
-        
+
         // Configure UserContext for this test
         UserContext.setCurrentUserId(testUser.getId());
 
@@ -176,12 +174,12 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
             otherUserSource.setIsActive(true);
             otherUserSource.setUser(otherUser);
             transactionSourceRepository.save(otherUserSource);
-            
+
             // Set context for testUser e buscar fontes
             UserContext.setCurrentUserId(testUser.getId());
             Page<TransactionSourceDTO> user1Sources = transactionSourceService.findAll("", null, null, null,
                     PageRequest.of(0, 10));
-            
+
             // Set context para otherUser e buscar fontes
             UserContext.setCurrentUserId(otherUser.getId());
             Page<TransactionSourceDTO> user2Sources = transactionSourceService.findAll("", null, null, null,
