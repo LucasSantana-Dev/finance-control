@@ -7,9 +7,9 @@ start_dev() {
     local retry_count=0
     print_status "Starting development shell..."
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose --profile dev up -d dev; then
+        if docker compose --profile dev up -d dev; then
             print_success "Development container started!"
-            print_status "Connect with: docker-compose exec dev bash"
+            print_status "Connect with: docker compose exec dev bash"
             print_status "Or run: $0 dev"
             return 0
         else
@@ -30,7 +30,7 @@ open_dev_shell() {
     local retry_count=0
     print_status "Opening development shell..."
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose run --rm dev bash; then
+        if docker compose run --rm dev bash; then
             return 0
         else
             retry_count=$((retry_count + 1))
@@ -51,7 +51,7 @@ check_environment() {
     local retry_count=0
     print_status "Checking environment..."
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose run --rm check-env; then
+        if docker compose run --rm check-env; then
             print_success "Environment check completed!"
             return 0
         else
@@ -65,4 +65,4 @@ check_environment() {
             fi
         fi
     done
-} 
+}

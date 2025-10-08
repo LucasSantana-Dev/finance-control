@@ -75,7 +75,7 @@ check_docker() {
         print_error "Docker not found. Please install Docker first."
         exit 1
     fi
-    
+
     if ! docker info >/dev/null 2>&1; then
         print_error "Docker is not running. Please start Docker."
         exit 1
@@ -99,15 +99,15 @@ get_docker_path() {
 start_services() {
     local max_retries=2
     local retry_count=0
-    
+
     echo -e "${BLUE}[INFO]${NC} Starting services..."
-    
+
     # Set the correct path for Docker volume mounts on Windows
     if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
         export COMPOSE_CONVERT_WINDOWS_PATHS=1
         echo -e "${YELLOW}[INFO]${NC} Windows detected, enabling path conversion..."
     fi
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose up -d; then
             echo -e "${GREEN}[SUCCESS]${NC} Services started successfully!"
@@ -129,9 +129,9 @@ start_services() {
 stop_services() {
     local max_retries=2
     local retry_count=0
-    
+
     echo -e "${BLUE}[INFO]${NC} Stopping services..."
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose down; then
             echo -e "${GREEN}[SUCCESS]${NC} Services stopped successfully!"
@@ -160,7 +160,7 @@ clean_services() {
 # Function to clean up with --no-test support
 clean_up() {
     local skip_tests=false
-    
+
     # Check for --no-test parameter
     for arg in "$@"; do
         if [ "$arg" = "--no-test" ]; then
@@ -168,7 +168,7 @@ clean_up() {
             break
         fi
     done
-    
+
     if [ "$skip_tests" = true ]; then
         print_status "Cleaning up containers and volumes (skipping test cleanup)..."
         SKIP_TESTS=true docker compose down -v --remove-orphans
@@ -186,9 +186,9 @@ clean_up() {
 show_logs() {
     local max_retries=2
     local retry_count=0
-    
+
     echo -e "${BLUE}[INFO]${NC} Showing logs..."
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose logs -f; then
             # If logs command succeeds, exit normally
@@ -214,9 +214,9 @@ show_logs() {
 build_project() {
     local max_retries=2
     local retry_count=0
-    
+
     echo -e "${BLUE}[INFO]${NC} Building project..."
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose run --rm build; then
             echo -e "${GREEN}[SUCCESS]${NC} Project built successfully!"
@@ -240,7 +240,7 @@ run_tests() {
     local test_timeout=600  # 10 minutes timeout
     local max_retries=2
     local retry_count=0
-    
+
     # Check for --no-test parameter
     for arg in "$@"; do
         if [ "$arg" = "--no-test" ]; then
@@ -248,12 +248,12 @@ run_tests() {
             break
         fi
     done
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if [ "$skip_tests" = true ]; then
             print_status "Running tests (skipping compilation)..."
             print_status "⏱️  Test timeout set to ${test_timeout}s (10 minutes)"
-            
+
             # Run tests with timeout
             if gtimeout $test_timeout SKIP_TESTS=true docker compose --profile test up test --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker compose --profile test up test --abort-on-container-exit; then
                 print_success "Tests completed (compilation skipped)!"
@@ -270,7 +270,7 @@ run_tests() {
         else
             print_status "Running tests..."
             print_status "⏱️  Test timeout set to ${test_timeout}s (10 minutes)"
-            
+
             # Run tests with timeout
             if gtimeout $test_timeout docker compose --profile test up test --abort-on-container-exit 2>/dev/null || docker compose --profile test up test --abort-on-container-exit; then
                 print_success "Tests completed successfully!"
@@ -285,7 +285,7 @@ run_tests() {
                 fi
             fi
         fi
-        
+
         retry_count=$((retry_count + 1))
         if [ $retry_count -lt $max_retries ]; then
             print_warning "Tests failed, retrying... (attempt $retry_count/$max_retries)"
@@ -307,7 +307,7 @@ run_quality() {
     local quality_timeout=900  # 15 minutes timeout
     local max_retries=2
     local retry_count=0
-    
+
     # Check for --no-test parameter
     for arg in "$@"; do
         if [ "$arg" = "--no-test" ]; then
@@ -315,12 +315,12 @@ run_quality() {
             break
         fi
     done
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if [ "$skip_tests" = true ]; then
             print_status "Running quality checks in Docker (skipping tests)..."
             print_status "⏱️  Quality check timeout set to ${quality_timeout}s (15 minutes)"
-            
+
             # Run quality checks with timeout (macOS compatible)
             if gtimeout $quality_timeout SKIP_TESTS=true docker compose --profile quality up quality --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker compose --profile quality up quality --abort-on-container-exit; then
                 print_success "Quality checks completed (tests skipped)!"
@@ -337,7 +337,7 @@ run_quality() {
         else
             print_status "Running quality checks in Docker..."
             print_status "⏱️  Quality check timeout set to ${quality_timeout}s (15 minutes)"
-            
+
             # Run quality checks with timeout (macOS compatible)
             if gtimeout $quality_timeout docker compose --profile quality up quality --abort-on-container-exit 2>/dev/null || docker compose --profile quality up quality --abort-on-container-exit; then
                 print_success "Quality checks completed successfully!"
@@ -352,7 +352,7 @@ run_quality() {
                 fi
             fi
         fi
-        
+
         retry_count=$((retry_count + 1))
         if [ $retry_count -lt $max_retries ]; then
             print_warning "Quality checks failed, retrying... (attempt $retry_count/$max_retries)"
@@ -372,9 +372,9 @@ run_quality() {
 open_dev_shell() {
     local max_retries=2
     local retry_count=0
-    
+
     echo -e "${BLUE}[INFO]${NC} Opening development shell..."
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose run --rm dev bash; then
             return 0
@@ -396,9 +396,9 @@ open_dev_shell() {
 check_environment() {
     local max_retries=2
     local retry_count=0
-    
+
     echo -e "${BLUE}[INFO]${NC} Checking environment..."
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose run --rm check-env; then
             echo -e "${GREEN}[SUCCESS]${NC} Environment check completed!"
@@ -418,7 +418,7 @@ check_environment() {
 
 start_app() {
     local skip_tests=false
-    
+
     # Check for --no-test parameter
     for arg in "$@"; do
         if [ "$arg" = "--no-test" ]; then
@@ -426,7 +426,7 @@ start_app() {
             break
         fi
     done
-    
+
     if [ "$skip_tests" = true ]; then
         print_status "Starting application (skipping tests)..."
         SKIP_TESTS=true docker compose up -d
@@ -436,7 +436,7 @@ start_app() {
         docker compose up -d
         print_success "Application started!"
     fi
-    
+
     print_status "Access at: http://localhost:8080"
     print_status "Database at: localhost:5432"
 }
@@ -444,9 +444,9 @@ start_app() {
 start_dev() {
     local max_retries=2
     local retry_count=0
-    
+
     print_status "Starting development shell..."
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose --profile dev up -d dev; then
             print_success "Development container started!"
@@ -471,7 +471,7 @@ run_build() {
     local build_timeout=900  # 15 minutes timeout
     local max_retries=2
     local retry_count=0
-    
+
     # Check for --no-test parameter
     for arg in "$@"; do
         if [ "$arg" = "--no-test" ]; then
@@ -479,12 +479,12 @@ run_build() {
             break
         fi
     done
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if [ "$skip_tests" = true ]; then
             print_status "Building application (skipping tests)..."
             print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
-            
+
             # Run build with timeout
             if gtimeout $build_timeout SKIP_TESTS=true docker compose --profile build up build --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker compose --profile build up build --abort-on-container-exit; then
                 print_success "Application built successfully (tests skipped)!"
@@ -501,7 +501,7 @@ run_build() {
         else
             print_status "Building application..."
             print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
-            
+
             # Run build with timeout
             if gtimeout $build_timeout docker compose --profile build up build --abort-on-container-exit 2>/dev/null || docker compose --profile build up build --abort-on-container-exit; then
                 print_success "Application built successfully!"
@@ -516,7 +516,7 @@ run_build() {
                 fi
             fi
         fi
-        
+
         retry_count=$((retry_count + 1))
         if [ $retry_count -lt $max_retries ]; then
             print_warning "Build failed, retrying... (attempt $retry_count/$max_retries)"
@@ -534,7 +534,7 @@ run_build() {
 
 run_quality_local() {
     local skip_tests=false
-    
+
     # Check for --no-test parameter
     for arg in "$@"; do
         if [ "$arg" = "--no-test" ]; then
@@ -542,30 +542,30 @@ run_quality_local() {
             break
         fi
     done
-    
+
     print_status "Running quality checks locally..."
-    
+
     # Check if we're in the project root
     if [ ! -f "build.gradle" ]; then
         print_error "Error: This script must be run from the project root directory"
         exit 1
     fi
-    
+
     # Check if Java/Gradle are available
     if ! command -v java >/dev/null 2>&1; then
         print_error "Java not found. Please install Java 21 or use 'quality' command for Docker."
         exit 1
     fi
-    
+
     if ! command -v ./gradlew >/dev/null 2>&1; then
         print_error "Gradle wrapper not found. Please use 'quality' command for Docker."
         exit 1
     fi
-    
+
     # Clean previous reports
     print_status "🧹 Cleaning previous reports..."
     ./gradlew clean
-    
+
     # Run Checkstyle
     print_status "🔍 Running Checkstyle..."
     if ./gradlew checkstyleMain; then
@@ -573,7 +573,7 @@ run_quality_local() {
     else
         print_warning "⚠️  Checkstyle found violations"
     fi
-    
+
     # Run PMD
     print_status "🔍 Running PMD..."
     if ./gradlew pmdMain; then
@@ -581,7 +581,7 @@ run_quality_local() {
     else
         print_warning "⚠️  PMD found violations"
     fi
-    
+
     # Run SpotBugs
     print_status "🔍 Running SpotBugs..."
     if ./gradlew spotbugsMain; then
@@ -589,7 +589,7 @@ run_quality_local() {
     else
         print_warning "⚠️  SpotBugs found violations"
     fi
-    
+
     # Run tests with coverage (only if not skipping)
     if [ "$skip_tests" = false ]; then
         print_status "🧪 Running tests with coverage..."
@@ -602,7 +602,7 @@ run_quality_local() {
     else
         print_status "🧪 Skipping tests (--no-test flag used)"
     fi
-    
+
     # Generate quality report
     print_status "📊 Generating quality report..."
     if [ "$skip_tests" = true ]; then
@@ -610,7 +610,7 @@ run_quality_local() {
     else
         ./gradlew qualityCheck
     fi
-    
+
     # Show summary
     echo ""
     echo "🎯 QUALITY ANALYSIS SUMMARY"
@@ -628,7 +628,7 @@ run_quality_local() {
         echo "📊 Coverage: SKIPPED (--no-test flag used)"
         echo "📄 Quality Report: build/quality-report-no-tests.txt"
     fi
-    
+
     # Check if SonarQube is available
     if docker compose --profile sonarqube ps sonarqube | grep -q "Up"; then
         echo ""
@@ -651,7 +651,7 @@ run_quality_local() {
         echo "   - PMD: build/reports/pmd/"
         echo "   - SpotBugs: build/reports/spotbugs/"
     fi
-    
+
     echo ""
     if [ "$skip_tests" = true ]; then
         print_success "🎉 Quality analysis completed (tests skipped)!"
@@ -664,9 +664,9 @@ run_quality_local() {
 run_checkstyle_clean() {
     local max_retries=2
     local retry_count=0
-    
+
     print_status "🧹 Cleaning project..."
-    
+
     # Clean with retry
     while [ $retry_count -lt $max_retries ]; do
         if ./gradlew clean; then
@@ -683,12 +683,12 @@ run_checkstyle_clean() {
             fi
         fi
     done
-    
+
     # Reset retry counter for Checkstyle
     retry_count=0
-    
+
     print_status "🔍 Running Checkstyle with stacktrace..."
-    
+
     # Checkstyle with retry
     while [ $retry_count -lt $max_retries ]; do
         if ./gradlew checkstyleMain --stacktrace; then
@@ -711,9 +711,9 @@ run_checkstyle_clean() {
 start_sonarqube() {
     local max_retries=2
     local retry_count=0
-    
+
     print_status "🚀 Starting SonarQube service..."
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose --profile sonarqube up -d sonarqube; then
             print_success "SonarQube service started!"
@@ -737,9 +737,9 @@ start_sonarqube() {
 stop_sonarqube() {
     local max_retries=2
     local retry_count=0
-    
+
     print_status "🛑 Stopping SonarQube service..."
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose --profile sonarqube down sonarqube; then
             print_success "SonarQube service stopped!"
@@ -760,9 +760,9 @@ stop_sonarqube() {
 show_sonarqube_logs() {
     local max_retries=2
     local retry_count=0
-    
+
     print_status "📋 Showing SonarQube logs..."
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if docker compose --profile sonarqube logs -f sonarqube; then
             return 0
@@ -789,7 +789,7 @@ run_sonarqube_scan() {
     local build_timeout=900  # 15 minutes timeout for build
     local max_retries=2
     local retry_count=0
-    
+
     # Check for --no-test parameter
     for arg in "$@"; do
         if [ "$arg" = "--no-test" ]; then
@@ -797,9 +797,9 @@ run_sonarqube_scan() {
             break
         fi
     done
-    
+
     print_status "🔍 Running SonarQube analysis..."
-    
+
     # Check if SonarQube is running
     if ! docker compose --profile sonarqube ps sonarqube | grep -q "Up"; then
         print_warning "SonarQube is not running. Starting it first..."
@@ -807,29 +807,29 @@ run_sonarqube_scan() {
         print_status "Waiting for SonarQube to be ready..."
         sleep 30
     fi
-    
+
     # Check if we're in the project root
     if [ ! -f "build.gradle" ]; then
         print_error "Error: This script must be run from the project root directory"
         exit 1
     fi
-    
+
     # Check if Java/Gradle are available
     if ! command -v java >/dev/null 2>&1; then
         print_error "Java not found. Please install Java 21 or use Docker commands."
         exit 1
     fi
-    
+
     if ! command -v ./gradlew >/dev/null 2>&1; then
         print_error "Gradle wrapper not found. Please use Docker commands."
         exit 1
     fi
-    
+
     # Build the project first with timeout
     if [ "$skip_tests" = true ]; then
         print_status "🔨 Building project for SonarQube analysis (skipping tests)..."
         print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
-        
+
         if gtimeout $build_timeout ./gradlew clean build -x test 2>/dev/null || ./gradlew clean build -x test; then
             print_success "✅ Build completed successfully (tests skipped)"
         else
@@ -845,7 +845,7 @@ run_sonarqube_scan() {
     else
         print_status "🔨 Building project for SonarQube analysis..."
         print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
-        
+
         if gtimeout $build_timeout ./gradlew clean build 2>/dev/null || ./gradlew clean build; then
             print_success "✅ Build completed successfully"
         else
@@ -859,11 +859,11 @@ run_sonarqube_scan() {
             exit 1
         fi
     fi
-    
+
     # Run SonarQube analysis with timeout
     print_status "🔍 Running SonarQube analysis..."
     print_status "⏱️  SonarQube analysis timeout set to ${sonar_timeout}s (15 minutes)"
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if gtimeout $sonar_timeout ./gradlew sonarqube 2>/dev/null || ./gradlew sonarqube; then
             print_success "✅ SonarQube analysis completed successfully"
@@ -877,7 +877,7 @@ run_sonarqube_scan() {
             else
                 print_error "❌ SonarQube analysis failed with exit code $exit_code"
             fi
-            
+
             retry_count=$((retry_count + 1))
             if [ $retry_count -lt $max_retries ]; then
                 print_warning "SonarQube analysis failed, retrying... (attempt $retry_count/$max_retries)"
@@ -899,7 +899,7 @@ main() {
         show_usage
         exit 1
     fi
-    
+
     case "$1" in
         start)
             check_docker
@@ -972,4 +972,4 @@ main() {
     esac
 }
 
-main "$@" 
+main "$@"

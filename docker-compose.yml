@@ -98,6 +98,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: base
+      args:
+        SKIP_TESTS: "${SKIP_TESTS:-false}"
     environment:
       GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
       SKIP_TESTS: "${SKIP_TESTS:-false}"
@@ -126,6 +128,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: base
+      args:
+        SKIP_TESTS: "${SKIP_TESTS:-false}"
     environment:
       GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
       SPRING_PROFILES_ACTIVE: test
@@ -159,6 +163,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: base
+      args:
+        SKIP_TESTS: "${SKIP_TESTS:-false}"
     environment:
       GRADLE_OPTS: "-Dorg.gradle.console=rich -Dorg.gradle.daemon=false"
       SKIP_TESTS: "${SKIP_TESTS:-false}"

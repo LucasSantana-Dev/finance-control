@@ -35,7 +35,8 @@ RUN ./gradlew dependencies --no-daemon || sh gradlew dependencies --no-daemon
 COPY src src
 
 # Build the app (for prod)
-RUN ./gradlew build --no-daemon || sh gradlew build --no-daemon
+ARG SKIP_TESTS=false
+RUN if [ "$SKIP_TESTS" = "true" ]; then ./gradlew build -x test --no-daemon || sh gradlew build -x test --no-daemon; else ./gradlew build --no-daemon || sh gradlew build --no-daemon; fi
 
 # Final image
 FROM openjdk:21-slim

@@ -7,7 +7,7 @@ start_sonarqube() {
     local retry_count=0
     print_status "🚀 Starting SonarQube service..."
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose --profile sonarqube up -d sonarqube; then
+        if docker compose --profile sonarqube up -d sonarqube; then
             print_success "SonarQube service started!"
             print_status "Access SonarQube at: http://localhost:9000"
             print_status "Default credentials: ${SONAR_DB_USER}/${SONAR_DB_PASSWORD}"
@@ -31,7 +31,7 @@ stop_sonarqube() {
     local retry_count=0
     print_status "🛑 Stopping SonarQube service..."
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose --profile sonarqube down sonarqube; then
+        if docker compose --profile sonarqube down sonarqube; then
             print_success "SonarQube service stopped!"
             return 0
         else
@@ -52,7 +52,7 @@ show_sonarqube_logs() {
     local retry_count=0
     print_status "📋 Showing SonarQube logs..."
     while [ $retry_count -lt $max_retries ]; do
-        if docker-compose --profile sonarqube logs -f sonarqube; then
+        if docker compose --profile sonarqube logs -f sonarqube; then
             return 0
         else
             retry_count=$((retry_count + 1))
@@ -62,7 +62,7 @@ show_sonarqube_logs() {
             else
                 print_error "Failed to show SonarQube logs after $max_retries attempts"
                 print_status "Checking if SonarQube is running..."
-                if ! docker-compose --profile sonarqube ps sonarqube | grep -q "Up"; then
+                if ! docker compose --profile sonarqube ps sonarqube | grep -q "Up"; then
                     print_warning "SonarQube is not running. Start it first with: $0 sonarqube-start"
                 fi
                 return 1
@@ -84,7 +84,7 @@ run_sonarqube_scan() {
         fi
     done
     print_status "🔍 Running SonarQube analysis..."
-    if ! docker-compose --profile sonarqube ps sonarqube | grep -q "Up"; then
+    if ! docker compose --profile sonarqube ps sonarqube | grep -q "Up"; then
         print_warning "SonarQube is not running. Starting it first..."
         start_sonarqube
         print_status "Waiting for SonarQube to be ready..."
@@ -162,4 +162,4 @@ run_sonarqube_scan() {
             fi
         fi
     done
-} 
+}

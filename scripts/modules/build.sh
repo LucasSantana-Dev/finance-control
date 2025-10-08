@@ -7,7 +7,7 @@ run_build() {
     local build_timeout=900  # 15 minutes timeout
     local max_retries=2
     local retry_count=0
-    
+
     # Check for --no-test parameter
     for arg in "$@"; do
         if [ "$arg" = "--no-test" ]; then
@@ -15,12 +15,12 @@ run_build() {
             break
         fi
     done
-    
+
     while [ $retry_count -lt $max_retries ]; do
         if [ "$skip_tests" = true ]; then
             print_status "Building application (skipping tests)..."
             print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
-            if timeout $build_timeout SKIP_TESTS=true docker-compose --profile build up build --abort-on-container-exit; then
+            if gtimeout $build_timeout SKIP_TESTS=true docker compose --profile build up build --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker compose --profile build up build --abort-on-container-exit; then
                 print_success "Application built successfully (tests skipped)!"
                 return 0
             else
@@ -35,7 +35,7 @@ run_build() {
         else
             print_status "Building application..."
             print_status "⏱️  Build timeout set to ${build_timeout}s (15 minutes)"
-            if timeout $build_timeout docker-compose --profile build up build --abort-on-container-exit; then
+            if gtimeout $build_timeout docker compose --profile build up build --abort-on-container-exit 2>/dev/null || docker compose --profile build up build --abort-on-container-exit; then
                 print_success "Application built successfully!"
                 return 0
             else
@@ -78,7 +78,7 @@ run_tests() {
         if [ "$skip_tests" = true ]; then
             print_status "Running tests (skipping compilation)..."
             print_status "⏱️  Test timeout set to ${test_timeout}s (10 minutes)"
-            if timeout $test_timeout SKIP_TESTS=true docker-compose --profile test up test --abort-on-container-exit; then
+            if gtimeout $test_timeout SKIP_TESTS=true docker compose --profile test up test --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker compose --profile test up test --abort-on-container-exit; then
                 print_success "Tests completed (compilation skipped)!"
                 return 0
             else
@@ -93,7 +93,7 @@ run_tests() {
         else
             print_status "Running tests..."
             print_status "⏱️  Test timeout set to ${test_timeout}s (10 minutes)"
-            if timeout $test_timeout docker-compose --profile test up test --abort-on-container-exit; then
+            if gtimeout $test_timeout docker compose --profile test up test --abort-on-container-exit 2>/dev/null || docker compose --profile test up test --abort-on-container-exit; then
                 print_success "Tests completed successfully!"
                 return 0
             else
@@ -136,7 +136,7 @@ run_quality() {
         if [ "$skip_tests" = true ]; then
             print_status "Running quality checks in Docker (skipping tests)..."
             print_status "⏱️  Quality check timeout set to ${quality_timeout}s (15 minutes)"
-            if timeout $quality_timeout SKIP_TESTS=true docker-compose --profile quality up quality --abort-on-container-exit; then
+            if gtimeout $quality_timeout SKIP_TESTS=true docker compose --profile quality up quality --abort-on-container-exit 2>/dev/null || SKIP_TESTS=true docker compose --profile quality up quality --abort-on-container-exit; then
                 print_success "Quality checks completed (tests skipped)!"
                 return 0
             else
@@ -151,7 +151,7 @@ run_quality() {
         else
             print_status "Running quality checks in Docker..."
             print_status "⏱️  Quality check timeout set to ${quality_timeout}s (15 minutes)"
-            if timeout $quality_timeout docker-compose --profile quality up quality --abort-on-container-exit; then
+            if gtimeout $quality_timeout docker compose --profile quality up quality --abort-on-container-exit 2>/dev/null || docker compose --profile quality up quality --abort-on-container-exit; then
                 print_success "Quality checks completed successfully!"
                 return 0
             else
@@ -237,7 +237,7 @@ run_quality_local() {
     else
         ./gradlew qualityCheck
     fi
-    echo ""; echo "🎯 QUALITY ANALYSIS SUMMARY"; echo "=========================="; echo "📁 Reports location: build/reports/"; echo "📊 Checkstyle: build/reports/checkstyle/"; echo "📊 PMD: build/reports/pmd/"; echo "📊 SpotBugs: build/reports/spotbugs/"; if [ "$skip_tests" = false ]; then echo "📊 Tests: build/reports/tests/"; echo "📊 Coverage: build/reports/jacoco/"; echo "📄 Quality Report: build/quality-report.txt"; else echo "📊 Tests: SKIPPED (--no-test flag used)"; echo "📊 Coverage: SKIPPED (--no-test flag used)"; echo "📄 Quality Report: build/quality-report-no-tests.txt"; fi; if docker-compose --profile sonarqube ps sonarqube | grep -q "Up"; then echo ""; print_status "🚀 SonarQube is running!"; print_status "Access SonarQube at: http://localhost:9000"; print_status "To run analysis: $0 sonarqube-scan"; else echo ""; print_warning "⚠️  SonarQube is not running."; echo ""; print_status "📋 To start SonarQube:"; echo "   $0 sonarqube-start"; echo ""; print_status "📋 To run SonarQube analysis:"; echo "   $0 sonarqube-scan"; echo ""; print_status "📊 For now, you can view local reports at:"; echo "   - Quality Report: build/quality-report-no-tests.txt"; echo "   - Checkstyle: build/reports/checkstyle/"; echo "   - PMD: build/reports/pmd/"; echo "   - SpotBugs: build/reports/spotbugs/"; fi; echo ""; if [ "$skip_tests" = true ]; then print_success "🎉 Quality analysis completed (tests skipped)!"; else print_success "🎉 Quality analysis completed!"; fi; echo "📋 Review the reports above to see detailed results."
+    echo ""; echo "🎯 QUALITY ANALYSIS SUMMARY"; echo "=========================="; echo "📁 Reports location: build/reports/"; echo "📊 Checkstyle: build/reports/checkstyle/"; echo "📊 PMD: build/reports/pmd/"; echo "📊 SpotBugs: build/reports/spotbugs/"; if [ "$skip_tests" = false ]; then echo "📊 Tests: build/reports/tests/"; echo "📊 Coverage: build/reports/jacoco/"; echo "📄 Quality Report: build/quality-report.txt"; else echo "📊 Tests: SKIPPED (--no-test flag used)"; echo "📊 Coverage: SKIPPED (--no-test flag used)"; echo "📄 Quality Report: build/quality-report-no-tests.txt"; fi; if docker compose --profile sonarqube ps sonarqube | grep -q "Up"; then echo ""; print_status "🚀 SonarQube is running!"; print_status "Access SonarQube at: http://localhost:9000"; print_status "To run analysis: $0 sonarqube-scan"; else echo ""; print_warning "⚠️  SonarQube is not running."; echo ""; print_status "📋 To start SonarQube:"; echo "   $0 sonarqube-start"; echo ""; print_status "📋 To run SonarQube analysis:"; echo "   $0 sonarqube-scan"; echo ""; print_status "📊 For now, you can view local reports at:"; echo "   - Quality Report: build/quality-report-no-tests.txt"; echo "   - Checkstyle: build/reports/checkstyle/"; echo "   - PMD: build/reports/pmd/"; echo "   - SpotBugs: build/reports/spotbugs/"; fi; echo ""; if [ "$skip_tests" = true ]; then print_success "🎉 Quality analysis completed (tests skipped)!"; else print_success "🎉 Quality analysis completed!"; fi; echo "📋 Review the reports above to see detailed results."
 }
 
 run_checkstyle_clean() {
@@ -277,4 +277,4 @@ run_checkstyle_clean() {
             fi
         fi
     done
-} 
+}
