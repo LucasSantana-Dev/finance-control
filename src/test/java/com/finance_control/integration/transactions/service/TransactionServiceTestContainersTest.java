@@ -1,7 +1,6 @@
 package com.finance_control.integration.transactions.service;
 
 import com.finance_control.FinanceControlApplication;
-import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.goals.repository.FinancialGoalRepository;
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.transactions.dto.TransactionDTO;
@@ -19,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.Page;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;

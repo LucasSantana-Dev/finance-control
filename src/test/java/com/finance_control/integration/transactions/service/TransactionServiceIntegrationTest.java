@@ -2,7 +2,6 @@ package com.finance_control.integration.transactions.service;
 
 import com.finance_control.integration.BaseIntegrationTest;
 import com.finance_control.transactions.dto.TransactionDTO;
-import com.finance_control.transactions.model.Transaction;
 import com.finance_control.shared.enums.TransactionType;
 import com.finance_control.shared.enums.TransactionSubtype;
 import com.finance_control.shared.enums.TransactionSource;

@@ -1,9 +1,7 @@
 package com.finance_control.transactions.mapper;
 
 import com.finance_control.transactions.dto.TransactionDTO;
-import com.finance_control.transactions.dto.responsibles.TransactionResponsiblesDTO;
 import com.finance_control.transactions.model.Transaction;
-import com.finance_control.transactions.model.responsibles.TransactionResponsibles;
 import com.finance_control.transactions.service.TransactionService;
 import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
