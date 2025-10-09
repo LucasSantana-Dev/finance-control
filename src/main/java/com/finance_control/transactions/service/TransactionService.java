@@ -328,7 +328,7 @@ public class TransactionService
 
     /**
      * Generic method to find an entity by ID with consistent error handling.
-     * 
+     *
      * @param repository the repository to search in
      * @param id the ID to search for
      * @param entityName the name of the entity for error messages
@@ -336,7 +336,7 @@ public class TransactionService
      * @return the found entity
      * @throws EntityNotFoundException if the entity is not found
      */
-    private <T> T findEntityById(org.springframework.data.jpa.repository.JpaRepository<T, Long> repository, 
+    private <T> T findEntityById(org.springframework.data.jpa.repository.JpaRepository<T, Long> repository,
                                  Long id, String entityName) {
         return repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(entityName, "id", id));

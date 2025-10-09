@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 public class EntityMapper {
 
     private static final Logger log = LoggerFactory.getLogger(EntityMapper.class);
-    
+
     // Cache for getter and setter methods to improve performance
     private static final Map<Class<?>, Map<String, Method>> GETTER_CACHE = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Map<String, Method>> SETTER_CACHE = new ConcurrentHashMap<>();
@@ -28,7 +28,7 @@ public class EntityMapper {
     /**
      * Maps all common fields from source to target object.
      * Common fields are those with the same name and compatible types.
-     * 
+     *
      * @param source the source object
      * @param target the target object
      * @param <T>    the target type
@@ -65,7 +65,7 @@ public class EntityMapper {
 
     /**
      * Maps specific fields from source to target object.
-     * 
+     *
      * @param source     the source object
      * @param target     the target object
      * @param fieldNames the names of fields to map
@@ -101,17 +101,17 @@ public class EntityMapper {
     /**
      * Gets a map of getter methods for a class.
      * Uses caching to improve performance for repeated calls.
-     * 
+     *
      * @param clazz the class
      * @return a map of field names to getter methods
      */
     private static Map<String, Method> getGetters(Class<?> clazz) {
         return GETTER_CACHE.computeIfAbsent(clazz, EntityMapper::buildGettersMap);
     }
-    
+
     /**
      * Builds the getters map for a class (uncached version).
-     * 
+     *
      * @param clazz the class
      * @return a map of field names to getter methods
      */
@@ -133,17 +133,17 @@ public class EntityMapper {
     /**
      * Gets a map of setter methods for a class.
      * Uses caching to improve performance for repeated calls.
-     * 
+     *
      * @param clazz the class
      * @return a map of field names to setter methods
      */
     private static Map<String, Method> getSetters(Class<?> clazz) {
         return SETTER_CACHE.computeIfAbsent(clazz, EntityMapper::buildSettersMap);
     }
-    
+
     /**
      * Builds the setters map for a class (uncached version).
-     * 
+     *
      * @param clazz the class
      * @return a map of field names to setter methods
      */
@@ -163,7 +163,7 @@ public class EntityMapper {
 
     /**
      * Checks if two types are compatible for mapping.
-     * 
+     *
      * @param sourceType the source type
      * @param targetType the target type
      * @return true if types are compatible
@@ -193,7 +193,7 @@ public class EntityMapper {
 
     /**
      * Gets the wrapper class for a primitive type.
-     * 
+     *
      * @param primitiveType the primitive type
      * @return the wrapper class
      */
@@ -227,7 +227,7 @@ public class EntityMapper {
 
     /**
      * Sets a field value using reflection.
-     * 
+     *
      * @param obj       the object
      * @param fieldName the field name
      * @param value     the value to set
@@ -245,7 +245,7 @@ public class EntityMapper {
 
     /**
      * Gets a field value using reflection.
-     * 
+     *
      * @param obj       the object
      * @param fieldName the field name
      * @return the field value
@@ -261,7 +261,7 @@ public class EntityMapper {
             throw new EntityMappingException("Failed to get field " + fieldName, e);
         }
     }
-    
+
     /**
      * Clears the method cache. Useful for testing or when class definitions change.
      */
