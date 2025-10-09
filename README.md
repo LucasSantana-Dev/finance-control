@@ -10,7 +10,16 @@ A comprehensive financial management system built with Spring Boot, designed to 
 
 ## 🚀 Features
 
-### 📊 Transaction Management
+### 📊 Financial Dashboard
+- **Interactive Dashboard**: Comprehensive financial overview with key metrics and visualizations
+- **Real-time Metrics**: Income, expenses, savings rate, net worth, and monthly balance tracking
+- **Spending Analytics**: Top spending categories with percentage breakdowns and transaction counts
+- **Monthly Trends**: Historical income/expense trends for chart visualization
+- **Goal Progress**: Real-time goal progress monitoring and visualization
+- **Financial Metrics**: Detailed metrics including average transaction amounts and largest/smallest transactions
+- **Dashboard API**: Complete REST API for dashboard data with caching support
+
+### 💰 Transaction Management
 - **Multi-source tracking**: Credit cards, bank accounts, cash, and more
 - **Categorization system**: Hierarchical categories and subcategories with full CRUD operations
 - **Category management**: Complete REST API for managing transaction categories and subcategories

@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Financial Dashboard**: Interactive financial dashboard with comprehensive metrics and visualizations
+- **Dashboard API Endpoints**: Complete REST API for dashboard data including summary, metrics, trends, and spending categories
+- **Financial Metrics**: Detailed financial metrics including income, expenses, savings rate, and net worth calculations
+- **Spending Analytics**: Top spending categories with percentage breakdowns and transaction counts
+- **Monthly Trends**: Historical monthly income/expense trends for chart visualization
+- **Goal Progress Tracking**: Real-time goal progress monitoring and visualization
+- **Dashboard DTOs**: Comprehensive DTOs for dashboard data transfer and API responses
+- **Dashboard Service**: Business logic for calculating financial metrics and generating dashboard data
+- **Dashboard Controller**: REST endpoints for dashboard operations with OpenAPI documentation
+- **Dashboard Tests**: Unit and integration tests for dashboard functionality
+- **Dashboard Cache Tables**: Database tables for caching dashboard data and user preferences
 - **Brazilian Market Data Integration**: Complete Brazilian market data module with real-time stock, FII, and economic indicator tracking
 - **BCB API Integration**: Integration with Banco Central do Brasil APIs for Selic rate, CDI, IPCA, and other economic indicators
 - **Brazilian Stocks API**: Integration with Brazilian stocks and FIIs data sources
