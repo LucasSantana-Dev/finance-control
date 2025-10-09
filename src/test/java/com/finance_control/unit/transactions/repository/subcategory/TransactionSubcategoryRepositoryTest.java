@@ -174,7 +174,7 @@ class TransactionSubcategoryRepositoryTest {
         assertThat(savedSubcategory.getId()).isNotNull();
         assertThat(savedSubcategory.getName()).isEqualTo("Fast Food");
         assertThat(savedSubcategory.getCategory().getId()).isEqualTo(testCategory.getId());
-        
+
         // Verify it was actually saved
         Optional<TransactionSubcategory> found = transactionSubcategoryRepository.findById(savedSubcategory.getId());
         assertThat(found).isPresent();
@@ -194,7 +194,7 @@ class TransactionSubcategoryRepositoryTest {
         // Then
         assertThat(updatedSubcategory.getName()).isEqualTo("Updated Restaurants");
         assertThat(updatedSubcategory.getDescription()).isEqualTo("Updated description");
-        
+
         // Verify the update
         Optional<TransactionSubcategory> found = transactionSubcategoryRepository.findById(testSubcategory1.getId());
         assertThat(found).isPresent();

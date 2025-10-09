@@ -121,7 +121,7 @@ class TransactionCategoryRepositoryTest {
         // Then
         assertThat(savedCategory.getId()).isNotNull();
         assertThat(savedCategory.getName()).isEqualTo("Entertainment");
-        
+
         // Verify it was actually saved
         Optional<TransactionCategory> found = transactionCategoryRepository.findById(savedCategory.getId());
         assertThat(found).isPresent();
@@ -139,7 +139,7 @@ class TransactionCategoryRepositoryTest {
 
         // Then
         assertThat(updatedCategory.getName()).isEqualTo("Updated Food & Dining");
-        
+
         // Verify the update
         Optional<TransactionCategory> found = transactionCategoryRepository.findById(testCategory1.getId());
         assertThat(found).isPresent();

@@ -35,7 +35,7 @@ public interface TransactionSourceRepository extends BaseRepository<TransactionS
                         "(:search IS NULL OR :search = '' OR " +
                         "LOWER(tse.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
                         "LOWER(tse.sourceType) LIKE LOWER(CONCAT('%', :search, '%')))")
-        Page<TransactionSourceEntity> findAll(@Param("search") String search, 
-                                             @Param("userId") Long userId, 
+        Page<TransactionSourceEntity> findAll(@Param("search") String search,
+                                             @Param("userId") Long userId,
                                              Pageable pageable);
 }
