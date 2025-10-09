@@ -121,7 +121,7 @@ class TransactionSourceEntityRepositoryIntegrationTest extends BaseIntegrationTe
         inactiveSource.setIsActive(false);
         transactionSourceRepository.save(inactiveSource);
 
-        List<TransactionSourceEntity> activeSources = transactionSourceRepository.findAllByUserIdOrderByNameAsc(testUser.getId());
+        List<TransactionSourceEntity> activeSources = transactionSourceRepository.findByUserIdAndIsActiveTrue(testUser.getId());
 
         assertThat(activeSources).hasSize(1);
         assertThat(activeSources.get(0).getName()).isEqualTo("Nubank Credit Card");
