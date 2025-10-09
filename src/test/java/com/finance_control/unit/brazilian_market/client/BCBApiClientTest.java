@@ -39,7 +39,7 @@ class BCBApiClientTest {
     @BeforeEach
     void setUp() {
         bcbApiClient = new BCBApiClient(restTemplate, "https://api.bcb.gov.br/dados/serie/bcdata.sgs", "");
-        
+
         // Mock response data
         mockResponseData = List.of(
             Map.of("data", "2024-01-15", "valor", "13.75")
@@ -207,8 +207,8 @@ class BCBApiClientTest {
 
         // When
         MarketIndicator indicator = bcbApiClient.createMarketIndicator(
-                "SELIC", 
-                "Taxa Selic", 
+                "SELIC",
+                "Taxa Selic",
                 "Taxa básica de juros da economia brasileira",
                 MarketIndicator.IndicatorType.INTEREST_RATE,
                 MarketIndicator.Frequency.DAILY
@@ -232,8 +232,8 @@ class BCBApiClientTest {
 
         // When
         MarketIndicator indicator = bcbApiClient.createMarketIndicator(
-                "SELIC", 
-                "Taxa Selic", 
+                "SELIC",
+                "Taxa Selic",
                 "Taxa básica de juros da economia brasileira",
                 MarketIndicator.IndicatorType.INTEREST_RATE,
                 MarketIndicator.Frequency.DAILY

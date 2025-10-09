@@ -94,49 +94,26 @@ public class BrazilianBond extends BaseModel<Long> {
     @JoinColumn(name = "user_id", nullable = false)
     private com.finance_control.users.model.User user;
 
-    /**
-     * Enum representing different types of Brazilian bonds.
-     */
     public enum BondType {
-        /** Certificado de Depósito Bancário */
         CDB,
-        /** Recibo de Depósito Bancário */
         RDB,
-        /** Letra de Crédito Imobiliário */
         LCI,
-        /** Letra de Crédito do Agronegócio */
         LCA,
-        /** Letra Financeira */
         LF,
-        /** Debêntures */
         DEBENTURE,
-        /** Tesouro Direto */
         TESOURO_DIRETO,
-        /** Other fixed income instruments */
         OTHER
     }
 
-    /**
-     * Enum representing index types for Brazilian bonds.
-     */
     public enum IndexType {
-        /** CDI (Certificado de Depósito Interbancário) */
         CDI,
-        /** IPCA (Índice Nacional de Preços ao Consumidor Amplo) */
         IPCA,
-        /** Selic */
         SELIC,
-        /** Prefixado (Fixed rate) */
         PREFIXADO,
-        /** IGP-M (Índice Geral de Preços do Mercado) */
         IGP_M,
-        /** Other indices */
         OTHER
     }
 
-    /**
-     * Calculates the remaining days to maturity.
-     */
     public long getDaysToMaturity() {
         if (maturityDate == null) {
             return 0;
@@ -144,24 +121,15 @@ public class BrazilianBond extends BaseModel<Long> {
         return java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), maturityDate);
     }
 
-    /**
-     * Calculates the remaining years to maturity.
-     */
     public BigDecimal getYearsToMaturity() {
         long days = getDaysToMaturity();
         return BigDecimal.valueOf(days).divide(BigDecimal.valueOf(365), 4, java.math.RoundingMode.HALF_UP);
     }
 
-    /**
-     * Checks if the bond is close to maturity (within 30 days).
-     */
     public boolean isNearMaturity() {
         return getDaysToMaturity() <= 30;
     }
 
-    /**
-     * Updates the bond price and last updated timestamp.
-     */
     public void updatePrice(BigDecimal newPrice) {
         currentPrice = newPrice;
         lastUpdated = LocalDateTime.now();

@@ -51,9 +51,6 @@ public class BrazilianMarketDataService {
         this.userRepository = userRepository;
     }
 
-    /**
-     * Fetches and updates current Selic rate.
-     */
     @Async
     public CompletableFuture<MarketIndicator> updateSelicRate() {
         try {
@@ -87,9 +84,6 @@ public class BrazilianMarketDataService {
         }
     }
 
-    /**
-     * Fetches and updates current CDI rate.
-     */
     @Async
     public CompletableFuture<MarketIndicator> updateCDIRate() {
         try {
@@ -123,9 +117,6 @@ public class BrazilianMarketDataService {
         }
     }
 
-    /**
-     * Fetches and updates current IPCA inflation rate.
-     */
     @Async
     public CompletableFuture<MarketIndicator> updateIPCA() {
         try {
@@ -159,9 +150,6 @@ public class BrazilianMarketDataService {
         }
     }
 
-    /**
-     * Fetches and updates stock data for a specific ticker.
-     */
     @Async
     public CompletableFuture<BrazilianStock> updateStockData(String ticker, Long userId) {
         try {
@@ -199,9 +187,6 @@ public class BrazilianMarketDataService {
         }
     }
 
-    /**
-     * Fetches and updates FII data for a specific ticker.
-     */
     @Async
     public CompletableFuture<FII> updateFIIData(String ticker, Long userId) {
         try {
@@ -243,72 +228,45 @@ public class BrazilianMarketDataService {
         }
     }
 
-    /**
-     * Gets current Selic rate.
-     */
     public BigDecimal getCurrentSelicRate() {
         return indicatorRepository.findByCode("SELIC")
                 .map(MarketIndicator::getCurrentValue)
                 .orElse(BigDecimal.ZERO);
     }
 
-    /**
-     * Gets current CDI rate.
-     */
     public BigDecimal getCurrentCDIRate() {
         return indicatorRepository.findByCode("CDI")
                 .map(MarketIndicator::getCurrentValue)
                 .orElse(BigDecimal.ZERO);
     }
 
-    /**
-     * Gets current IPCA.
-     */
     public BigDecimal getCurrentIPCA() {
         return indicatorRepository.findByCode("IPCA")
                 .map(MarketIndicator::getCurrentValue)
                 .orElse(BigDecimal.ZERO);
     }
 
-    /**
-     * Gets all key economic indicators.
-     */
     public List<MarketIndicator> getKeyIndicators() {
         return indicatorRepository.findKeyIndicators();
     }
 
-    /**
-     * Gets all stocks for a user.
-     */
     public List<BrazilianStock> getUserStocks(Long userId) {
         return stockRepository.findByUserId(userId);
     }
 
-    /**
-     * Gets all FIIs for a user.
-     */
     public List<FII> getUserFIIs(Long userId) {
         return fiiRepository.findByUserId(userId);
     }
 
-    /**
-     * Searches stocks for a user.
-     */
     public List<BrazilianStock> searchUserStocks(Long userId, String query) {
         return stockRepository.searchByUserAndQuery(userId, query);
     }
 
-    /**
-     * Searches FIIs for a user.
-     */
     public List<FII> searchUserFIIs(Long userId, String query) {
         return fiiRepository.searchByUserAndQuery(userId, query);
     }
 
-    /**
-     * Scheduled task to update key indicators every hour.
-     */
-    @Scheduled(fixedRate = 3600000) // 1 hour
+    @Scheduled(fixedRate = 3600000)
     public void updateKeyIndicators() {
         log.info("Starting scheduled update of key indicators");
 
@@ -324,9 +282,6 @@ public class BrazilianMarketDataService {
         });
     }
 
-    /**
-     * Gets market summary data.
-     */
     public Object getMarketSummary() {
         return stocksApiClient.getMarketSummary();
     }

@@ -43,9 +43,6 @@ public class BCBApiClient {
         this.bcbApiKey = bcbApiKey;
     }
 
-    /**
-     * Fetches the current Selic rate from BCB.
-     */
     public BigDecimal getCurrentSelicRate() {
         try {
             log.debug("Fetching current Selic rate from BCB");
@@ -67,9 +64,6 @@ public class BCBApiClient {
         }
     }
 
-    /**
-     * Fetches the current CDI rate from BCB.
-     */
     public BigDecimal getCurrentCDIRate() {
         try {
             log.debug("Fetching current CDI rate from BCB");
@@ -91,9 +85,6 @@ public class BCBApiClient {
         }
     }
 
-    /**
-     * Fetches the current IPCA inflation rate from BCB.
-     */
     public BigDecimal getCurrentIPCA() {
         try {
             log.debug("Fetching current IPCA from BCB");
@@ -115,9 +106,6 @@ public class BCBApiClient {
         }
     }
 
-    /**
-     * Fetches the current USD/BRL exchange rate from BCB.
-     */
     public BigDecimal getCurrentExchangeRate() {
         try {
             log.debug("Fetching current USD/BRL exchange rate from BCB");
@@ -152,9 +140,6 @@ public class BCBApiClient {
         }
     }
 
-    /**
-     * Fetches data for a specific indicator within a date range.
-     */
     public List<Map<String, Object>> getDataInRange(String indicatorCode, LocalDate startDate, LocalDate endDate) {
         try {
             log.debug("Fetching data for indicator {} from {} to {}", indicatorCode, startDate, endDate);
@@ -181,9 +166,6 @@ public class BCBApiClient {
         }
     }
 
-    /**
-     * Creates a MarketIndicator object from BCB data.
-     */
     public MarketIndicator createMarketIndicator(String code, String name, String description,
                                                MarketIndicator.IndicatorType type, MarketIndicator.Frequency frequency) {
         MarketIndicator indicator = new MarketIndicator();
@@ -204,9 +186,6 @@ public class BCBApiClient {
         return indicator;
     }
 
-    /**
-     * Private method to fetch indicator data from BCB API.
-     */
     private List<Map<String, Object>> fetchIndicatorData(String indicatorCode, int lastValues) {
         String url = UriComponentsBuilder.fromHttpUrl(bcbBaseUrl)
                 .pathSegment(indicatorCode, "dados")
@@ -224,9 +203,6 @@ public class BCBApiClient {
         return new ArrayList<>();
     }
 
-    /**
-     * Gets the current value for a specific indicator code.
-     */
     private BigDecimal getCurrentValueForCode(String code) {
         try {
             List<Map<String, Object>> data = fetchIndicatorData(code, 1);

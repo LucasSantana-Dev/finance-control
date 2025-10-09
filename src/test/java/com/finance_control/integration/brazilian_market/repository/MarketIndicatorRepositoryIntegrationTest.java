@@ -34,19 +34,19 @@ class MarketIndicatorRepositoryIntegrationTest extends BaseIntegrationTest {
     @BeforeEach
     void setUp() {
         // Create test indicators
-        selicIndicator = createTestIndicator("SELIC", "Taxa Selic", 
+        selicIndicator = createTestIndicator("SELIC", "Taxa Selic",
                 MarketIndicator.IndicatorType.INTEREST_RATE, MarketIndicator.Frequency.DAILY,
                 new BigDecimal("13.75"), new BigDecimal("13.50"), LocalDate.now());
-        
-        cdiIndicator = createTestIndicator("CDI", "CDI", 
+
+        cdiIndicator = createTestIndicator("CDI", "CDI",
                 MarketIndicator.IndicatorType.INTEREST_RATE, MarketIndicator.Frequency.DAILY,
                 new BigDecimal("13.25"), new BigDecimal("13.00"), LocalDate.now());
-        
-        ipcaIndicator = createTestIndicator("IPCA", "IPCA", 
+
+        ipcaIndicator = createTestIndicator("IPCA", "IPCA",
                 MarketIndicator.IndicatorType.INFLATION, MarketIndicator.Frequency.MONTHLY,
                 new BigDecimal("4.62"), new BigDecimal("4.50"), LocalDate.now().minusDays(1));
-        
-        exchangeRateIndicator = createTestIndicator("USD_BRL", "USD/BRL", 
+
+        exchangeRateIndicator = createTestIndicator("USD_BRL", "USD/BRL",
                 MarketIndicator.IndicatorType.EXCHANGE_RATE, MarketIndicator.Frequency.DAILY,
                 new BigDecimal("5.25"), new BigDecimal("5.20"), LocalDate.now());
 
@@ -267,11 +267,11 @@ class MarketIndicatorRepositoryIntegrationTest extends BaseIntegrationTest {
         assertThat(result.get(1).getCode()).isEqualTo("CDI"); // Second most recent
     }
 
-    private MarketIndicator createTestIndicator(String code, String name, 
-                                              MarketIndicator.IndicatorType type, 
+    private MarketIndicator createTestIndicator(String code, String name,
+                                              MarketIndicator.IndicatorType type,
                                               MarketIndicator.Frequency frequency,
-                                              BigDecimal currentValue, 
-                                              BigDecimal previousValue, 
+                                              BigDecimal currentValue,
+                                              BigDecimal previousValue,
                                               LocalDate referenceDate) {
         MarketIndicator indicator = new MarketIndicator();
         indicator.setCode(code);

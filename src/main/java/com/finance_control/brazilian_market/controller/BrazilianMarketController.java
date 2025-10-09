@@ -33,9 +33,6 @@ public class BrazilianMarketController {
         this.marketDataService = marketDataService;
     }
 
-    /**
-     * Gets current Selic rate.
-     */
     @GetMapping("/indicators/selic")
     @Operation(summary = "Get current Selic rate", description = "Retrieves the current Selic interest rate from BCB")
     public ResponseEntity<BigDecimal> getCurrentSelicRate() {
@@ -44,9 +41,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(selicRate);
     }
 
-    /**
-     * Gets current CDI rate.
-     */
     @GetMapping("/indicators/cdi")
     @Operation(summary = "Get current CDI rate", description = "Retrieves the current CDI interest rate from BCB")
     public ResponseEntity<BigDecimal> getCurrentCDIRate() {
@@ -55,9 +49,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(cdiRate);
     }
 
-    /**
-     * Gets current IPCA inflation rate.
-     */
     @GetMapping("/indicators/ipca")
     @Operation(summary = "Get current IPCA", description = "Retrieves the current IPCA inflation rate from BCB")
     public ResponseEntity<BigDecimal> getCurrentIPCA() {
@@ -66,9 +57,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(ipca);
     }
 
-    /**
-     * Gets all key economic indicators.
-     */
     @GetMapping("/indicators")
     @Operation(summary = "Get key indicators", description = "Retrieves all key economic indicators (Selic, CDI, IPCA, etc.)")
     public ResponseEntity<List<MarketIndicator>> getKeyIndicators() {
@@ -77,9 +65,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(indicators);
     }
 
-    /**
-     * Updates Selic rate from BCB.
-     */
     @PostMapping("/indicators/selic/update")
     @Operation(summary = "Update Selic rate", description = "Fetches and updates the current Selic rate from BCB")
     public ResponseEntity<CompletableFuture<MarketIndicator>> updateSelicRate() {
@@ -88,9 +73,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(future);
     }
 
-    /**
-     * Updates CDI rate from BCB.
-     */
     @PostMapping("/indicators/cdi/update")
     @Operation(summary = "Update CDI rate", description = "Fetches and updates the current CDI rate from BCB")
     public ResponseEntity<CompletableFuture<MarketIndicator>> updateCDIRate() {
@@ -99,9 +81,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(future);
     }
 
-    /**
-     * Updates IPCA from BCB.
-     */
     @PostMapping("/indicators/ipca/update")
     @Operation(summary = "Update IPCA", description = "Fetches and updates the current IPCA from BCB")
     public ResponseEntity<CompletableFuture<MarketIndicator>> updateIPCA() {
@@ -110,9 +89,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(future);
     }
 
-    /**
-     * Gets all stocks for the authenticated user.
-     */
     @GetMapping("/stocks")
     @Operation(summary = "Get user stocks", description = "Retrieves all stocks tracked by the authenticated user")
     public ResponseEntity<List<BrazilianStock>> getUserStocks(Authentication authentication) {
@@ -122,9 +98,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(stocks);
     }
 
-    /**
-     * Gets all FIIs for the authenticated user.
-     */
     @GetMapping("/fiis")
     @Operation(summary = "Get user FIIs", description = "Retrieves all FIIs tracked by the authenticated user")
     public ResponseEntity<List<FII>> getUserFIIs(Authentication authentication) {
@@ -134,9 +107,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(fiis);
     }
 
-    /**
-     * Searches stocks for the authenticated user.
-     */
     @GetMapping("/stocks/search")
     @Operation(summary = "Search user stocks", description = "Searches stocks by ticker or company name for the authenticated user")
     public ResponseEntity<List<BrazilianStock>> searchUserStocks(
@@ -148,9 +118,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(stocks);
     }
 
-    /**
-     * Searches FIIs for the authenticated user.
-     */
     @GetMapping("/fiis/search")
     @Operation(summary = "Search user FIIs", description = "Searches FIIs by ticker or fund name for the authenticated user")
     public ResponseEntity<List<FII>> searchUserFIIs(
@@ -162,9 +129,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(fiis);
     }
 
-    /**
-     * Updates stock data for a specific ticker.
-     */
     @PostMapping("/stocks/{ticker}/update")
     @Operation(summary = "Update stock data", description = "Fetches and updates real-time data for a specific stock")
     public ResponseEntity<CompletableFuture<BrazilianStock>> updateStockData(
@@ -176,9 +140,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(future);
     }
 
-    /**
-     * Updates FII data for a specific ticker.
-     */
     @PostMapping("/fiis/{ticker}/update")
     @Operation(summary = "Update FII data", description = "Fetches and updates real-time data for a specific FII")
     public ResponseEntity<CompletableFuture<FII>> updateFIIData(
@@ -190,9 +151,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(future);
     }
 
-    /**
-     * Gets market summary data.
-     */
     @GetMapping("/summary")
     @Operation(summary = "Get market summary", description = "Retrieves overall market summary and statistics")
     public ResponseEntity<Object> getMarketSummary() {
@@ -201,9 +159,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(summary);
     }
 
-    /**
-     * Updates all key indicators.
-     */
     @PostMapping("/indicators/update-all")
     @Operation(summary = "Update all indicators", description = "Fetches and updates all key economic indicators from BCB")
     public ResponseEntity<Map<String, CompletableFuture<MarketIndicator>>> updateAllIndicators() {
@@ -218,9 +173,6 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(futures);
     }
 
-    /**
-     * Helper method to extract user ID from authentication.
-     */
     private Long getUserIdFromAuthentication(Authentication authentication) {
         if (authentication == null || authentication.getPrincipal() == null) {
             throw new IllegalArgumentException("User not authenticated");

@@ -16,9 +16,6 @@ import org.springframework.web.client.RestTemplate;
 @EnableScheduling
 public class BrazilianMarketConfig {
 
-    /**
-     * Creates a RestTemplate bean for external API calls.
-     */
     @Bean
     public RestTemplate restTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();

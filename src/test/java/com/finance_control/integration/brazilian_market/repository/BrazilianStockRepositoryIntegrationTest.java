@@ -46,13 +46,13 @@ class BrazilianStockRepositoryIntegrationTest extends BaseIntegrationTest {
         testUser = userRepository.save(testUser);
 
         // Create test stocks
-        testStock1 = createTestStock("PETR4", "Petrobras", BrazilianStock.StockType.ORDINARY, 
+        testStock1 = createTestStock("PETR4", "Petrobras", BrazilianStock.StockType.ORDINARY,
                 BrazilianStock.MarketSegment.NOVO_MERCADO, new BigDecimal("25.50"), testUser);
-        
-        testStock2 = createTestStock("VALE3", "Vale S.A.", BrazilianStock.StockType.ORDINARY, 
+
+        testStock2 = createTestStock("VALE3", "Vale S.A.", BrazilianStock.StockType.ORDINARY,
                 BrazilianStock.MarketSegment.NOVO_MERCADO, new BigDecimal("45.20"), testUser);
-        
-        testStock3 = createTestStock("ITUB4", "Itaú Unibanco", BrazilianStock.StockType.PREFERRED, 
+
+        testStock3 = createTestStock("ITUB4", "Itaú Unibanco", BrazilianStock.StockType.PREFERRED,
                 BrazilianStock.MarketSegment.LEVEL_1, new BigDecimal("28.75"), testUser);
 
         stockRepository.saveAll(List.of(testStock1, testStock2, testStock3));
@@ -283,9 +283,9 @@ class BrazilianStockRepositoryIntegrationTest extends BaseIntegrationTest {
         assertThat(exists).isFalse();
     }
 
-    private BrazilianStock createTestStock(String ticker, String companyName, 
-                                         BrazilianStock.StockType stockType, 
-                                         BrazilianStock.MarketSegment segment, 
+    private BrazilianStock createTestStock(String ticker, String companyName,
+                                         BrazilianStock.StockType stockType,
+                                         BrazilianStock.MarketSegment segment,
                                          BigDecimal price, User user) {
         BrazilianStock stock = new BrazilianStock();
         stock.setTicker(ticker);

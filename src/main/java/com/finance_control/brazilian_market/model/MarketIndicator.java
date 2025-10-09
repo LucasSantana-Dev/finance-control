@@ -66,45 +66,24 @@ public class MarketIndicator extends BaseModel<Long> {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
-    /**
-     * Enum representing different types of market indicators.
-     */
     public enum IndicatorType {
-        /** Interest rates */
         INTEREST_RATE,
-        /** Inflation indices */
         INFLATION,
-        /** Exchange rates */
         EXCHANGE_RATE,
-        /** Stock market indices */
         STOCK_INDEX,
-        /** Economic indicators */
         ECONOMIC,
-        /** Other indicators */
         OTHER
     }
 
-    /**
-     * Enum representing data frequency.
-     */
     public enum Frequency {
-        /** Daily */
         DAILY,
-        /** Weekly */
         WEEKLY,
-        /** Monthly */
         MONTHLY,
-        /** Quarterly */
         QUARTERLY,
-        /** Annually */
         ANNUALLY,
-        /** Irregular */
         IRREGULAR
     }
 
-    /**
-     * Calculates the change value and percentage.
-     */
     public void calculateChanges() {
         if (currentValue != null && previousValue != null) {
             changeValue = currentValue.subtract(previousValue);
@@ -118,9 +97,6 @@ public class MarketIndicator extends BaseModel<Long> {
         }
     }
 
-    /**
-     * Updates the indicator value and calculates changes.
-     */
     public void updateValue(BigDecimal newValue, LocalDate referenceDate) {
         if (currentValue != null) {
             previousValue = currentValue;
@@ -131,9 +107,6 @@ public class MarketIndicator extends BaseModel<Long> {
         lastUpdated = LocalDateTime.now();
     }
 
-    /**
-     * Checks if the indicator is a key economic indicator.
-     */
     public boolean isKeyIndicator() {
         return indicatorType == IndicatorType.INTEREST_RATE ||
                indicatorType == IndicatorType.INFLATION ||

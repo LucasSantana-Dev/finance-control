@@ -43,7 +43,7 @@ class BrazilianStocksApiClientTest {
     @BeforeEach
     void setUp() {
         stocksApiClient = new BrazilianStocksApiClient(restTemplate, "https://api.brazilianstocks.com", "");
-        
+
         // Mock stock data
         mockStockData = Map.of(
             "ticker", "PETR4",
@@ -283,7 +283,7 @@ class BrazilianStocksApiClientTest {
                 "06. volume", "1000000"
             )
         );
-        
+
         // First call fails (Brazilian API), second call succeeds (Alpha Vantage)
         when(restTemplate.getForEntity(anyString(), eq(Map.class)))
                 .thenThrow(new RuntimeException("Brazilian API Error"))
@@ -318,7 +318,7 @@ class BrazilianStocksApiClientTest {
     void getStockQuote_WithAlphaVantageInvalidResponse_ShouldReturnNull() {
         // Given
         Map<String, Object> invalidResponse = Map.of("Invalid", "Data");
-        
+
         when(restTemplate.getForEntity(anyString(), eq(Map.class)))
                 .thenThrow(new RuntimeException("Brazilian API Error"))
                 .thenReturn(new ResponseEntity<>(invalidResponse, HttpStatus.OK));

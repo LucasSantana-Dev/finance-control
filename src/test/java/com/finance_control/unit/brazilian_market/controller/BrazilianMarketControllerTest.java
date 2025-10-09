@@ -284,7 +284,7 @@ class BrazilianMarketControllerTest {
         CompletableFuture<MarketIndicator> selicFuture = CompletableFuture.completedFuture(testIndicator);
         CompletableFuture<MarketIndicator> cdiFuture = CompletableFuture.completedFuture(testIndicator);
         CompletableFuture<MarketIndicator> ipcaFuture = CompletableFuture.completedFuture(testIndicator);
-        
+
         when(marketDataService.updateSelicRate()).thenReturn(selicFuture);
         when(marketDataService.updateCDIRate()).thenReturn(cdiFuture);
         when(marketDataService.updateIPCA()).thenReturn(ipcaFuture);

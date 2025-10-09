@@ -47,13 +47,13 @@ class FIIRepositoryIntegrationTest extends BaseIntegrationTest {
         testUser = userRepository.save(testUser);
 
         // Create test FIIs
-        testFII1 = createTestFII("HGLG11", "CSHG Logística", FII.FIIType.TIJOLO, 
+        testFII1 = createTestFII("HGLG11", "CSHG Logística", FII.FIIType.TIJOLO,
                 FII.FIISegment.LOGISTICS, new BigDecimal("120.00"), testUser);
-        
-        testFII2 = createTestFII("XPML11", "XP Malls", FII.FIIType.TIJOLO, 
+
+        testFII2 = createTestFII("XPML11", "XP Malls", FII.FIIType.TIJOLO,
                 FII.FIISegment.SHOPPING, new BigDecimal("95.50"), testUser);
-        
-        testFII3 = createTestFII("HABT11", "Habitat II", FII.FIIType.PAPEL, 
+
+        testFII3 = createTestFII("HABT11", "Habitat II", FII.FIIType.PAPEL,
                 FII.FIISegment.RESIDENTIAL, new BigDecimal("85.25"), testUser);
 
         fiiRepository.saveAll(List.of(testFII1, testFII2, testFII3));
@@ -335,7 +335,7 @@ class FIIRepositoryIntegrationTest extends BaseIntegrationTest {
         assertThat(result.get(1).getTicker()).isEqualTo("HGLG11");
     }
 
-    private FII createTestFII(String ticker, String fundName, FII.FIIType fiiType, 
+    private FII createTestFII(String ticker, String fundName, FII.FIIType fiiType,
                             FII.FIISegment segment, BigDecimal price, User user) {
         FII fii = new FII();
         fii.setTicker(ticker);

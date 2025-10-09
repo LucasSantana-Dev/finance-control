@@ -4,7 +4,6 @@ import com.finance_control.shared.model.BaseModel;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -89,76 +88,47 @@ public class FII extends BaseModel<Long> {
     @JoinColumn(name = "user_id", nullable = false)
     private com.finance_control.users.model.User user;
 
-    /**
-     * Enum representing different types of FIIs.
-     */
     public enum FIIType {
-        /** Tijolo - Physical real estate */
         TIJOLO,
-        /** Papel - Real estate receivables */
         PAPEL,
-        /** Híbrido - Mixed portfolio */
         HIBRIDO,
-        /** Fundo de Fundos */
         FUNDO_DE_FUNDOS,
-        /** Other types */
         OTHER
     }
 
-    /**
-     * Enum representing FII segments.
-     */
     public enum FIISegment {
-        /** Shopping centers */
         SHOPPING,
-        /** Office buildings */
         OFFICES,
-        /** Logistics warehouses */
         LOGISTICS,
-        /** Residential properties */
         RESIDENTIAL,
-        /** Healthcare facilities */
         HEALTHCARE,
-        /** Educational facilities */
         EDUCATIONAL,
-        /** Hotels */
         HOTELS,
-        /** Mixed portfolio */
         MIXED,
-        /** Other segments */
         OTHER
     }
 
-    /**
-     * Calculates the day change percentage.
-     */
     public BigDecimal calculateDayChangePercent() {
         if (currentPrice == null || previousClose == null || previousClose.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
-
+        
         dayChange = currentPrice.subtract(previousClose);
         dayChangePercent = dayChange.divide(previousClose, 4, java.math.RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
-
+        
         return dayChangePercent;
     }
 
-    /**
-     * Calculates the P/VP ratio.
-     */
     public BigDecimal calculatePVPRatio() {
         if (currentPrice == null || netWorth == null || netWorth.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
-
+        
         pvpRatio = currentPrice.divide(netWorth, 4, java.math.RoundingMode.HALF_UP);
         return pvpRatio;
     }
 
-    /**
-     * Updates the FII price and calculates changes.
-     */
     public void updatePrice(BigDecimal newPrice) {
         if (currentPrice != null) {
             previousClose = currentPrice;

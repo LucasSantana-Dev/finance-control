@@ -36,9 +36,6 @@ public class BrazilianStocksApiClient {
         this.alphaVantageApiKey = alphaVantageApiKey;
     }
 
-    /**
-     * Fetches all available Brazilian stocks.
-     */
     public List<BrazilianStock> getAllStocks() {
         try {
             log.debug("Fetching all Brazilian stocks");
@@ -61,9 +58,6 @@ public class BrazilianStocksApiClient {
         }
     }
 
-    /**
-     * Fetches all available FIIs.
-     */
     public List<FII> getAllFIIs() {
         try {
             log.debug("Fetching all FIIs");
@@ -86,9 +80,6 @@ public class BrazilianStocksApiClient {
         }
     }
 
-    /**
-     * Fetches real-time quote for a specific stock.
-     */
     public BrazilianStock getStockQuote(String ticker) {
         try {
             log.debug("Fetching quote for stock: {}", ticker);
@@ -132,9 +123,6 @@ public class BrazilianStocksApiClient {
         }
     }
 
-    /**
-     * Searches for stocks by company name or ticker.
-     */
     public List<BrazilianStock> searchStocks(String query) {
         try {
             log.debug("Searching stocks with query: {}", query);
@@ -157,9 +145,6 @@ public class BrazilianStocksApiClient {
         }
     }
 
-    /**
-     * Gets market summary data.
-     */
     public Map<String, Object> getMarketSummary() {
         try {
             log.debug("Fetching market summary");
@@ -181,9 +166,6 @@ public class BrazilianStocksApiClient {
         }
     }
 
-    /**
-     * Private method to get stock from Brazilian Stocks API.
-     */
     private BrazilianStock getStockFromBrazilianApi(String ticker) {
         try {
             String url = UriComponentsBuilder.fromHttpUrl(stocksApiBaseUrl)
@@ -204,9 +186,6 @@ public class BrazilianStocksApiClient {
         }
     }
 
-    /**
-     * Private method to get stock from Alpha Vantage API.
-     */
     private BrazilianStock getStockFromAlphaVantage(String ticker) {
         if (alphaVantageApiKey == null || alphaVantageApiKey.trim().isEmpty()) {
             log.debug("Alpha Vantage API key not configured");
@@ -248,9 +227,6 @@ public class BrazilianStocksApiClient {
         return stocks;
     }
 
-    /**
-     * Maps API response to BrazilianStock object.
-     */
     private BrazilianStock mapToBrazilianStock(Map<String, Object> data) {
         try {
             BrazilianStock stock = new BrazilianStock();
@@ -294,9 +270,6 @@ public class BrazilianStocksApiClient {
         }
     }
 
-    /**
-     * Maps Alpha Vantage response to BrazilianStock object.
-     */
     private BrazilianStock mapToBrazilianStockFromAlphaVantage(Map<String, Object> data, String ticker) {
         try {
             Map<String, Object> quote = (Map<String, Object>) data.get("Global Quote");
@@ -329,9 +302,6 @@ public class BrazilianStocksApiClient {
         }
     }
 
-    /**
-     * Maps API response to FII objects.
-     */
     private List<FII> mapToFIIs(List<Map<String, Object>> data) {
         List<FII> fiis = new ArrayList<>();
         for (Map<String, Object> item : data) {
@@ -343,9 +313,6 @@ public class BrazilianStocksApiClient {
         return fiis;
     }
 
-    /**
-     * Maps API response to FII object.
-     */
     private FII mapToFII(Map<String, Object> data) {
         try {
             FII fii = new FII();

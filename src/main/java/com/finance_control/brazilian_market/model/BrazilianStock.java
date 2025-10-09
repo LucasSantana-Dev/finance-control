@@ -72,62 +72,37 @@ public class BrazilianStock extends BaseModel<Long> {
     @JoinColumn(name = "user_id", nullable = false)
     private com.finance_control.users.model.User user;
 
-    /**
-     * Enum representing different types of Brazilian stocks.
-     */
     public enum StockType {
-        /** Common stock */
         ORDINARY,
-        /** Preferred stock */
         PREFERRED,
-        /** Unit (combination of common and preferred) */
         UNIT,
-        /** Real Estate Investment Fund */
         FII,
-        /** Exchange Traded Fund */
         ETF,
-        /** Other equity instruments */
         OTHER
     }
 
-    /**
-     * Enum representing market segments on B3.
-     */
     public enum MarketSegment {
-        /** Novo Mercado */
         NOVO_MERCADO,
-        /** Level 2 */
         LEVEL_2,
-        /** Level 1 */
         LEVEL_1,
-        /** Traditional */
         TRADITIONAL,
-        /** Bovespa Mais */
         BOVESPA_MAIS,
-        /** Bovespa Mais Level 2 */
         BOVESPA_MAIS_LEVEL_2,
-        /** Other segments */
         OTHER
     }
 
-    /**
-     * Calculates the day change percentage.
-     */
     public BigDecimal calculateDayChangePercent() {
         if (currentPrice == null || previousClose == null || previousClose.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
-
+        
         dayChange = currentPrice.subtract(previousClose);
         dayChangePercent = dayChange.divide(previousClose, 4, java.math.RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
-
+        
         return dayChangePercent;
     }
 
-    /**
-     * Updates the stock price and calculates changes.
-     */
     public void updatePrice(BigDecimal newPrice) {
         if (currentPrice != null) {
             previousClose = currentPrice;
