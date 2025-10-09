@@ -307,28 +307,39 @@ public class TransactionService
 
     // Helper methods for entity fetching
     private User getUserById(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User", "id", userId));
+        return findEntityById(userRepository, userId, "User");
     }
 
     private TransactionCategory getCategoryById(Long categoryId) {
-        return categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("TransactionCategory", "id", categoryId));
+        return findEntityById(categoryRepository, categoryId, "TransactionCategory");
     }
 
     private TransactionSubcategory getSubcategoryById(Long subcategoryId) {
-        return subcategoryRepository.findById(subcategoryId)
-                .orElseThrow(() -> new EntityNotFoundException("TransactionSubcategory", "id", subcategoryId));
+        return findEntityById(subcategoryRepository, subcategoryId, "TransactionSubcategory");
     }
 
     private TransactionSourceEntity getSourceEntityById(Long sourceEntityId) {
-        return sourceEntityRepository.findById(sourceEntityId)
-                .orElseThrow(() -> new EntityNotFoundException("TransactionSourceEntity", "id", sourceEntityId));
+        return findEntityById(sourceEntityRepository, sourceEntityId, "TransactionSourceEntity");
     }
 
     private TransactionResponsibles getResponsibleById(Long responsibleId) {
-        return responsibleRepository.findById(responsibleId)
-                .orElseThrow(() -> new EntityNotFoundException("TransactionResponsible", "id", responsibleId));
+        return findEntityById(responsibleRepository, responsibleId, "TransactionResponsible");
+    }
+
+    /**
+     * Generic method to find an entity by ID with consistent error handling.
+     * 
+     * @param repository the repository to search in
+     * @param id the ID to search for
+     * @param entityName the name of the entity for error messages
+     * @param <T> the entity type
+     * @return the found entity
+     * @throws EntityNotFoundException if the entity is not found
+     */
+    private <T> T findEntityById(org.springframework.data.jpa.repository.JpaRepository<T, Long> repository, 
+                                 Long id, String entityName) {
+        return repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(entityName, "id", id));
     }
 
     private TransactionResponsiblesDTO mapResponsiblesToDTO(

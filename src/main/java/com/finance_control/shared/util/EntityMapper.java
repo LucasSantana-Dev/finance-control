@@ -3,6 +3,7 @@ package com.finance_control.shared.util;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.finance_control.shared.exception.EntityMappingException;
 import org.slf4j.Logger;
@@ -15,6 +16,10 @@ import org.slf4j.LoggerFactory;
 public class EntityMapper {
 
     private static final Logger log = LoggerFactory.getLogger(EntityMapper.class);
+    
+    // Cache for getter and setter methods to improve performance
+    private static final Map<Class<?>, Map<String, Method>> GETTER_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Map<String, Method>> SETTER_CACHE = new ConcurrentHashMap<>();
 
     private EntityMapper() {
         // Utility class - prevent instantiation
@@ -45,7 +50,10 @@ public class EntityMapper {
             if (setter != null && isCompatibleTypes(getter.getReturnType(), setter.getParameterTypes()[0])) {
                 try {
                     Object value = getter.invoke(source);
-                    setter.invoke(target, value);
+                    // Only set non-null values to avoid overwriting with null
+                    if (value != null) {
+                        setter.invoke(target, value);
+                    }
                 } catch (Exception e) {
                     log.debug("Skipping field '{}' due to mapping error: {}", fieldName, e.getMessage());
                 }
@@ -92,11 +100,22 @@ public class EntityMapper {
 
     /**
      * Gets a map of getter methods for a class.
+     * Uses caching to improve performance for repeated calls.
      * 
      * @param clazz the class
      * @return a map of field names to getter methods
      */
     private static Map<String, Method> getGetters(Class<?> clazz) {
+        return GETTER_CACHE.computeIfAbsent(clazz, EntityMapper::buildGettersMap);
+    }
+    
+    /**
+     * Builds the getters map for a class (uncached version).
+     * 
+     * @param clazz the class
+     * @return a map of field names to getter methods
+     */
+    private static Map<String, Method> buildGettersMap(Class<?> clazz) {
         Map<String, Method> getters = new HashMap<>();
 
         for (Method method : clazz.getMethods()) {
@@ -113,11 +132,22 @@ public class EntityMapper {
 
     /**
      * Gets a map of setter methods for a class.
+     * Uses caching to improve performance for repeated calls.
      * 
      * @param clazz the class
      * @return a map of field names to setter methods
      */
     private static Map<String, Method> getSetters(Class<?> clazz) {
+        return SETTER_CACHE.computeIfAbsent(clazz, EntityMapper::buildSettersMap);
+    }
+    
+    /**
+     * Builds the setters map for a class (uncached version).
+     * 
+     * @param clazz the class
+     * @return a map of field names to setter methods
+     */
+    private static Map<String, Method> buildSettersMap(Class<?> clazz) {
         Map<String, Method> setters = new HashMap<>();
 
         for (Method method : clazz.getMethods()) {
@@ -230,5 +260,13 @@ public class EntityMapper {
         } catch (Exception e) {
             throw new EntityMappingException("Failed to get field " + fieldName, e);
         }
+    }
+    
+    /**
+     * Clears the method cache. Useful for testing or when class definitions change.
+     */
+    public static void clearCache() {
+        GETTER_CACHE.clear();
+        SETTER_CACHE.clear();
     }
 }

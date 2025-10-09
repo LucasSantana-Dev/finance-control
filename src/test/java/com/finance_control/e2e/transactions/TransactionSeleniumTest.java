@@ -11,7 +11,7 @@ class TransactionSeleniumTest extends BaseSeleniumTest {
     void shouldDisplayTransactionPage() {
         // Test that the application is running and accessible
         String content = getPageContent("/actuator/health");
-        
+
         // Verify the application is responding
         assertThat(content).isNotNull();
         assertThat(content).contains("UP");
