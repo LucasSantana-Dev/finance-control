@@ -12,7 +12,8 @@ A comprehensive financial management system built with Spring Boot, designed to 
 
 ### 📊 Transaction Management
 - **Multi-source tracking**: Credit cards, bank accounts, cash, and more
-- **Categorization system**: Hierarchical categories and subcategories
+- **Categorization system**: Hierarchical categories and subcategories with full CRUD operations
+- **Category management**: Complete REST API for managing transaction categories and subcategories
 - **Responsibility sharing**: Split transactions between multiple people
 - **Installment support**: Track recurring payments and installments
 - **Advanced filtering**: Search and filter by date, type, category, and amount
@@ -180,10 +181,23 @@ Once the application is running, you can access:
 - `PUT /goals/{id}` - Update goal
 - `DELETE /goals/{id}` - Delete goal
 
-#### Categories & Sources
+#### Transaction Categories
 - `GET /transaction-categories` - List transaction categories
+- `POST /transaction-categories` - Create new category
+- `PUT /transaction-categories/{id}` - Update category
+- `DELETE /transaction-categories/{id}` - Delete category
+
+#### Transaction Subcategories
+- `GET /transaction-subcategories` - List transaction subcategories
+- `POST /transaction-subcategories` - Create new subcategory
+- `PUT /transaction-subcategories/{id}` - Update subcategory
+- `DELETE /transaction-subcategories/{id}` - Delete subcategory
+- `GET /transaction-subcategories/category/{categoryId}` - Get subcategories by category
+- `GET /transaction-subcategories/category/{categoryId}/usage` - Get subcategories ordered by usage
+- `GET /transaction-subcategories/category/{categoryId}/count` - Get subcategory count by category
+
+#### Other Resources
 - `GET /transaction-sources` - List transaction sources
-- `GET /transaction-subcategories` - List subcategories
 - `GET /transaction-responsibles` - List responsible parties
 
 ## 🧪 Testing Strategy

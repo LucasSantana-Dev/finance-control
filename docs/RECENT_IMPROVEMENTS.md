@@ -83,7 +83,7 @@ This document outlines the recent improvements and fixes made to the Finance Con
 
 **Problem**: Scripts failing on macOS due to missing `timeout` command and Docker Compose v2 syntax.
 
-**Root Cause**: 
+**Root Cause**:
 - `timeout` command not available on macOS by default
 - Scripts using `docker-compose` instead of `docker compose` (v2 syntax)
 

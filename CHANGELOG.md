@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Transaction Categories Management**: Complete CRUD operations for transaction categories and subcategories
+  - `TransactionCategory` and `TransactionSubcategory` entities with proper JPA relationships
+  - `TransactionCategoryService` and `TransactionSubcategoryService` with business logic
+  - `TransactionCategoryController` and `TransactionSubcategoryController` with REST endpoints
+  - Comprehensive unit and integration tests for category management
+  - Support for case-insensitive name operations and duplicate validation
 - **MapStruct Integration**: Added MapStruct 1.5.5.Final for type-safe DTO-entity mapping
   - `FinancialGoalMapper` with date conversion support
   - `TransactionMapper` with complex relationship handling
@@ -15,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `UserMapper` for user entity conversions
 - **JPA Auditing Configuration**: Added `JpaConfig` for automatic timestamp management
 - **Comprehensive Test Suite**:
-  - Unit tests for Auth, Goals, Transactions, and Users
+  - Unit tests for Auth, Goals, Transactions, Users, and Categories
   - Integration tests with TestContainers
   - Enhanced test coverage targeting 80% minimum
 - **Enhanced Development Scripts**: Improved `dev.sh` with retry logic and better error handling
