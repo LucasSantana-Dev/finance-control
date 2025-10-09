@@ -27,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Cleanup**: Removed TODO comments and AI-generated redundant comments from test files
 - **Test Structure**: Improved test isolation by using fresh entity instances and proper mock setup
 
+### Improved
+- **Code Quality**: Enhanced TransactionService with generic findEntityById method to reduce code duplication
+- **Performance**: Added method caching to EntityMapper for better reflection performance
+- **EntityMapper**: Improved null handling to avoid overwriting target fields with null values
+- **Maintainability**: Added clearCache method to EntityMapper for testing and debugging purposes
+
 ## [0.1.0] - 2024-12-19
 
 ### Added
