@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -43,7 +44,9 @@ class TransactionSubcategoryControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(transactionSubcategoryController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(transactionSubcategoryController)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .build();
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules();
 
@@ -101,7 +104,7 @@ class TransactionSubcategoryControllerTest {
         List<TransactionSubcategoryDTO> subcategories = List.of(testSubcategoryDTO);
         Page<TransactionSubcategoryDTO> page = new PageImpl<>(subcategories, PageRequest.of(0, 10), 1);
 
-        when(transactionSubcategoryService.findAll(anyString(), anyMap(), anyString(), anyString(), any(Pageable.class)))
+        when(transactionSubcategoryService.findAll(eq((String) null), anyMap(), eq((String) null), eq("asc"), any(Pageable.class)))
                 .thenReturn(page);
 
         // When & Then
@@ -114,7 +117,7 @@ class TransactionSubcategoryControllerTest {
                 .andExpect(jsonPath("$.content[0].name").value("Test Subcategory"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(transactionSubcategoryService).findAll(anyString(), anyMap(), anyString(), anyString(), any(Pageable.class));
+        verify(transactionSubcategoryService).findAll(eq((String) null), anyMap(), eq((String) null), eq("asc"), any(Pageable.class));
     }
 
     @Test
@@ -123,12 +126,13 @@ class TransactionSubcategoryControllerTest {
         TransactionSubcategoryDTO updateDTO = new TransactionSubcategoryDTO();
         updateDTO.setName("Updated Subcategory");
         updateDTO.setDescription("Updated Description");
+        updateDTO.setCategoryId(1L);
 
         when(transactionSubcategoryService.update(eq(1L), any(TransactionSubcategoryDTO.class)))
                 .thenReturn(testSubcategoryDTO);
 
         // When & Then
-        mockMvc.perform(put("/transaction-subcategories/1")
+        mockMvc.perform(patch("/transaction-subcategories/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDTO)))
                 .andExpect(status().isOk())
@@ -219,7 +223,7 @@ class TransactionSubcategoryControllerTest {
         List<TransactionSubcategoryDTO> subcategories = List.of(testSubcategoryDTO);
         Page<TransactionSubcategoryDTO> page = new PageImpl<>(subcategories, PageRequest.of(0, 10), 1);
 
-        when(transactionSubcategoryService.findAll(eq("test"), anyMap(), anyString(), anyString(), any(Pageable.class)))
+        when(transactionSubcategoryService.findAll(eq("test"), anyMap(), eq((String) null), eq("asc"), any(Pageable.class)))
                 .thenReturn(page);
 
         // When & Then
@@ -231,7 +235,7 @@ class TransactionSubcategoryControllerTest {
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content[0].name").value("Test Subcategory"));
 
-        verify(transactionSubcategoryService).findAll(eq("test"), anyMap(), anyString(), anyString(), any(Pageable.class));
+        verify(transactionSubcategoryService).findAll(eq("test"), anyMap(), eq((String) null), eq("asc"), any(Pageable.class));
     }
 
     @Test
@@ -240,7 +244,7 @@ class TransactionSubcategoryControllerTest {
         List<TransactionSubcategoryDTO> subcategories = List.of(testSubcategoryDTO);
         Page<TransactionSubcategoryDTO> page = new PageImpl<>(subcategories, PageRequest.of(0, 10), 1);
 
-        when(transactionSubcategoryService.findAll(anyString(), anyMap(), anyString(), anyString(), any(Pageable.class)))
+        when(transactionSubcategoryService.findAll(eq((String) null), anyMap(), eq((String) null), eq("asc"), any(Pageable.class)))
                 .thenReturn(page);
 
         // When & Then
@@ -252,6 +256,6 @@ class TransactionSubcategoryControllerTest {
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content[0].categoryId").value(1L));
 
-        verify(transactionSubcategoryService).findAll(anyString(), anyMap(), anyString(), anyString(), any(Pageable.class));
+        verify(transactionSubcategoryService).findAll(eq((String) null), anyMap(), eq((String) null), eq("asc"), any(Pageable.class));
     }
 }

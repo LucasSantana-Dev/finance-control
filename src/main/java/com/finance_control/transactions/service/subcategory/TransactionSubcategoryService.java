@@ -191,12 +191,14 @@ public class TransactionSubcategoryService extends
 
     @Override
     protected void validateCreateDTO(TransactionSubcategoryDTO createDTO) {
+        createDTO.validateCreate();
         super.validateCreateDTO(createDTO);
         ValidationUtils.validateId(createDTO.getCategoryId());
     }
 
     @Override
     protected void validateUpdateDTO(TransactionSubcategoryDTO updateDTO) {
+        updateDTO.validateUpdate();
         super.validateUpdateDTO(updateDTO);
     }
 

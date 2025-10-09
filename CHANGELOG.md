@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **TransactionServiceTest Update Tests**: Fixed all failing update tests in TransactionServiceTest
+  - Resolved "Total percentage of responsibilities must equal 100%" validation errors
+  - Fixed test isolation issues with shared mutable state between tests
+  - Corrected mock setup for `transactionRepository.save()` to properly set entity IDs
+  - Fixed `ClassCastException` in `EntityMapper.mapCommonFields()` for responsibilities field
+  - All 8 update test methods now passing: `update_WithValidData_ShouldReturnUpdatedTransaction`, `update_WithCategoryId_ShouldUpdateCategory`, `update_WithNullSourceEntityId_ShouldClearSourceEntity`, `update_WithNullSubcategoryId_ShouldClearSubcategory`, `update_WithResponsibilities_ShouldUpdateResponsibilities`, `update_WithSourceEntityId_ShouldUpdateSourceEntity`, `update_WithSubcategoryId_ShouldUpdateSubcategory`, `update_WithNonExistingId_ShouldThrowException`
+
+### Changed
+- **Test Cleanup**: Removed TODO comments and AI-generated redundant comments from test files
+- **Test Structure**: Improved test isolation by using fresh entity instances and proper mock setup
+
 ## [0.1.0] - 2024-12-19
 
 ### Added

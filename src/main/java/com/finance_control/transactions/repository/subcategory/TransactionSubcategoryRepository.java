@@ -3,6 +3,8 @@ package com.finance_control.transactions.repository.subcategory;
 import com.finance_control.shared.repository.BaseRepository;
 import com.finance_control.shared.repository.NameBasedRepository;
 import com.finance_control.transactions.model.subcategory.TransactionSubcategory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -29,6 +31,13 @@ public interface TransactionSubcategoryRepository extends BaseRepository<Transac
     List<TransactionSubcategory> findByCategoryIdOrderByUsageAndName(@Param("categoryId") Long categoryId);
 
     long countByCategoryIdAndIsActiveTrue(Long categoryId);
+
+    // Override BaseRepository search method to search by name field
+    @Override
+    @Query("SELECT s FROM TransactionSubcategory s WHERE " +
+            "(:search IS NULL OR :search = '' OR " +
+            "LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<TransactionSubcategory> findAll(@Param("search") String search, Pageable pageable);
 
     // NameBasedRepository interface methods
     // For subcategories, these methods are not applicable as names are scoped to categories

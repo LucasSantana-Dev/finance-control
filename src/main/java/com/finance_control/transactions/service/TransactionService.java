@@ -144,8 +144,17 @@ public class TransactionService
 
     @Override
     protected void updateEntityFromDTO(Transaction entity, TransactionDTO updateDTO) {
+        // Store responsibilities before mapping to avoid type conflicts
+        List<TransactionResponsiblesDTO> responsibilitiesToUpdate = updateDTO.getResponsibilities();
+
+        // Temporarily clear responsibilities to prevent EntityMapper from copying DTOs
+        updateDTO.setResponsibilities(null);
+
         // Map common fields using reflection
         EntityMapper.mapCommonFields(updateDTO, entity);
+
+        // Restore responsibilities to the DTO
+        updateDTO.setResponsibilities(responsibilitiesToUpdate);
 
         // Update relationships if provided
         if (updateDTO.getCategoryId() != null) {
@@ -165,7 +174,12 @@ public class TransactionService
         }
 
         // Clear existing responsibilities and add new ones
-        entity.getResponsibilities().clear();
+        if (entity.getResponsibilities() == null) {
+            entity.setResponsibilities(new ArrayList<>());
+        } else {
+            entity.getResponsibilities().clear();
+        }
+
         if (updateDTO.getResponsibilities() != null) {
             for (TransactionResponsiblesDTO respDTO : updateDTO.getResponsibilities()) {
                 TransactionResponsibles responsible = getResponsibleById(respDTO.getResponsibleId());
@@ -182,8 +196,12 @@ public class TransactionService
         EntityMapper.mapCommonFields(entity, dto);
 
         // Map nested fields separately
-        dto.setUserId(entity.getUser().getId());
-        dto.setCategoryId(entity.getCategory().getId());
+        if (entity.getUser() != null) {
+            dto.setUserId(entity.getUser().getId());
+        }
+        if (entity.getCategory() != null) {
+            dto.setCategoryId(entity.getCategory().getId());
+        }
         if (entity.getSubcategory() != null) {
             dto.setSubcategoryId(entity.getSubcategory().getId());
         }

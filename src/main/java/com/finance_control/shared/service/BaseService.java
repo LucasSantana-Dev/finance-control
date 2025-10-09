@@ -91,7 +91,8 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     public Page<D> findAll(String search, Map<String, Object> filters, String sortBy, String sortDirection,
             Pageable pageable) {
         log.debug("Finding all entities with search: '{}', filters: {}, sortBy: '{}', sortDirection: '{}', page: {}",
-                search, filters, sortBy, sortDirection, pageable.getPageNumber());
+                search, filters, sortBy, sortDirection,
+                pageable.isUnpaged() ? "unpaged" : pageable.getPageNumber());
 
         Pageable finalPageable = createPageableWithSort(pageable, sortBy, sortDirection);
         addUserFilterIfNeeded(filters);
@@ -299,7 +300,9 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
         log.debug("Saving updated entity to repository");
         T savedEntity = repository.save(entity);
         log.info("Entity updated successfully with ID: {}", id);
-        return mapToResponseDTO(savedEntity);
+        D result = mapToResponseDTO(savedEntity);
+        log.debug("Mapped result: {}", result);
+        return result;
     }
 
     /**

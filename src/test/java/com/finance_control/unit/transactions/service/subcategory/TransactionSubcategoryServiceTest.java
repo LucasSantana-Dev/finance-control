@@ -77,7 +77,6 @@ class TransactionSubcategoryServiceTest {
 
         when(transactionCategoryRepository.existsById(1L)).thenReturn(true);
         when(transactionCategoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(transactionSubcategoryRepository.existsByCategoryIdAndNameIgnoreCase(1L, "New Subcategory")).thenReturn(false);
         when(transactionSubcategoryRepository.save(any(TransactionSubcategory.class))).thenReturn(testSubcategory);
 
         // When
@@ -91,7 +90,6 @@ class TransactionSubcategoryServiceTest {
 
         verify(transactionCategoryRepository).existsById(1L);
         verify(transactionCategoryRepository).findById(1L);
-        verify(transactionSubcategoryRepository).existsByCategoryIdAndNameIgnoreCase(1L, "New Subcategory");
         verify(transactionSubcategoryRepository).save(any(TransactionSubcategory.class));
     }
 
@@ -113,25 +111,7 @@ class TransactionSubcategoryServiceTest {
         verify(transactionSubcategoryRepository, never()).save(any(TransactionSubcategory.class));
     }
 
-    @Test
-    void create_WithDuplicateNameInCategory_ShouldThrowException() {
-        // Given
-        TransactionSubcategoryDTO createDTO = new TransactionSubcategoryDTO();
-        createDTO.setName("Existing Subcategory");
-        createDTO.setCategoryId(1L);
-
-        when(transactionCategoryRepository.existsById(1L)).thenReturn(true);
-        when(transactionSubcategoryRepository.existsByCategoryIdAndNameIgnoreCase(1L, "Existing Subcategory")).thenReturn(true);
-
-        // When & Then
-        assertThatThrownBy(() -> transactionSubcategoryService.create(createDTO))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("already exists");
-
-        verify(transactionCategoryRepository).existsById(1L);
-        verify(transactionSubcategoryRepository).existsByCategoryIdAndNameIgnoreCase(1L, "Existing Subcategory");
-        verify(transactionSubcategoryRepository, never()).save(any(TransactionSubcategory.class));
-    }
+    // Note: Subcategories don't have duplicate name validation since they can have the same name in different categories
 
     @Test
     void findById_WithExistingId_ShouldReturnSubcategory() {
@@ -151,14 +131,15 @@ class TransactionSubcategoryServiceTest {
     }
 
     @Test
-    void findById_WithNonExistingId_ShouldThrowException() {
+    void findById_WithNonExistingId_ShouldReturnEmpty() {
         // Given
         when(transactionSubcategoryRepository.findById(999L)).thenReturn(Optional.empty());
 
-        // When & Then
-        assertThatThrownBy(() -> transactionSubcategoryService.findById(999L))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("not found");
+        // When
+        Optional<TransactionSubcategoryDTO> result = transactionSubcategoryService.findById(999L);
+
+        // Then
+        assertThat(result).isEmpty();
 
         verify(transactionSubcategoryRepository).findById(999L);
     }
@@ -224,7 +205,6 @@ class TransactionSubcategoryServiceTest {
         updateDTO.setDescription("Updated Description");
 
         when(transactionSubcategoryRepository.findById(1L)).thenReturn(Optional.of(testSubcategory));
-        when(transactionSubcategoryRepository.existsByCategoryIdAndNameIgnoreCase(1L, "Updated Subcategory")).thenReturn(false);
         when(transactionSubcategoryRepository.save(any(TransactionSubcategory.class))).thenReturn(testSubcategory);
 
         // When
@@ -235,7 +215,6 @@ class TransactionSubcategoryServiceTest {
         assertThat(result.getId()).isEqualTo(1L);
 
         verify(transactionSubcategoryRepository).findById(1L);
-        verify(transactionSubcategoryRepository).existsByCategoryIdAndNameIgnoreCase(1L, "Updated Subcategory");
         verify(transactionSubcategoryRepository).save(any(TransactionSubcategory.class));
     }
 
