@@ -28,6 +28,8 @@ public interface TransactionSourceRepository extends BaseRepository<TransactionS
 
         List<TransactionSourceEntity> findAllByUserIdOrderByNameAsc(Long userId);
 
+        List<TransactionSourceEntity> findByUserIdAndIsActiveTrue(Long userId);
+
         @Query("SELECT tse FROM TransactionSourceEntity tse WHERE " +
                         "tse.user.id = :userId AND " +
                         "(:search IS NULL OR :search = '' OR " +
