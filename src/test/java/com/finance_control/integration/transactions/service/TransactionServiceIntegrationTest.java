@@ -13,6 +13,8 @@ import com.finance_control.transactions.repository.responsibles.TransactionRespo
 import com.finance_control.transactions.model.responsibles.TransactionResponsibles;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
+import com.finance_control.unit.TestUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,6 +63,15 @@ class TransactionServiceIntegrationTest extends BaseIntegrationTest {
         testResponsible = new TransactionResponsibles();
         testResponsible.setName("Test Responsible");
         testResponsible = responsibleRepository.save(testResponsible);
+
+        // Set up user context for the service calls
+        TestUtils.setupUserContext(testUser.getId());
+    }
+
+    @AfterEach
+    void tearDown() {
+        // Clear user context after each test
+        TestUtils.clearUserContext();
     }
 
     @Test
