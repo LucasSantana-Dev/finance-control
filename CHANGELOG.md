@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Brazilian Market Data Integration**: Complete Brazilian market data module with real-time stock, FII, and economic indicator tracking
+- **BCB API Integration**: Integration with Banco Central do Brasil APIs for Selic rate, CDI, IPCA, and other economic indicators
+- **Brazilian Stocks API**: Integration with Brazilian stocks and FIIs data sources
+- **Market Data Entities**: BrazilianStock, FII, BrazilianBond, and MarketIndicator entities
+- **REST API Endpoints**: Complete REST API for Brazilian market data operations
+- **Async Data Updates**: Asynchronous data fetching and updates for real-time market data
+- **Scheduled Updates**: Automatic hourly updates for key economic indicators
+- **Database Migration**: V4 migration for Brazilian market data tables
+- **Unit Tests**: Comprehensive unit tests for Brazilian market data services
+
 ### Fixed
 - **TransactionServiceTest Update Tests**: Fixed all failing update tests in TransactionServiceTest
   - Resolved "Total percentage of responsibilities must equal 100%" validation errors
