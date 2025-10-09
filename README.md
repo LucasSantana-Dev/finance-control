@@ -14,6 +14,10 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Multi-source tracking**: Credit cards, bank accounts, cash, and more
 - **Categorization system**: Hierarchical categories and subcategories with full CRUD operations
 - **Category management**: Complete REST API for managing transaction categories and subcategories
+  - ✅ **NEW**: Full CRUD operations for transaction categories and subcategories
+  - ✅ **NEW**: Case-insensitive name validation and duplicate checking
+  - ✅ **NEW**: Active/inactive status management for subcategories
+  - ✅ **NEW**: Comprehensive test coverage (62 tests) with unit and integration tests
 - **Responsibility sharing**: Split transactions between multiple people
 - **Installment support**: Track recurring payments and installments
 - **Advanced filtering**: Search and filter by date, type, category, and amount
@@ -257,13 +261,15 @@ The project includes comprehensive test coverage with multiple testing strategie
 
 The project has recently undergone significant improvements:
 
+- **✅ Transaction Categories Management**: Complete CRUD operations with 62 comprehensive tests
 - **✅ MapStruct Integration**: Type-safe DTO-entity mapping with compile-time validation
 - **✅ JPA Auditing**: Automatic timestamp management for all entities
-- **✅ Enhanced Testing**: Comprehensive unit and integration test coverage
-- **✅ Quality Gates**: All code quality checks passing consistently
+- **✅ Enhanced Testing**: Comprehensive unit and integration test coverage (148 tests passing)
+- **✅ Quality Gates**: All code quality checks passing consistently (Checkstyle, PMD, SpotBugs)
 - **✅ Docker Compatibility**: Full macOS and Docker Compose v2 support
 - **✅ Test Isolation**: Fixed optimistic locking issues in integration tests
 - **✅ Development Scripts**: Enhanced `dev.sh` with retry logic and better error handling
+- **✅ Repository Layer**: Enhanced with NameBasedRepository interface for standardized operations
 
 ### Code Standards
 - **Java 24**: Latest LTS version with modern features
