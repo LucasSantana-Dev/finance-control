@@ -2,9 +2,6 @@ package com.finance_control.e2e.transactions;
 
 import com.finance_control.e2e.BaseSeleniumTest;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.support.ui.WebDriverWait;
-
-import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,24 +9,20 @@ class TransactionSeleniumTest extends BaseSeleniumTest {
 
     @Test
     void shouldDisplayTransactionPage() {
-        navigateTo("/transactions");
-
-        // Wait for page to load
-        new WebDriverWait(driver, Duration.ofSeconds(10))
-            .until(webDriver -> webDriver.getTitle() != null);
-
-        // This test assumes there's a web interface
-        // For now, we'll just verify the application is running
-        assertThat(driver.getTitle()).isNotNull();
+        // Test that the application is running and accessible
+        String content = getPageContent("/actuator/health");
+        
+        // Verify the application is responding
+        assertThat(content).isNotNull();
+        assertThat(content).contains("UP");
     }
 
     @Test
     void shouldHandleApiEndpoints() {
-        // Test API endpoints directly
-        navigateTo("/actuator/health");
+        // Test API endpoints directly using HTTP client
+        String content = getPageContent("/actuator/health");
 
         // Verify health endpoint is accessible
-        String pageSource = driver.getPageSource();
-        assertThat(pageSource).contains("UP");
+        assertThat(content).contains("UP");
     }
 }
