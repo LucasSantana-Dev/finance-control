@@ -96,8 +96,8 @@ public interface FIIRepository extends JpaRepository<FII, Long> {
      */
     @Query("SELECT f FROM FII f WHERE f.userId = :userId AND " +
            "f.marketCap BETWEEN :minCap AND :maxCap")
-    List<FII> findByUserAndMarketCapBetween(@Param("userId") Long userId, 
-                                          @Param("minCap") java.math.BigDecimal minCap, 
+    List<FII> findByUserAndMarketCapBetween(@Param("userId") Long userId,
+                                          @Param("minCap") java.math.BigDecimal minCap,
                                           @Param("maxCap") java.math.BigDecimal maxCap);
 
     /**

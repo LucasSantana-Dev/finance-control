@@ -208,13 +208,13 @@ public class BrazilianMarketController {
     @Operation(summary = "Update all indicators", description = "Fetches and updates all key economic indicators from BCB")
     public ResponseEntity<Map<String, CompletableFuture<MarketIndicator>>> updateAllIndicators() {
         log.debug("POST request to update all indicators");
-        
+
         Map<String, CompletableFuture<MarketIndicator>> futures = Map.of(
             "selic", marketDataService.updateSelicRate(),
             "cdi", marketDataService.updateCDIRate(),
             "ipca", marketDataService.updateIPCA()
         );
-        
+
         return ResponseEntity.ok(futures);
     }
 
@@ -225,7 +225,7 @@ public class BrazilianMarketController {
         if (authentication == null || authentication.getPrincipal() == null) {
             throw new IllegalArgumentException("User not authenticated");
         }
-        
+
         // Assuming the principal contains user ID - adjust based on your authentication setup
         try {
             return Long.valueOf(authentication.getName());

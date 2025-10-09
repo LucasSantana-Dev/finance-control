@@ -59,17 +59,17 @@ public class BrazilianMarketDataService {
         try {
             log.info("Updating Selic rate from BCB");
             BigDecimal currentRate = bcbApiClient.getCurrentSelicRate();
-            
+
             Optional<MarketIndicator> existingIndicator = indicatorRepository.findByCode("SELIC");
             MarketIndicator indicator;
-            
+
             if (existingIndicator.isPresent()) {
                 indicator = existingIndicator.get();
                 indicator.updateValue(currentRate, LocalDate.now());
             } else {
                 indicator = bcbApiClient.createMarketIndicator(
-                    "SELIC", 
-                    "Taxa Selic", 
+                    "SELIC",
+                    "Taxa Selic",
                     "Taxa básica de juros da economia brasileira",
                     MarketIndicator.IndicatorType.INTEREST_RATE,
                     MarketIndicator.Frequency.DAILY
@@ -77,7 +77,7 @@ public class BrazilianMarketDataService {
                 indicator.setCurrentValue(currentRate);
                 indicator.setReferenceDate(LocalDate.now());
             }
-            
+
             MarketIndicator saved = indicatorRepository.save(indicator);
             log.info("Selic rate updated: {}%", currentRate);
             return CompletableFuture.completedFuture(saved);
@@ -95,17 +95,17 @@ public class BrazilianMarketDataService {
         try {
             log.info("Updating CDI rate from BCB");
             BigDecimal currentRate = bcbApiClient.getCurrentCDIRate();
-            
+
             Optional<MarketIndicator> existingIndicator = indicatorRepository.findByCode("CDI");
             MarketIndicator indicator;
-            
+
             if (existingIndicator.isPresent()) {
                 indicator = existingIndicator.get();
                 indicator.updateValue(currentRate, LocalDate.now());
             } else {
                 indicator = bcbApiClient.createMarketIndicator(
-                    "CDI", 
-                    "CDI", 
+                    "CDI",
+                    "CDI",
                     "Certificado de Depósito Interbancário",
                     MarketIndicator.IndicatorType.INTEREST_RATE,
                     MarketIndicator.Frequency.DAILY
@@ -113,7 +113,7 @@ public class BrazilianMarketDataService {
                 indicator.setCurrentValue(currentRate);
                 indicator.setReferenceDate(LocalDate.now());
             }
-            
+
             MarketIndicator saved = indicatorRepository.save(indicator);
             log.info("CDI rate updated: {}%", currentRate);
             return CompletableFuture.completedFuture(saved);
@@ -131,17 +131,17 @@ public class BrazilianMarketDataService {
         try {
             log.info("Updating IPCA from BCB");
             BigDecimal currentIPCA = bcbApiClient.getCurrentIPCA();
-            
+
             Optional<MarketIndicator> existingIndicator = indicatorRepository.findByCode("IPCA");
             MarketIndicator indicator;
-            
+
             if (existingIndicator.isPresent()) {
                 indicator = existingIndicator.get();
                 indicator.updateValue(currentIPCA, LocalDate.now());
             } else {
                 indicator = bcbApiClient.createMarketIndicator(
-                    "IPCA", 
-                    "IPCA", 
+                    "IPCA",
+                    "IPCA",
                     "Índice Nacional de Preços ao Consumidor Amplo",
                     MarketIndicator.IndicatorType.INFLATION,
                     MarketIndicator.Frequency.MONTHLY
@@ -149,7 +149,7 @@ public class BrazilianMarketDataService {
                 indicator.setCurrentValue(currentIPCA);
                 indicator.setReferenceDate(LocalDate.now());
             }
-            
+
             MarketIndicator saved = indicatorRepository.save(indicator);
             log.info("IPCA updated: {}%", currentIPCA);
             return CompletableFuture.completedFuture(saved);
@@ -166,17 +166,17 @@ public class BrazilianMarketDataService {
     public CompletableFuture<BrazilianStock> updateStockData(String ticker, Long userId) {
         try {
             log.info("Updating stock data for ticker: {} for user: {}", ticker, userId);
-            
+
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            
+
             BrazilianStock stockData = stocksApiClient.getStockQuote(ticker);
             if (stockData == null) {
                 throw new IllegalArgumentException("Stock data not found for ticker: " + ticker);
             }
-            
+
             stockData.setUser(user);
-            
+
             Optional<BrazilianStock> existingStock = stockRepository.findByTickerAndUserId(ticker, userId);
             if (existingStock.isPresent()) {
                 BrazilianStock existing = existingStock.get();
@@ -184,7 +184,7 @@ public class BrazilianMarketDataService {
                 existing.setVolume(stockData.getVolume());
                 existing.setMarketCap(stockData.getMarketCap());
                 existing.setLastUpdated(LocalDateTime.now());
-                
+
                 BrazilianStock saved = stockRepository.save(existing);
                 log.info("Stock data updated for ticker: {}", ticker);
                 return CompletableFuture.completedFuture(saved);
@@ -206,17 +206,17 @@ public class BrazilianMarketDataService {
     public CompletableFuture<FII> updateFIIData(String ticker, Long userId) {
         try {
             log.info("Updating FII data for ticker: {} for user: {}", ticker, userId);
-            
+
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            
+
             FII fiiData = stocksApiClient.getFIIQuote(ticker);
             if (fiiData == null) {
                 throw new IllegalArgumentException("FII data not found for ticker: " + ticker);
             }
-            
+
             fiiData.setUser(user);
-            
+
             Optional<FII> existingFII = fiiRepository.findByTickerAndUserId(ticker, userId);
             if (existingFII.isPresent()) {
                 FII existing = existingFII.get();
@@ -228,7 +228,7 @@ public class BrazilianMarketDataService {
                 existing.setLastDividendDate(fiiData.getLastDividendDate());
                 existing.setNetWorth(fiiData.getNetWorth());
                 existing.setLastUpdated(LocalDateTime.now());
-                
+
                 FII saved = fiiRepository.save(existing);
                 log.info("FII data updated for ticker: {}", ticker);
                 return CompletableFuture.completedFuture(saved);
@@ -311,7 +311,7 @@ public class BrazilianMarketDataService {
     @Scheduled(fixedRate = 3600000) // 1 hour
     public void updateKeyIndicators() {
         log.info("Starting scheduled update of key indicators");
-        
+
         CompletableFuture.allOf(
             updateSelicRate(),
             updateCDIRate(),

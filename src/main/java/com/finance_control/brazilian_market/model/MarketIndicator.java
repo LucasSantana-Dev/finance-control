@@ -108,7 +108,7 @@ public class MarketIndicator extends BaseModel<Long> {
     public void calculateChanges() {
         if (currentValue != null && previousValue != null) {
             changeValue = currentValue.subtract(previousValue);
-            
+
             if (previousValue.compareTo(BigDecimal.ZERO) != 0) {
                 changePercent = changeValue.divide(previousValue, 4, java.math.RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100));
@@ -135,10 +135,10 @@ public class MarketIndicator extends BaseModel<Long> {
      * Checks if the indicator is a key economic indicator.
      */
     public boolean isKeyIndicator() {
-        return indicatorType == IndicatorType.INTEREST_RATE || 
+        return indicatorType == IndicatorType.INTEREST_RATE ||
                indicatorType == IndicatorType.INFLATION ||
-               code.equals("SELIC") || 
-               code.equals("CDI") || 
+               code.equals("SELIC") ||
+               code.equals("CDI") ||
                code.equals("IPCA");
     }
 }

@@ -48,11 +48,11 @@ public class BrazilianStocksApiClient {
                     .toUriString();
 
             ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToBrazilianStocks(response.getBody());
             }
-            
+
             log.warn("No stocks data found");
             return new ArrayList<>();
         } catch (Exception e) {
@@ -73,11 +73,11 @@ public class BrazilianStocksApiClient {
                     .toUriString();
 
             ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToFIIs(response.getBody());
             }
-            
+
             log.warn("No FIIs data found");
             return new ArrayList<>();
         } catch (Exception e) {
@@ -92,13 +92,13 @@ public class BrazilianStocksApiClient {
     public BrazilianStock getStockQuote(String ticker) {
         try {
             log.debug("Fetching quote for stock: {}", ticker);
-            
+
             // Try Brazilian Stocks API first
             BrazilianStock stock = getStockFromBrazilianApi(ticker);
             if (stock != null) {
                 return stock;
             }
-            
+
             // Fallback to Alpha Vantage
             return getStockFromAlphaVantage(ticker);
         } catch (Exception e) {
@@ -119,11 +119,11 @@ public class BrazilianStocksApiClient {
                     .toUriString();
 
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToFII(response.getBody());
             }
-            
+
             log.warn("No FII data found for ticker: {}", ticker);
             return null;
         } catch (Exception e) {
@@ -145,11 +145,11 @@ public class BrazilianStocksApiClient {
                     .toUriString();
 
             ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToBrazilianStocks(response.getBody());
             }
-            
+
             return new ArrayList<>();
         } catch (Exception e) {
             log.error("Error searching stocks with query: {}", query, e);
@@ -169,11 +169,11 @@ public class BrazilianStocksApiClient {
                     .toUriString();
 
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return response.getBody();
             }
-            
+
             return Map.of();
         } catch (Exception e) {
             log.error("Error fetching market summary", e);
@@ -192,11 +192,11 @@ public class BrazilianStocksApiClient {
                     .toUriString();
 
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToBrazilianStock(response.getBody());
             }
-            
+
             return null;
         } catch (Exception e) {
             log.debug("Error fetching stock {} from Brazilian API: {}", ticker, e.getMessage());
@@ -222,11 +222,11 @@ public class BrazilianStocksApiClient {
                     .toUriString();
 
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return mapToBrazilianStockFromAlphaVantage(response.getBody(), ticker);
             }
-            
+
             return null;
         } catch (Exception e) {
             log.debug("Error fetching stock {} from Alpha Vantage: {}", ticker, e.getMessage());
@@ -257,19 +257,19 @@ public class BrazilianStocksApiClient {
             stock.setTicker((String) data.get("ticker"));
             stock.setCompanyName((String) data.get("companyName"));
             stock.setDescription((String) data.get("description"));
-            
+
             // Map stock type
             String stockTypeStr = (String) data.get("stockType");
             if (stockTypeStr != null) {
                 stock.setStockType(BrazilianStock.StockType.valueOf(stockTypeStr.toUpperCase()));
             }
-            
+
             // Map segment
             String segmentStr = (String) data.get("segment");
             if (segmentStr != null) {
                 stock.setSegment(BrazilianStock.MarketSegment.valueOf(segmentStr.toUpperCase()));
             }
-            
+
             // Map price data
             if (data.get("currentPrice") != null) {
                 stock.setCurrentPrice(new BigDecimal(data.get("currentPrice").toString()));
@@ -283,10 +283,10 @@ public class BrazilianStocksApiClient {
             if (data.get("marketCap") != null) {
                 stock.setMarketCap(new BigDecimal(data.get("marketCap").toString()));
             }
-            
+
             stock.setLastUpdated(LocalDateTime.now());
             stock.setIsActive(true);
-            
+
             return stock;
         } catch (Exception e) {
             log.error("Error mapping stock data", e);
@@ -307,7 +307,7 @@ public class BrazilianStocksApiClient {
             BrazilianStock stock = new BrazilianStock();
             stock.setTicker(ticker);
             stock.setCompanyName(ticker); // Alpha Vantage doesn't provide company name
-            
+
             // Map price data
             if (quote.get("05. price") != null) {
                 stock.setCurrentPrice(new BigDecimal(quote.get("05. price").toString()));
@@ -318,10 +318,10 @@ public class BrazilianStocksApiClient {
             if (quote.get("06. volume") != null) {
                 stock.setVolume(Long.valueOf(quote.get("06. volume").toString()));
             }
-            
+
             stock.setLastUpdated(LocalDateTime.now());
             stock.setIsActive(true);
-            
+
             return stock;
         } catch (Exception e) {
             log.error("Error mapping Alpha Vantage stock data", e);
@@ -352,19 +352,19 @@ public class BrazilianStocksApiClient {
             fii.setTicker((String) data.get("ticker"));
             fii.setFundName((String) data.get("fundName"));
             fii.setDescription((String) data.get("description"));
-            
+
             // Map FII type
             String fiiTypeStr = (String) data.get("fiiType");
             if (fiiTypeStr != null) {
                 fii.setFiiType(FII.FIIType.valueOf(fiiTypeStr.toUpperCase()));
             }
-            
+
             // Map segment
             String segmentStr = (String) data.get("segment");
             if (segmentStr != null) {
                 fii.setSegment(FII.FIISegment.valueOf(segmentStr.toUpperCase()));
             }
-            
+
             // Map price data
             if (data.get("currentPrice") != null) {
                 fii.setCurrentPrice(new BigDecimal(data.get("currentPrice").toString()));
@@ -387,10 +387,10 @@ public class BrazilianStocksApiClient {
             if (data.get("netWorth") != null) {
                 fii.setNetWorth(new BigDecimal(data.get("netWorth").toString()));
             }
-            
+
             fii.setLastUpdated(LocalDateTime.now());
             fii.setIsActive(true);
-            
+
             return fii;
         } catch (Exception e) {
             log.error("Error mapping FII data", e);

@@ -24,7 +24,7 @@ public class BrazilianMarketConfig {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000); // 10 seconds
         factory.setReadTimeout(30000);    // 30 seconds
-        
+
         return new RestTemplate(factory);
     }
 }

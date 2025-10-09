@@ -136,11 +136,11 @@ public class FII extends BaseModel<Long> {
         if (currentPrice == null || previousClose == null || previousClose.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
-        
+
         dayChange = currentPrice.subtract(previousClose);
         dayChangePercent = dayChange.divide(previousClose, 4, java.math.RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
-        
+
         return dayChangePercent;
     }
 
@@ -151,7 +151,7 @@ public class FII extends BaseModel<Long> {
         if (currentPrice == null || netWorth == null || netWorth.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
-        
+
         pvpRatio = currentPrice.divide(netWorth, 4, java.math.RoundingMode.HALF_UP);
         return pvpRatio;
     }

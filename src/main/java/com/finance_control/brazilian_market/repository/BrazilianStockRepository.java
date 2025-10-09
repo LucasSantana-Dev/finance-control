@@ -89,8 +89,8 @@ public interface BrazilianStockRepository extends JpaRepository<BrazilianStock, 
      */
     @Query("SELECT s FROM BrazilianStock s WHERE s.userId = :userId AND " +
            "s.marketCap BETWEEN :minCap AND :maxCap")
-    List<BrazilianStock> findByUserAndMarketCapBetween(@Param("userId") Long userId, 
-                                                      @Param("minCap") java.math.BigDecimal minCap, 
+    List<BrazilianStock> findByUserAndMarketCapBetween(@Param("userId") Long userId,
+                                                      @Param("minCap") java.math.BigDecimal minCap,
                                                       @Param("maxCap") java.math.BigDecimal maxCap);
 
     /**

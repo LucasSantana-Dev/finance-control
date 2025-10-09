@@ -242,7 +242,7 @@ class BrazilianMarketDataServiceTest {
         String ticker = "PETR4";
         Long userId = 1L;
         BigDecimal newPrice = new BigDecimal("26.00");
-        
+
         BrazilianStock updatedStock = new BrazilianStock();
         updatedStock.setTicker(ticker);
         updatedStock.setCurrentPrice(newPrice);
@@ -270,7 +270,7 @@ class BrazilianMarketDataServiceTest {
         String ticker = "HGLG11";
         Long userId = 1L;
         BigDecimal newPrice = new BigDecimal("125.00");
-        
+
         FII updatedFII = new FII();
         updatedFII.setTicker(ticker);
         updatedFII.setCurrentPrice(newPrice);
@@ -295,7 +295,7 @@ class BrazilianMarketDataServiceTest {
     @Test
     void getMarketSummary_ShouldReturnSummary() {
         // Given
-        Object summary = new Object();
+        Map<String, Object> summary = Map.of("totalStocks", 500, "totalFIIs", 200);
         when(stocksApiClient.getMarketSummary()).thenReturn(summary);
 
         // When

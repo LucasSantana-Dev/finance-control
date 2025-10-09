@@ -39,7 +39,7 @@ public interface MarketIndicatorRepository extends JpaRepository<MarketIndicator
     /**
      * Finds indicators by type and frequency.
      */
-    List<MarketIndicator> findByIndicatorTypeAndFrequency(MarketIndicator.IndicatorType indicatorType, 
+    List<MarketIndicator> findByIndicatorTypeAndFrequency(MarketIndicator.IndicatorType indicatorType,
                                                          MarketIndicator.Frequency frequency);
 
     /**
@@ -68,7 +68,7 @@ public interface MarketIndicatorRepository extends JpaRepository<MarketIndicator
      * Finds indicators by reference date range.
      */
     @Query("SELECT m FROM MarketIndicator m WHERE m.referenceDate BETWEEN :startDate AND :endDate")
-    List<MarketIndicator> findByReferenceDateBetween(@Param("startDate") java.time.LocalDate startDate, 
+    List<MarketIndicator> findByReferenceDateBetween(@Param("startDate") java.time.LocalDate startDate,
                                                     @Param("endDate") java.time.LocalDate endDate);
 
     /**
