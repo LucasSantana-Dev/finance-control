@@ -50,10 +50,12 @@ public class TransactionCategoryService extends BaseService<TransactionCategory,
     @Override
     protected void validateCreateDTO(TransactionCategoryDTO createDTO) {
         createDTO.validateCreate();
+        super.validateCreateDTO(createDTO); // This calls the duplicate validation
     }
 
     @Override
     protected void validateUpdateDTO(TransactionCategoryDTO updateDTO) {
         updateDTO.validateUpdate();
+        super.validateUpdateDTO(updateDTO); // This calls the duplicate validation
     }
 }

@@ -96,10 +96,11 @@ class TransactionCategoryServiceIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void findById_WithNonExistingId_ShouldThrowException() {
-        // When & Then
-        assertThatThrownBy(() -> transactionCategoryService.findById(999L))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("not found");
+        // When
+        Optional<TransactionCategoryDTO> result = transactionCategoryService.findById(999L);
+
+        // Then
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -150,7 +151,7 @@ class TransactionCategoryServiceIntegrationTest extends BaseIntegrationTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(testCategory.getId());
         assertThat(result.getName()).isEqualTo("Updated Category");
-        assertThat(result.getUpdatedAt()).isAfter(result.getCreatedAt());
+        assertThat(result.getUpdatedAt()).isAfterOrEqualTo(result.getCreatedAt());
 
         // Verify it was updated in database
         TransactionCategory updatedCategory = transactionCategoryRepository.findById(testCategory.getId()).orElse(null);

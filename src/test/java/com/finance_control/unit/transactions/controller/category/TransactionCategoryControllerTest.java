@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,7 +44,9 @@ class TransactionCategoryControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(transactionCategoryController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(transactionCategoryController)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .build();
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules();
 
@@ -94,7 +97,7 @@ class TransactionCategoryControllerTest {
         List<TransactionCategoryDTO> categories = List.of(testCategoryDTO);
         Page<TransactionCategoryDTO> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
 
-        when(transactionCategoryService.findAll(anyString(), anyMap(), anyString(), anyString(), any(Pageable.class)))
+        when(transactionCategoryService.findAll(eq((String) null), anyMap(), eq((String) null), eq("asc"), any(Pageable.class)))
                 .thenReturn(page);
 
         // When & Then
@@ -107,7 +110,7 @@ class TransactionCategoryControllerTest {
                 .andExpect(jsonPath("$.content[0].name").value("Test Category"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(transactionCategoryService).findAll(anyString(), anyMap(), anyString(), anyString(), any(Pageable.class));
+        verify(transactionCategoryService).findAll(eq((String) null), anyMap(), eq((String) null), eq("asc"), any(Pageable.class));
     }
 
     @Test
@@ -120,7 +123,7 @@ class TransactionCategoryControllerTest {
                 .thenReturn(testCategoryDTO);
 
         // When & Then
-        mockMvc.perform(put("/transaction-categories/1")
+        mockMvc.perform(patch("/transaction-categories/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDTO)))
                 .andExpect(status().isOk())
@@ -163,7 +166,7 @@ class TransactionCategoryControllerTest {
         List<TransactionCategoryDTO> categories = List.of(testCategoryDTO);
         Page<TransactionCategoryDTO> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
 
-        when(transactionCategoryService.findAll(eq("test"), anyMap(), anyString(), anyString(), any(Pageable.class)))
+        when(transactionCategoryService.findAll(eq("test"), anyMap(), eq((String) null), eq("asc"), any(Pageable.class)))
                 .thenReturn(page);
 
         // When & Then
@@ -175,7 +178,7 @@ class TransactionCategoryControllerTest {
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content[0].name").value("Test Category"));
 
-        verify(transactionCategoryService).findAll(eq("test"), anyMap(), anyString(), anyString(), any(Pageable.class));
+        verify(transactionCategoryService).findAll(eq("test"), anyMap(), eq((String) null), eq("asc"), any(Pageable.class));
     }
 
     @Test
@@ -184,7 +187,7 @@ class TransactionCategoryControllerTest {
         List<TransactionCategoryDTO> categories = List.of(testCategoryDTO);
         Page<TransactionCategoryDTO> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
 
-        when(transactionCategoryService.findAll(anyString(), anyMap(), eq("name"), eq("desc"), any(Pageable.class)))
+        when(transactionCategoryService.findAll(eq((String) null), anyMap(), eq("name"), eq("asc"), any(Pageable.class)))
                 .thenReturn(page);
 
         // When & Then
@@ -196,6 +199,6 @@ class TransactionCategoryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray());
 
-        verify(transactionCategoryService).findAll(anyString(), anyMap(), eq("name"), eq("desc"), any(Pageable.class));
+        verify(transactionCategoryService).findAll(eq((String) null), anyMap(), eq("name"), eq("asc"), any(Pageable.class));
     }
 }

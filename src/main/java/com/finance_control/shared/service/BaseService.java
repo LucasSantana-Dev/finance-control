@@ -26,7 +26,7 @@ import jakarta.persistence.criteria.Root;
  * This class is designed to be generic and reusable across different domains.
  * Supports user-aware operations and name-based operations through
  * configuration.
- * 
+ *
  * @param <T> The entity type managed by this service
  * @param <I> The ID type of the entity (typically Long)
  * @param <D> The DTO type used for all operations (create, update, response)
@@ -48,7 +48,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Constructs a new BaseService with the specified repository.
-     * 
+     *
      * @param repository the repository to use for data access operations
      */
     protected BaseService(BaseRepository<T, I> repository) {
@@ -58,7 +58,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     /**
      * Check if this service should be user-aware (filter by current user).
      * Override to return true for user-scoped entities.
-     * 
+     *
      * @return true if the service should filter by user, false otherwise
      */
     protected boolean isUserAware() {
@@ -68,7 +68,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     /**
      * Check if this service should support name-based operations.
      * Override to return true for entities with name fields.
-     * 
+     *
      * @return true if the service should support name operations, false otherwise
      */
     protected boolean isNameBased() {
@@ -78,7 +78,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     /**
      * Find all entities with optional filtering, searching, and pagination support.
      * This method provides a unified interface for all entity queries.
-     * 
+     *
      * @param search        optional search term to filter entities (searches across
      *                      searchable fields)
      * @param filters       optional map of field-specific filters
@@ -105,7 +105,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Adds user filter to filters map if service is user-aware.
-     * 
+     *
      * @param filters the filters map to modify
      */
     private void addUserFilterIfNeeded(Map<String, Object> filters) {
@@ -127,7 +127,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Checks if filters map is null or empty.
-     * 
+     *
      * @param filters the filters map to check
      * @return true if filters is null or empty
      */
@@ -137,7 +137,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Finds entities using search-only approach (no specific filters).
-     * 
+     *
      * @param search the search term
      * @param pageable the pageable parameters
      * @return a page of response DTOs
@@ -151,7 +151,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Executes the findAll method with search, handling user-aware repositories.
-     * 
+     *
      * @param search the search term
      * @param pageable the pageable parameters
      * @return a page of entities
@@ -182,7 +182,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Finds entities using specifications approach.
-     * 
+     *
      * @param search the search term
      * @param filters the filters map
      * @param pageable the pageable parameters
@@ -198,7 +198,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Find entity by ID.
-     * 
+     *
      * @param id the ID of the entity to find
      * @return an Optional containing the response DTO if found, empty otherwise
      */
@@ -233,7 +233,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Create a new entity.
-     * 
+     *
      * @param createDTO the DTO containing data for the new entity
      * @return the created entity as a response DTO
      */
@@ -262,7 +262,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Update an existing entity.
-     * 
+     *
      * @param id        the ID of the entity to update
      * @param updateDTO the DTO containing updated data
      * @return the updated entity as a response DTO
@@ -304,7 +304,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Delete an entity by ID.
-     * 
+     *
      * @param id the ID of the entity to delete
      * @throws EntityNotFoundException if the entity with the given ID is not found
      */
@@ -338,7 +338,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Check if entity exists by ID.
-     * 
+     *
      * @param id the ID to check
      * @return true if entity exists, false otherwise
      */
@@ -349,7 +349,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Find entity by name (if name-based).
-     * 
+     *
      * @param name the name to search for
      * @return an Optional containing the response DTO if found, empty otherwise
      */
@@ -382,7 +382,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Check if entity exists by name (if name-based).
-     * 
+     *
      * @param name the name to check
      * @return true if entity exists, false otherwise
      */
@@ -399,21 +399,27 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
                 throw new SecurityException("User context not available");
             }
 
-            if (repository instanceof NameBasedRepository) {
-                return ((NameBasedRepository<T, I>) repository).existsByNameIgnoreCaseAndUserId(name, currentUserId);
+            // Use reflection to check if the repository has the method
+            try {
+                Method method = repository.getClass().getMethod("existsByNameIgnoreCaseAndUserId", String.class, Long.class);
+                return (Boolean) method.invoke(repository, name, currentUserId);
+            } catch (Exception e) {
+                throw new UnsupportedOperationException("Repository does not support name-based operations");
             }
         } else {
-            if (repository instanceof NameBasedRepository) {
-                return ((NameBasedRepository<T, I>) repository).existsByNameIgnoreCase(name);
+            // Use reflection to check if the repository has the method
+            try {
+                Method method = repository.getClass().getMethod("existsByNameIgnoreCase", String.class);
+                return (Boolean) method.invoke(repository, name);
+            } catch (Exception e) {
+                throw new UnsupportedOperationException("Repository does not support name-based operations");
             }
         }
-
-        throw new UnsupportedOperationException("Repository does not support name-based operations");
     }
 
     /**
      * Find all entities ordered by name (if name-based).
-     * 
+     *
      * @return a list of response DTOs ordered by name
      */
     public List<D> findAllOrderedByName() {
@@ -447,7 +453,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Count entities with optional filtering and searching.
-     * 
+     *
      * @param search  optional search term to filter entities
      * @param filters optional map of field-specific filters
      * @return the count of entities matching the criteria
@@ -477,7 +483,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Find all entities without pagination.
-     * 
+     *
      * @param search        optional search term to filter entities
      * @param filters       optional map of field-specific filters
      * @param sortBy        optional field name to sort by
@@ -492,7 +498,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Get entity by ID for internal use (returns entity, not DTO).
-     * 
+     *
      * @param id the ID of the entity to find
      * @return the entity
      * @throws EntityNotFoundException if the entity is not found
@@ -504,7 +510,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Maps a DTO to an entity.
-     * 
+     *
      * @param dto the DTO to map
      * @return the mapped entity
      */
@@ -512,7 +518,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Updates an entity with data from a DTO.
-     * 
+     *
      * @param entity the entity to update
      * @param dto    the DTO containing update data
      */
@@ -520,7 +526,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Maps an entity to a response DTO.
-     * 
+     *
      * @param entity the entity to map
      * @return the mapped response DTO
      */
@@ -530,7 +536,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * Validates a DTO before entity creation.
      * Default implementation validates name if name-based.
      * Override this method to add custom validation logic.
-     * 
+     *
      * @param dto the DTO to validate
      */
     protected void validateCreateDTO(D dto) {
@@ -545,13 +551,14 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * Validates a DTO before entity update.
      * Default implementation validates name if name-based.
      * Override this method to add custom validation logic.
-     * 
+     *
      * @param dto the DTO to validate
      */
     protected void validateUpdateDTO(D dto) {
         if (isNameBased()) {
             String name = getNameFromDTO(dto);
             ValidationUtils.validateString(name, "Name");
+            validateNameUnique(name);
         }
     }
 
@@ -559,7 +566,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * Validates an entity before saving.
      * Default implementation does nothing.
      * Override this method to add custom validation logic.
-     * 
+     *
      * @param entity the entity to validate
      */
     protected void validateEntity(T entity) {
@@ -569,7 +576,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     /**
      * Returns the entity name for error messages.
      * Override this method to provide a more specific entity name.
-     * 
+     *
      * @return the entity name
      */
     protected String getEntityName() {
@@ -578,7 +585,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Validates an ID value.
-     * 
+     *
      * @param id the ID to validate
      * @throws IllegalArgumentException if the ID is invalid
      */
@@ -593,7 +600,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     /**
      * Creates a specification from search term and filters.
      * Override this method to provide custom specification logic.
-     * 
+     *
      * @param search  the search term
      * @param filters the filters map
      * @return the specification
@@ -658,7 +665,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
             case USER_ID_FIELD -> predicates.add(criteriaBuilder.equal(root.get("user").get("id"), value));
             case "name" -> predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("name")),
                     "%" + value.toString().toLowerCase() + "%"));
-            case IS_ACTIVE_FIELD -> predicates.add(Boolean.TRUE.equals(value) ? 
+            case IS_ACTIVE_FIELD -> predicates.add(Boolean.TRUE.equals(value) ?
                     criteriaBuilder.isTrue(root.get(IS_ACTIVE_FIELD))
                     : criteriaBuilder.isFalse(root.get(IS_ACTIVE_FIELD)));
             default -> log.debug("Ignoring unknown filter key: {}", key);
@@ -667,7 +674,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Creates a pageable with sorting.
-     * 
+     *
      * @param pageable      the base pageable
      * @param sortBy        the field to sort by
      * @param sortDirection the sort direction
@@ -696,7 +703,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Validates that the name is unique before creating an entity.
-     * 
+     *
      * @param name the name to validate
      * @throws IllegalArgumentException if the name already exists
      */
@@ -708,7 +715,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Validates that the name is unique before updating an entity.
-     * 
+     *
      * @param name        the name to validate
      * @param currentName the current name of the entity being updated
      * @throws IllegalArgumentException if the name already exists
@@ -722,7 +729,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     /**
      * Gets the name from a DTO using reflection.
      * Subclasses can override this if they need custom logic.
-     * 
+     *
      * @param dto the DTO
      * @return the name
      */
@@ -732,7 +739,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Generic method to get a field value using reflection.
-     * 
+     *
      * @param obj        the object to get the field from
      * @param methodName the getter method name
      * @param returnType the expected return type
@@ -753,7 +760,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     /**
      * Checks if an entity belongs to the specified user.
      * This method must be implemented by subclasses if isUserAware() returns true.
-     * 
+     *
      * @param entity the entity to check
      * @param userId the user ID to check against
      * @return true if the entity belongs to the user, false otherwise
@@ -765,7 +772,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     /**
      * Sets the user ID on an entity during creation.
      * This method must be implemented by subclasses if isUserAware() returns true.
-     * 
+     *
      * @param entity the entity to set the user ID on
      * @param userId the user ID to set
      */
@@ -775,7 +782,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
     /**
      * Repository interface for name-based operations.
-     * 
+     *
      * @param <T> The entity type
      * @param <I> The ID type
      */
@@ -783,7 +790,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
         /**
          * Find entity by name (case-insensitive).
-         * 
+         *
          * @param name the name to search for
          * @return an Optional containing the entity if found, empty otherwise
          */
@@ -791,7 +798,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
         /**
          * Check if entity exists by name (case-insensitive).
-         * 
+         *
          * @param name the name to check
          * @return true if entity exists, false otherwise
          */
@@ -799,14 +806,14 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
         /**
          * Find all entities ordered by name (ascending).
-         * 
+         *
          * @return a list of entities ordered by name
          */
         List<T> findAllByOrderByNameAsc();
 
         /**
          * Find entity by name and user ID (case-insensitive).
-         * 
+         *
          * @param name   the name to search for
          * @param userId the user ID
          * @return an Optional containing the entity if found, empty otherwise
@@ -815,7 +822,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
         /**
          * Check if entity exists by name and user ID (case-insensitive).
-         * 
+         *
          * @param name   the name to check
          * @param userId the user ID
          * @return true if entity exists, false otherwise
@@ -824,7 +831,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
 
         /**
          * Find all entities by user ID ordered by name (ascending).
-         * 
+         *
          * @param userId the user ID
          * @return a list of entities ordered by name
          */

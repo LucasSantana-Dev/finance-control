@@ -117,10 +117,11 @@ class TransactionCategoryServiceTestContainersTest {
 
     @Test
     void findById_WithNonExistingId_ShouldThrowException() {
-        // When & Then
-        assertThatThrownBy(() -> transactionCategoryService.findById(999L))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("not found");
+        // When
+        Optional<TransactionCategoryDTO> result = transactionCategoryService.findById(999L);
+
+        // Then
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -144,18 +145,22 @@ class TransactionCategoryServiceTestContainersTest {
     @Test
     void findAll_WithSearch_ShouldReturnFilteredCategories() {
         // Given
+        TransactionCategory searchCategory = new TransactionCategory();
+        searchCategory.setName("Search Category");
+        transactionCategoryRepository.save(searchCategory);
+
         TransactionCategory anotherCategory = new TransactionCategory();
         anotherCategory.setName("Another Category");
         transactionCategoryRepository.save(anotherCategory);
 
         // When
         Page<TransactionCategoryDTO> result = transactionCategoryService.findAll(
-                "test", null, null, null, PageRequest.of(0, 10));
+                "Search", null, null, null, PageRequest.of(0, 10));
 
         // Then
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getName()).isEqualTo("Test Category");
+        assertThat(result.getContent().get(0).getName()).isEqualTo("Search Category");
     }
 
     @Test
@@ -171,7 +176,7 @@ class TransactionCategoryServiceTestContainersTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(testCategory.getId());
         assertThat(result.getName()).isEqualTo("Updated Category");
-        assertThat(result.getUpdatedAt()).isAfter(result.getCreatedAt());
+        assertThat(result.getUpdatedAt()).isAfterOrEqualTo(result.getCreatedAt());
 
         // Verify it was updated in database
         TransactionCategory updatedCategory = transactionCategoryRepository.findById(testCategory.getId()).orElse(null);

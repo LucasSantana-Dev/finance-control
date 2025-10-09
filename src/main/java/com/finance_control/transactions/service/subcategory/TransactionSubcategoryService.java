@@ -46,7 +46,7 @@ public class TransactionSubcategoryService extends
 
     /**
      * Find subcategories by category ID (active only).
-     * 
+     *
      * @param categoryId the category ID
      * @return a list of subcategory DTOs
      */
@@ -63,7 +63,7 @@ public class TransactionSubcategoryService extends
 
     /**
      * Find all active subcategories.
-     * 
+     *
      * @return a list of active subcategory DTOs
      */
     public List<TransactionSubcategoryDTO> findAllActive() {
@@ -75,7 +75,7 @@ public class TransactionSubcategoryService extends
 
     /**
      * Find subcategories by category ID ordered by usage.
-     * 
+     *
      * @param categoryId the category ID
      * @return a list of subcategory DTOs ordered by usage
      */
@@ -89,7 +89,7 @@ public class TransactionSubcategoryService extends
 
     /**
      * Count subcategories by category ID (active only).
-     * 
+     *
      * @param categoryId the category ID
      * @return the count of active subcategories
      */
@@ -106,7 +106,7 @@ public class TransactionSubcategoryService extends
 
     /**
      * Find subcategory by category ID and name.
-     * 
+     *
      * @param categoryId the category ID
      * @param name       the subcategory name
      * @return an Optional containing the subcategory DTO if found
@@ -127,7 +127,7 @@ public class TransactionSubcategoryService extends
 
     /**
      * Check if subcategory exists by category ID and name.
-     * 
+     *
      * @param categoryId the category ID
      * @param name       the subcategory name
      * @return true if exists, false otherwise
@@ -146,7 +146,7 @@ public class TransactionSubcategoryService extends
 
     @Override
     protected boolean isNameBased() {
-        return true;
+        return false; // Subcategories don't support global name-based operations
     }
 
     public TransactionSubcategory getTransactionSubcategoryEntity(Long id) {

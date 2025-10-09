@@ -110,10 +110,11 @@ class TransactionCategoryServiceTest {
         // Given
         when(transactionCategoryRepository.findById(999L)).thenReturn(Optional.empty());
 
-        // When & Then
-        assertThatThrownBy(() -> transactionCategoryService.findById(999L))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("not found");
+        // When
+        Optional<TransactionCategoryDTO> result = transactionCategoryService.findById(999L);
+
+        // Then
+        assertThat(result).isEmpty();
 
         verify(transactionCategoryRepository).findById(999L);
     }
@@ -124,7 +125,7 @@ class TransactionCategoryServiceTest {
         List<TransactionCategory> categories = List.of(testCategory);
         Page<TransactionCategory> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
 
-        when(transactionCategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
+        when(transactionCategoryRepository.findAll(eq((String) null), any(Pageable.class)))
                 .thenReturn(page);
 
         // When
@@ -135,7 +136,7 @@ class TransactionCategoryServiceTest {
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getName()).isEqualTo("Test Category");
 
-        verify(transactionCategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionCategoryRepository).findAll(eq((String) null), any(Pageable.class));
     }
 
     @Test
@@ -144,7 +145,7 @@ class TransactionCategoryServiceTest {
         List<TransactionCategory> categories = List.of(testCategory);
         Page<TransactionCategory> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
 
-        when(transactionCategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
+        when(transactionCategoryRepository.findAll(anyString(), any(Pageable.class)))
                 .thenReturn(page);
 
         // When
@@ -154,7 +155,7 @@ class TransactionCategoryServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
 
-        verify(transactionCategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionCategoryRepository).findAll(anyString(), any(Pageable.class));
     }
 
     @Test
@@ -202,7 +203,6 @@ class TransactionCategoryServiceTest {
         TransactionCategoryDTO updateDTO = new TransactionCategoryDTO();
         updateDTO.setName("Existing Category");
 
-        when(transactionCategoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
         when(transactionCategoryRepository.existsByNameIgnoreCase("Existing Category")).thenReturn(true);
 
         // When & Then
@@ -210,8 +210,8 @@ class TransactionCategoryServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("already exists");
 
-        verify(transactionCategoryRepository).findById(1L);
         verify(transactionCategoryRepository).existsByNameIgnoreCase("Existing Category");
+        verify(transactionCategoryRepository, never()).findById(anyLong());
         verify(transactionCategoryRepository, never()).save(any(TransactionCategory.class));
     }
 
