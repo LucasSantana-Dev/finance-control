@@ -29,12 +29,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Database Migration**: Fixed missing `updated_at` column in `transaction_responsibilities` table
 - **Migration Cleanup**: Removed unnecessary SonarQube database migration (runs in separate container)
+- **Test Isolation**: Fixed optimistic locking failures in integration tests by removing hardcoded entity IDs
+- **Docker Compatibility**: Fixed macOS compatibility issues with timeout and docker-compose commands
+- **Quality Checks**: Resolved all Checkstyle, PMD, and SpotBugs violations
 
 ### Technical Improvements
 - **Build Configuration**: Added MapStruct annotation processor
 - **Code Quality**: Enhanced development workflow with better error messages
 - **Test Infrastructure**: Added comprehensive unit and integration test coverage
 - **Documentation**: Updated README with new test infrastructure details
+- **Development Scripts**: Enhanced `dev.sh` with retry logic and macOS compatibility
+- **Docker Integration**: Improved Docker Compose v2 compatibility and build process
+- **Quality Gates**: All code quality checks now passing consistently
 
 ## [0.0.1-SNAPSHOT] - 2024-12-19
 

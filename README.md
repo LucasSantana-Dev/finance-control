@@ -144,8 +144,11 @@ cd finance-control
 ./gradlew spotbugsMain     # Bug detection
 ./gradlew sonarqube        # SonarQube analysis
 
-# Quality check with script
-./scripts/quality/quality-check.sh
+# Quality check with enhanced script (includes retry logic)
+./scripts/dev.sh quality
+
+# Quality check without tests (faster)
+./scripts/dev.sh quality --no-test
 ```
 
 ### Coverage Requirements
@@ -235,6 +238,18 @@ The project includes comprehensive test coverage with multiple testing strategie
   - Quality gates enforcement
 
 ## 🛠️ Development
+
+### Recent Improvements
+
+The project has recently undergone significant improvements:
+
+- **✅ MapStruct Integration**: Type-safe DTO-entity mapping with compile-time validation
+- **✅ JPA Auditing**: Automatic timestamp management for all entities
+- **✅ Enhanced Testing**: Comprehensive unit and integration test coverage
+- **✅ Quality Gates**: All code quality checks passing consistently
+- **✅ Docker Compatibility**: Full macOS and Docker Compose v2 support
+- **✅ Test Isolation**: Fixed optimistic locking issues in integration tests
+- **✅ Development Scripts**: Enhanced `dev.sh` with retry logic and better error handling
 
 ### Code Standards
 - **Java 24**: Latest LTS version with modern features
