@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance**: Added method caching to EntityMapper for better reflection performance
 - **EntityMapper**: Improved null handling to avoid overwriting target fields with null values
 - **Maintainability**: Added clearCache method to EntityMapper for testing and debugging purposes
+- **Error Handling**: Enhanced error handling with consistent entity not found messages across service layer
+- **Reflection Performance**: Cached getter/setter method lookups reduce reflection overhead in EntityMapper
 
 ## [0.1.0] - 2024-12-19
 
