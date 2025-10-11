@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Unified Investments Table**: Major architectural improvement to investment management
+  - Created unified `investments` table to replace separate `brazilian_stocks`, `fii_funds`, and `brazilian_bonds` tables
+  - Added comprehensive investment classification with type, subtype, sector, and industry fields
+  - Implemented flexible investment entity supporting stocks, FIIs, bonds, ETFs, crypto, and other asset types
+  - Added external market data integration with Alpha Vantage API for real-time price updates
+  - Created comprehensive InvestmentRepository with advanced querying capabilities
+  - Implemented InvestmentService with CRUD operations and market data management
+  - Added InvestmentController with full REST API for investment management
+  - Created ExternalMarketDataService for fetching real-time market data from external APIs
+  - Added support for Brazilian market tickers with proper Alpha Vantage formatting (.SAO suffix)
+  - Implemented market data caching and rate limiting to respect API limits
+  - Added portfolio analytics including top performers, dividend yield, and market value calculations
+  - Created comprehensive search and filtering capabilities by type, sector, industry, etc.
+  - Added investment metadata endpoints for available sectors, industries, and types
+  - Implemented soft delete functionality for investments
+  - Added market data update scheduling and background processing
+
 ### Fixed
 - **Monitoring System Issues**: Fixed implementation issues in monitoring and observability components
   - Fixed MonitoringController missing HealthCheckService dependency in constructor

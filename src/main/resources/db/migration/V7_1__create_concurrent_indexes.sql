@@ -30,8 +30,8 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_brazilian_stocks_active_user_ticker
 ON brazilian_stocks(user_id, ticker)
 WHERE is_active = true;
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_fiis_active_user_ticker
-ON fiis(user_id, ticker)
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_fii_funds_active_user_ticker
+ON fii_funds(user_id, ticker)
 WHERE is_active = true;
 
 -- Indexes for dashboard and analytics queries

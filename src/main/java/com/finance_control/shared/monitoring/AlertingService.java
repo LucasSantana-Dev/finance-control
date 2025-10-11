@@ -66,7 +66,7 @@ public class AlertingService {
             log.debug("Monitoring already started, skipping");
             return;
         }
-        
+
         if (!appProperties.getMonitoring().isEnabled()) {
             log.info("Monitoring is disabled, skipping alert monitoring");
             return;
@@ -77,10 +77,10 @@ public class AlertingService {
         scheduler.scheduleAtFixedRate(this::checkSystemHealth, 0, 30, TimeUnit.SECONDS);
         scheduler.scheduleAtFixedRate(this::checkPerformanceMetrics, 0, 60, TimeUnit.SECONDS);
         scheduler.scheduleAtFixedRate(this::checkResourceUsage, 0, 120, TimeUnit.SECONDS);
-        
+
         monitoringStarted = true;
     }
-    
+
     private void ensureMonitoringStarted() {
         if (!monitoringStarted) {
             startMonitoring();

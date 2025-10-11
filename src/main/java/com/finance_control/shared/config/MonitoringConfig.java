@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 /**
  * Configuration class for monitoring and observability features.
  * Sets up metrics, health checks, and alerting systems.
- * 
+ *
  * Note: Monitoring services are initialized lazily to avoid circular dependencies.
  */
 @Slf4j
