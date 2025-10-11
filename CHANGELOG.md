@@ -88,12 +88,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **HealthCheckService**: Detailed health checks for database, Redis, and configuration validation
   - **MonitoringController**: REST endpoints for monitoring data access and alert management
   - **Sentry Integration**: Enhanced error tracking, performance monitoring, and alert notifications
+  - **SentryService**: Centralized Sentry service for error tracking with user context and custom tags
+  - **SentryConfig**: Comprehensive Sentry configuration with filtering and context management
   - **Performance Monitoring**: Slow operation detection with configurable thresholds
   - **Business Metrics**: Custom metrics for transaction amounts, goal progress, and cache performance
   - **System Resource Monitoring**: Memory usage, database connection pools, and system health
   - **Alert Management**: Test alert triggering, alert clearing, and active alert monitoring
   - **Comprehensive Test Coverage**: 20+ enabled test files with unit and integration tests
   - **Postman API Testing**: Enhanced collections with monitoring endpoints and mock servers
+  - **Sentry Testing Script**: Automated script to test Sentry configuration and monitoring endpoints
 
 ### Fixed
 - **TransactionServiceTest Update Tests**: Fixed all failing update tests in TransactionServiceTest

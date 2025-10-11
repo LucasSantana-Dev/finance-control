@@ -71,6 +71,7 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Monitoring**: Sentry for error tracking and performance monitoring
 - **Health Checks**: Custom health indicators for database, Redis, and configuration
 - **Metrics**: Application metrics with performance monitoring and alerting
+- **Sentry Integration**: Comprehensive error tracking with custom context and user information
 - **Documentation**: OpenAPI 3.0 (Swagger)
 - **Testing**: JUnit 5, TestContainers, Selenium
 - **Build Tool**: Gradle 8.7+
@@ -128,6 +129,11 @@ DB_PASSWORD=your_password
 
 # PostgreSQL Container
 POSTGRES_DB=finance_control
+
+# Sentry Configuration (Optional)
+SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+SENTRY_ENVIRONMENT=development
+SENTRY_RELEASE=1.0.0
 ```
 
 ### Running with Docker Compose
@@ -187,6 +193,9 @@ cd finance-control
 
 # Quality check without tests (faster)
 ./scripts/dev.sh quality --no-test
+
+# Test Sentry configuration
+./scripts/test-sentry.sh
 ```
 
 ### Coverage Requirements

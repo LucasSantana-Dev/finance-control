@@ -1,7 +1,6 @@
 package com.finance_control.shared.monitoring;
 
 import com.finance_control.shared.config.AppProperties;
-import io.sentry.Sentry;
 import io.sentry.SentryLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 public class AlertingService {
 
     private final MetricsService metricsService;
+    private final SentryService sentryService;
     private final AppProperties appProperties;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
@@ -147,14 +147,15 @@ public class AlertingService {
         log.warn("Alert triggered: {} - {} - {}", severity, type, message);
 
         SentryLevel sentryLevel = mapSeverityToSentryLevel(severity);
-        Sentry.captureMessage(message, sentryLevel, scope -> {
-            scope.setTag("alert_type", type);
-            scope.setTag("severity", severity);
-            scope.setTag("alert_id", alertId);
-            if (data != null) {
-                scope.setExtra("alert_data", data.toString());
-            }
-        });
+        sentryService.setTags(Map.of(
+            "alert_type", type,
+            "severity", severity,
+            "alert_id", alertId
+        ));
+        if (data != null) {
+            sentryService.setContext("alert_data", data.toString());
+        }
+        sentryService.captureMessage(message, sentryLevel);
 
         for (AlertListener listener : alertListeners) {
             try {

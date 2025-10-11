@@ -1,6 +1,5 @@
 package com.finance_control.shared.monitoring;
 
-import io.sentry.Sentry;
 import io.sentry.SentryLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 @Slf4j
 public class MetricsService {
+
+    private final SentryService sentryService;
 
     private final AtomicLong transactionCreatedCounter = new AtomicLong(0);
     private final AtomicLong transactionUpdatedCounter = new AtomicLong(0);
@@ -58,7 +59,8 @@ public class MetricsService {
     public void recordTransactionProcessingTime(Instant startTime) {
         Duration duration = Duration.between(startTime, Instant.now());
         if (duration.toMillis() > 1000) {
-            Sentry.addBreadcrumb("Slow transaction processing: " + duration.toMillis() + "ms");
+            sentryService.addBreadcrumb("Slow transaction processing: " + duration.toMillis() + "ms", 
+                    "performance", SentryLevel.WARNING);
         }
         log.debug("Transaction processing time: {}ms", duration.toMillis());
     }
@@ -122,7 +124,7 @@ public class MetricsService {
 
     public void incrementApiError(String errorType) {
         apiErrorCounter.incrementAndGet();
-        Sentry.addBreadcrumb("API error: " + errorType);
+        sentryService.addBreadcrumb("API error: " + errorType, "error", SentryLevel.ERROR);
         log.warn("API error counter incremented for type: {}", errorType);
     }
 
@@ -133,7 +135,8 @@ public class MetricsService {
     public void recordDashboardGenerationTime(Instant startTime) {
         Duration duration = Duration.between(startTime, Instant.now());
         if (duration.toMillis() > 2000) {
-            Sentry.addBreadcrumb("Slow dashboard generation: " + duration.toMillis() + "ms");
+            sentryService.addBreadcrumb("Slow dashboard generation: " + duration.toMillis() + "ms", 
+                    "performance", SentryLevel.WARNING);
         }
         log.debug("Dashboard generation time: {}ms", duration.toMillis());
     }
@@ -145,7 +148,8 @@ public class MetricsService {
     public void recordMarketDataFetchTime(Instant startTime) {
         Duration duration = Duration.between(startTime, Instant.now());
         if (duration.toMillis() > 3000) {
-            Sentry.addBreadcrumb("Slow market data fetch: " + duration.toMillis() + "ms");
+            sentryService.addBreadcrumb("Slow market data fetch: " + duration.toMillis() + "ms", 
+                    "performance", SentryLevel.WARNING);
         }
         log.debug("Market data fetch time: {}ms", duration.toMillis());
     }
