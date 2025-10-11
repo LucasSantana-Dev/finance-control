@@ -1,6 +1,7 @@
 package com.finance_control.auth.service;
 
 import com.finance_control.auth.exception.AuthenticationException;
+import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MetricsService metricsService;
 
     /**
      * Authenticates a user by email and password.
@@ -25,18 +27,25 @@ public class AuthService {
      * @throws RuntimeException if authentication fails
      */
     public Long authenticate(String email, String password) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AuthenticationException("Invalid email or password"));
+        var sample = metricsService.startAuthenticationTimer();
+        try {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new AuthenticationException("Invalid email or password"));
 
-        if (Boolean.FALSE.equals(user.getIsActive())) {
-            throw new AuthenticationException("User account is disabled");
+            if (Boolean.FALSE.equals(user.getIsActive())) {
+                throw new AuthenticationException("User account is disabled");
+            }
+
+            if (!passwordEncoder.matches(password, user.getPassword())) {
+                throw new AuthenticationException("Invalid email or password");
+            }
+
+            metricsService.incrementUserLogin();
+            log.info("User authenticated successfully: {}", email);
+            return user.getId();
+        } finally {
+            metricsService.recordAuthenticationTime(sample);
         }
-
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new AuthenticationException("Invalid email or password");
-        }
-
-        return user.getId();
     }
 
     /**

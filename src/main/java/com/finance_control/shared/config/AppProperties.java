@@ -1,6 +1,8 @@
 package com.finance_control.shared.config;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -23,6 +25,10 @@ public class AppProperties {
     private Actuator actuator = new Actuator();
     private OpenApi openApi = new OpenApi();
     private Pagination pagination = new Pagination();
+    private Redis redis = new Redis();
+    private Cache cache = new Cache();
+    private RateLimit rateLimit = new RateLimit();
+    private Monitoring monitoring = new Monitoring();
 
     @Data
     public static class Database {
@@ -46,12 +52,12 @@ public class AppProperties {
         }
     }
 
-    @Data
+    @Getter
+    @Setter
     public static class Security {
         private Jwt jwt = new Jwt();
         private Cors cors = new Cors();
-        @Value("${SECURITY_PUBLIC_ENDPOINTS:/api/auth/**,/api/users,/actuator/health,/swagger-ui/**,/v3/api-docs/**}")
-        private String[] publicEndpoints;
+        private String[] publicEndpoints = {"/api/auth/**", "/api/users", "/api/monitoring/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**"};
 
         @Data
         public static class Jwt {
@@ -163,5 +169,65 @@ public class AppProperties {
         private int maxPageSize = 100;
         private String defaultSort = "id";
         private String defaultDirection = "ASC";
+    }
+
+    @Data
+    public static class Redis {
+        private String host = "localhost";
+        private int port = 6379;
+        private String password = "";
+        private int database = 0;
+        private long timeout = 2000;
+        private Pool pool = new Pool();
+
+        @Data
+        public static class Pool {
+            private int maxActive = 8;
+            private int maxIdle = 8;
+            private int minIdle = 0;
+            private long maxWait = -1;
+        }
+    }
+
+    @Data
+    public static class Cache {
+        private boolean enabled = true;
+        private long ttlDashboard = 900000; // 15 minutes
+        private long ttlMarketData = 300000; // 5 minutes
+        private long ttlUserData = 1800000; // 30 minutes
+    }
+
+    @Data
+    public static class RateLimit {
+        private boolean enabled = true;
+        private int requestsPerMinute = 100;
+        private int burstCapacity = 200;
+        private int refreshPeriod = 60; // seconds
+    }
+
+    @Data
+    public static class Monitoring {
+        private boolean enabled = true;
+        private Sentry sentry = new Sentry();
+        private HealthCheck healthCheck = new HealthCheck();
+
+        @Data
+        public static class Sentry {
+            private boolean enabled = true;
+            private String dsn = "";
+            private String environment = "dev";
+            private String release = "1.0.0";
+            private double sampleRate = 0.1;
+            private double tracesSampleRate = 0.1;
+            private boolean sendDefaultPii = false;
+            private boolean attachStacktrace = true;
+            private boolean enableTracing = true;
+        }
+
+        @Data
+        public static class HealthCheck {
+            private int interval = 30; // seconds
+            private boolean detailed = true;
+        }
     }
 }

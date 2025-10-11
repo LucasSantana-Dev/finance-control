@@ -4,10 +4,13 @@ import com.finance_control.brazilian_market.client.BCBApiClient;
 import com.finance_control.brazilian_market.client.BrazilianStocksApiClient;
 import com.finance_control.brazilian_market.model.*;
 import com.finance_control.brazilian_market.repository.*;
+import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -35,6 +38,7 @@ public class BrazilianMarketDataService {
     private final FIIRepository fiiRepository;
     private final MarketIndicatorRepository indicatorRepository;
     private final UserRepository userRepository;
+    private final MetricsService metricsService;
 
     @Autowired
     public BrazilianMarketDataService(BCBApiClient bcbApiClient,
@@ -42,13 +46,15 @@ public class BrazilianMarketDataService {
                                     BrazilianStockRepository stockRepository,
                                     FIIRepository fiiRepository,
                                     MarketIndicatorRepository indicatorRepository,
-                                    UserRepository userRepository) {
+                                    UserRepository userRepository,
+                                    MetricsService metricsService) {
         this.bcbApiClient = bcbApiClient;
         this.stocksApiClient = stocksApiClient;
         this.stockRepository = stockRepository;
         this.fiiRepository = fiiRepository;
         this.indicatorRepository = indicatorRepository;
         this.userRepository = userRepository;
+        this.metricsService = metricsService;
     }
 
     @Async
@@ -228,24 +234,28 @@ public class BrazilianMarketDataService {
         }
     }
 
+    @Cacheable(value = "market-data", key = "'selic_rate'")
     public BigDecimal getCurrentSelicRate() {
         return indicatorRepository.findByCode("SELIC")
                 .map(MarketIndicator::getCurrentValue)
                 .orElse(BigDecimal.ZERO);
     }
 
+    @Cacheable(value = "market-data", key = "'cdi_rate'")
     public BigDecimal getCurrentCDIRate() {
         return indicatorRepository.findByCode("CDI")
                 .map(MarketIndicator::getCurrentValue)
                 .orElse(BigDecimal.ZERO);
     }
 
+    @Cacheable(value = "market-data", key = "'ipca_rate'")
     public BigDecimal getCurrentIPCA() {
         return indicatorRepository.findByCode("IPCA")
                 .map(MarketIndicator::getCurrentValue)
                 .orElse(BigDecimal.ZERO);
     }
 
+    @Cacheable(value = "market-data", key = "'key_indicators'")
     public List<MarketIndicator> getKeyIndicators() {
         return indicatorRepository.findKeyIndicators();
     }
@@ -267,6 +277,7 @@ public class BrazilianMarketDataService {
     }
 
     @Scheduled(fixedRate = 3600000)
+    @CacheEvict(value = "market-data", allEntries = true)
     public void updateKeyIndicators() {
         log.info("Starting scheduled update of key indicators");
 
@@ -283,6 +294,11 @@ public class BrazilianMarketDataService {
     }
 
     public Object getMarketSummary() {
-        return stocksApiClient.getMarketSummary();
+        var sample = metricsService.startMarketDataFetchTimer();
+        try {
+            return stocksApiClient.getMarketSummary();
+        } finally {
+            metricsService.recordMarketDataFetchTime(sample);
+        }
     }
 }

@@ -39,6 +39,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added requests for all major API endpoints (auth, users, transactions, dashboard, Brazilian market)
   - Configured environment variables for easy testing
   - Verified all public and authenticated endpoints functionality
+- **Redis Caching Implementation**: Complete Redis integration for performance optimization
+  - Added Redis dependencies (spring-boot-starter-data-redis, spring-boot-starter-cache)
+  - Implemented Redis configuration with connection pooling and timeout settings
+  - Added cache annotations to DashboardService and BrazilianMarketDataService
+  - Configured different TTL for different cache types (dashboard: 15min, market-data: 5min, user-data: 30min)
+  - Added Redis service to Docker Compose with health checks and persistent volumes
+- **Rate Limiting Implementation**: API rate limiting using Bucket4j and Redis
+  - Added Bucket4j dependencies for token bucket algorithm implementation
+  - Implemented RateLimitFilter with configurable limits (100 requests/minute, 200 burst capacity)
+  - Added rate limiting configuration with environment variable support
+  - Integrated rate limiting filter into Spring Security filter chain
+  - Added proper HTTP headers for rate limit information (X-Rate-Limit-Remaining, X-Rate-Limit-Reset)
+- **Data Export Functionality**: Complete data export capabilities for user data portability
+  - Created DataExportService for exporting user data in CSV and JSON formats
+  - Added DataExportController with REST endpoints for data export operations
+  - Implemented export for all user data, transactions, and financial goals
+  - Added proper file naming with timestamps and content-type headers
+  - Support for both CSV and JSON export formats with proper escaping
+- **Simplified Monitoring & Alerting**: Lightweight monitoring with Sentry integration
+  - Added Sentry dependencies for error tracking and performance monitoring
+  - Created simplified MetricsService with business metrics and Sentry integration
+  - Implemented HealthCheckService with detailed component health status
+  - Added AlertingService with Sentry-based alerting and threshold monitoring
+  - Created MonitoringController with REST endpoints for monitoring data
+  - Integrated metrics into TransactionService, DashboardService, BrazilianMarketDataService, and AuthService
+  - Configured Sentry for error tracking, performance monitoring, and alerting
+  - Added comprehensive health checks for database, Redis, and configuration validation
+  - Simplified monitoring stack removes overengineering while maintaining essential observability
 - **Security Configuration Improvements**: Enhanced security configuration for production readiness
   - Fixed public endpoint configuration with proper `/api` prefix handling
   - Corrected environment variable loading in Docker environment
@@ -54,6 +82,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Corrected OpenAPI properties in application-docker.properties
   - Enhanced Swagger UI accessibility and functionality
   - Improved API documentation generation and display
+- **Enterprise-Grade Monitoring Infrastructure**: Comprehensive monitoring and observability system
+  - **MetricsService**: Real-time metrics collection for transactions, users, goals, cache, and API errors
+  - **AlertingService**: Intelligent alerting system with severity levels (CRITICAL, HIGH, MEDIUM, LOW)
+  - **HealthCheckService**: Detailed health checks for database, Redis, and configuration validation
+  - **MonitoringController**: REST endpoints for monitoring data access and alert management
+  - **Sentry Integration**: Enhanced error tracking, performance monitoring, and alert notifications
+  - **Performance Monitoring**: Slow operation detection with configurable thresholds
+  - **Business Metrics**: Custom metrics for transaction amounts, goal progress, and cache performance
+  - **System Resource Monitoring**: Memory usage, database connection pools, and system health
+  - **Alert Management**: Test alert triggering, alert clearing, and active alert monitoring
+  - **Comprehensive Test Coverage**: 20+ enabled test files with unit and integration tests
+  - **Postman API Testing**: Enhanced collections with monitoring endpoints and mock servers
 
 ### Fixed
 - **TransactionServiceTest Update Tests**: Fixed all failing update tests in TransactionServiceTest
@@ -91,10 +131,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed OpenAPI properties in application-docker.properties
   - Corrected Swagger UI accessibility and functionality
   - Enhanced API documentation generation and display
+- **Test Infrastructure**: Enabled and fixed 20+ disabled test files
+  - Fixed missing Sentry imports in MetricsServiceTest and AlertingServiceTest
+  - Enabled monitoring service tests (HealthCheckService, MonitoringController)
+  - Activated Brazilian market integration tests (FII, MarketIndicator, BrazilianStock repositories)
+  - Enabled transaction category and subcategory controller tests
+  - Fixed integration test compilation issues and missing dependencies
+  - Comprehensive test coverage now includes all monitoring and market data functionality
 
 ### Changed
 - **Test Cleanup**: Removed TODO comments and AI-generated redundant comments from test files
 - **Test Structure**: Improved test isolation by using fresh entity instances and proper mock setup
+- **Code Quality**: Cleaned up redundant comments in monitoring services
+  - Removed unnecessary section comments in MetricsService, AlertingService, and HealthCheckService
+  - Simplified inline comments to focus on essential information only
+  - Improved code readability by removing verbose explanatory comments
 
 ### Improved
 - **Code Quality**: Enhanced TransactionService with generic findEntityById method to reduce code duplication

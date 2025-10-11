@@ -50,13 +50,27 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Testing**: Unit, integration, and E2E test coverage with 80% minimum coverage
 - **DTO Mapping**: Type-safe MapStruct mappers for all entities
 - **JPA Auditing**: Automatic timestamp management for all entities
+- **Redis Caching**: High-performance caching for dashboard and market data
+- **Rate Limiting**: API protection with configurable request limits
+- **Data Export**: Complete data portability in CSV and JSON formats
+- **Monitoring & Alerting**: Enterprise-grade monitoring with Sentry integration
+  - ✅ **NEW**: Real-time health checks for database, Redis, and configuration
+  - ✅ **NEW**: Comprehensive metrics collection (transactions, users, goals, cache, API errors)
+  - ✅ **NEW**: Intelligent alerting system with severity levels and Sentry integration
+  - ✅ **NEW**: Performance monitoring with slow operation detection
+  - ✅ **NEW**: Custom business metrics and system resource monitoring
 
 ## 🏗️ Architecture
 
 ### Technology Stack
 - **Backend**: Spring Boot 3.5.3 with Java 24
 - **Database**: PostgreSQL 17 with Flyway migrations
+- **Cache**: Redis 7 with Spring Cache abstraction
 - **Security**: Spring Security with JWT authentication
+- **Rate Limiting**: Bucket4j with Redis backend
+- **Monitoring**: Sentry for error tracking and performance monitoring
+- **Health Checks**: Custom health indicators for database, Redis, and configuration
+- **Metrics**: Application metrics with performance monitoring and alerting
 - **Documentation**: OpenAPI 3.0 (Swagger)
 - **Testing**: JUnit 5, TestContainers, Selenium
 - **Build Tool**: Gradle 8.7+
@@ -68,8 +82,16 @@ A comprehensive financial management system built with Spring Boot, designed to 
 ```
 src/main/java/com/finance_control/
 ├── auth/                 # Authentication and authorization
+├── brazilian_market/    # Brazilian market data integration
+├── dashboard/           # Financial dashboard and analytics
 ├── goals/               # Financial goals management
+├── profile/             # User profile management
 ├── shared/              # Common utilities and base classes
+│   ├── config/          # Configuration classes
+│   ├── controller/      # Shared controllers
+│   ├── monitoring/      # Monitoring and metrics services
+│   ├── security/        # Security utilities
+│   └── service/         # Shared services
 ├── transactions/        # Transaction management
 │   ├── category/        # Transaction categories
 │   ├── responsibles/    # Transaction responsibility sharing
@@ -110,10 +132,12 @@ POSTGRES_DB=finance_control
 
 ### Running with Docker Compose
 ```bash
-# Start the application with PostgreSQL
+# Start the application with PostgreSQL and Redis
 docker-compose up -d
 
-# The application will be available at http://localhost:${APPLICATION_PORT}
+# The application will be available at:
+# - Application: http://localhost:${APPLICATION_PORT}
+# - Monitoring: Configure SENTRY_DSN environment variable for error tracking
 ```
 
 ### Running Locally
@@ -200,6 +224,10 @@ The project includes comprehensive API testing capabilities:
   - ✅ Brazilian market data endpoints (stocks, FIIs, indicators)
   - ✅ Financial goals endpoints (CRUD operations)
   - ✅ Category management endpoints (categories and subcategories)
+  - ✅ **NEW**: Data export endpoints (CSV and JSON formats)
+  - ✅ **NEW**: Redis caching for performance optimization
+  - ✅ **NEW**: Rate limiting for API protection
+  - ✅ **NEW**: Monitoring endpoints (health, metrics, alerts)
 
 ### Key Endpoints
 
@@ -240,6 +268,23 @@ The project includes comprehensive API testing capabilities:
 - `GET /transaction-subcategories` - List transaction subcategories
 - `POST /transaction-subcategories` - Create new subcategory
 - `PUT /transaction-subcategories/{id}` - Update subcategory
+
+#### Data Export
+- `GET /api/export/all/csv` - Export all user data as CSV
+- `GET /api/export/all/json` - Export all user data as JSON
+- `GET /api/export/transactions/csv` - Export transactions as CSV
+- `GET /api/export/goals/csv` - Export financial goals as CSV
+
+#### Monitoring & Observability
+- `GET /api/monitoring/health` - Detailed system health status
+- `GET /api/monitoring/status` - Monitoring system status
+- `GET /api/monitoring/alerts` - Active system alerts
+- `GET /api/monitoring/metrics/summary` - Application metrics summary
+- `POST /api/monitoring/test-alert` - Trigger test alert
+- `DELETE /api/monitoring/alerts/{alertId}` - Clear specific alert
+- `DELETE /api/monitoring/alerts` - Clear all alerts
+- `GET /actuator/health` - Spring Boot Actuator health check
+- `GET /actuator/info` - Application information
 - `DELETE /transaction-subcategories/{id}` - Delete subcategory
 - `GET /transaction-subcategories/category/{categoryId}` - Get subcategories by category
 - `GET /transaction-subcategories/category/{categoryId}/usage` - Get subcategories ordered by usage
@@ -337,6 +382,9 @@ The project has recently undergone significant improvements:
 - **✅ Authentication Flow**: Complete JWT authentication system with proper token validation
 - **✅ OpenAPI Documentation**: Fixed and enhanced API documentation generation
 - **✅ Production Readiness**: All major security and configuration issues resolved
+- **✅ Monitoring Infrastructure**: Enterprise-grade monitoring with Sentry integration
+- **✅ Test Infrastructure**: Comprehensive test coverage with 20+ enabled test files
+- **✅ API Testing**: Enhanced Postman collections with monitoring endpoints
 
 ### Code Standards
 - **Java 24**: Latest LTS version with modern features

@@ -5,10 +5,13 @@ import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.goals.repository.FinancialGoalRepository;
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.enums.TransactionType;
+import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.transactions.model.Transaction;
 import com.finance_control.transactions.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,13 +36,17 @@ public class DashboardService {
 
     private final TransactionRepository transactionRepository;
     private final FinancialGoalRepository financialGoalRepository;
+    private final MetricsService metricsService;
 
     /**
      * Get comprehensive dashboard summary for the current user.
      */
+    @Cacheable(value = "dashboard", key = "#root.methodName + '_' + T(com.finance_control.shared.context.UserContext).getCurrentUserId()")
     public DashboardSummaryDTO getDashboardSummary() {
-        Long userId = UserContext.getCurrentUserId();
-        log.debug("Generating dashboard summary for user: {}", userId);
+        var sample = metricsService.startDashboardGenerationTimer();
+        try {
+            Long userId = UserContext.getCurrentUserId();
+            log.debug("Generating dashboard summary for user: {}", userId);
 
         LocalDate startOfMonth = YearMonth.now().atDay(1);
         LocalDate endOfMonth = YearMonth.now().atEndOfMonth();
@@ -73,11 +80,15 @@ public class DashboardService {
                 .monthlyTrends(getMonthlyTrends(userId, 12))
                 .goalProgress(mapGoalProgress(activeGoals))
                 .build();
+        } finally {
+            metricsService.recordDashboardGenerationTime(sample);
+        }
     }
 
     /**
      * Get detailed financial metrics for a specific period.
      */
+    @Cacheable(value = "dashboard", key = "#root.methodName + '_' + T(com.finance_control.shared.context.UserContext).getCurrentUserId() + '_' + #startDate + '_' + #endDate")
     public FinancialMetricsDTO getFinancialMetrics(LocalDate startDate, LocalDate endDate) {
         Long userId = UserContext.getCurrentUserId();
         log.debug("Generating financial metrics for user: {} from {} to {}", userId, startDate, endDate);
@@ -128,6 +139,7 @@ public class DashboardService {
     /**
      * Get top spending categories for charts.
      */
+    @Cacheable(value = "dashboard", key = "#root.methodName + '_' + #userId + '_' + #limit")
     public List<CategorySpendingDTO> getTopSpendingCategories(Long userId, int limit) {
         log.debug("Getting top {} spending categories for user: {}", limit, userId);
 
@@ -187,6 +199,7 @@ public class DashboardService {
     /**
      * Get monthly trends for the last N months.
      */
+    @Cacheable(value = "dashboard", key = "#root.methodName + '_' + #userId + '_' + #months")
     public List<MonthlyTrendDTO> getMonthlyTrends(Long userId, int months) {
         log.debug("Getting monthly trends for user: {} for last {} months", userId, months);
 

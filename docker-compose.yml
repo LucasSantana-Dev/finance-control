@@ -24,6 +24,32 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Redis service for caching and rate limiting
+  redis:
+    image: redis:7-alpine
+    env_file:
+      - docker.env
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    command: >
+      sh -c "
+        if [ -n \"$$REDIS_PASSWORD\" ]; then
+          redis-server --requirepass $$REDIS_PASSWORD
+        else
+          redis-server
+        fi
+      "
+
   # SonarQube service for code quality analysis
   sonarqube:
     image: sonarqube:10.4-community
@@ -69,10 +95,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./logs:/app/logs
       - ./build:/app/build
     restart: unless-stopped
+
 
   # Development service for running scripts and Gradle commands
   dev:
@@ -264,6 +293,7 @@ services:
 
 volumes:
   pgdata:
+  redis_data:
   gradle-cache:
   sonarqube_data:
   sonarqube_extensions:

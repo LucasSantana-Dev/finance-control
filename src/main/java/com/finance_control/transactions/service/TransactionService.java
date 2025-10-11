@@ -1,6 +1,7 @@
 package com.finance_control.transactions.service;
 
 import com.finance_control.shared.exception.EntityNotFoundException;
+import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.service.BaseService;
 import com.finance_control.shared.util.EntityMapper;
 import com.finance_control.shared.util.ValidationUtils;
@@ -53,13 +54,15 @@ public class TransactionService
     private final TransactionSubcategoryRepository subcategoryRepository;
     private final TransactionSourceRepository sourceEntityRepository;
     private final TransactionResponsiblesRepository responsibleRepository;
+    private final MetricsService metricsService;
 
     public TransactionService(TransactionRepository transactionRepository,
             UserRepository userRepository,
             TransactionCategoryRepository categoryRepository,
             TransactionSubcategoryRepository subcategoryRepository,
             TransactionSourceRepository sourceEntityRepository,
-            TransactionResponsiblesRepository responsibleRepository) {
+            TransactionResponsiblesRepository responsibleRepository,
+            MetricsService metricsService) {
         super(transactionRepository);
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
@@ -67,6 +70,7 @@ public class TransactionService
         this.subcategoryRepository = subcategoryRepository;
         this.sourceEntityRepository = sourceEntityRepository;
         this.responsibleRepository = responsibleRepository;
+        this.metricsService = metricsService;
     }
 
     /**
@@ -394,5 +398,36 @@ public class TransactionService
 
         log.info("Transaction reconciled successfully with ID: {}", id);
         return mapToResponseDTO(transaction);
+    }
+
+    @Override
+    public TransactionDTO create(TransactionDTO createDTO) {
+        var sample = metricsService.startTransactionProcessingTimer();
+        try {
+            TransactionDTO result = super.create(createDTO);
+            metricsService.incrementTransactionCreated();
+            metricsService.recordTransactionAmount(createDTO.getAmount().doubleValue(), createDTO.getType().name());
+            return result;
+        } finally {
+            metricsService.recordTransactionProcessingTime(sample);
+        }
+    }
+
+    @Override
+    public TransactionDTO update(Long id, TransactionDTO updateDTO) {
+        var sample = metricsService.startTransactionProcessingTimer();
+        try {
+            TransactionDTO result = super.update(id, updateDTO);
+            metricsService.incrementTransactionUpdated();
+            return result;
+        } finally {
+            metricsService.recordTransactionProcessingTime(sample);
+        }
+    }
+
+    @Override
+    public void delete(Long id) {
+        super.delete(id);
+        metricsService.incrementTransactionDeleted();
     }
 }
