@@ -50,7 +50,7 @@ class MonitoringIntegrationTest {
     @Test
     @DisplayName("Should return health status via REST endpoint")
     void getHealthStatus_ShouldReturnHealthStatus() throws Exception {
-        mockMvc.perform(get("/api/monitoring/health")
+        mockMvc.perform(get("/monitoring/health")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -63,7 +63,7 @@ class MonitoringIntegrationTest {
     @Test
     @DisplayName("Should return active alerts via REST endpoint")
     void getActiveAlerts_ShouldReturnAlerts() throws Exception {
-        mockMvc.perform(get("/api/monitoring/alerts")
+        mockMvc.perform(get("/monitoring/alerts")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -75,7 +75,7 @@ class MonitoringIntegrationTest {
     void clearAlert_ShouldClearAlert() throws Exception {
         String alertId = "test_alert";
 
-        mockMvc.perform(delete("/api/monitoring/alerts/{alertId}", alertId)
+        mockMvc.perform(delete("/monitoring/alerts/{alertId}", alertId)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -86,7 +86,7 @@ class MonitoringIntegrationTest {
     @Test
     @DisplayName("Should clear all alerts via REST endpoint")
     void clearAllAlerts_ShouldClearAllAlerts() throws Exception {
-        mockMvc.perform(delete("/api/monitoring/alerts")
+        mockMvc.perform(delete("/monitoring/alerts")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -97,7 +97,7 @@ class MonitoringIntegrationTest {
     @Test
     @DisplayName("Should return metrics summary via REST endpoint")
     void getMetricsSummary_ShouldReturnMetrics() throws Exception {
-        mockMvc.perform(get("/api/monitoring/metrics/summary")
+        mockMvc.perform(get("/monitoring/metrics/summary")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -111,7 +111,7 @@ class MonitoringIntegrationTest {
     @Test
     @DisplayName("Should trigger test alert via REST endpoint")
     void triggerTestAlert_ShouldTriggerAlert() throws Exception {
-        mockMvc.perform(post("/api/monitoring/test-alert")
+        mockMvc.perform(post("/monitoring/test-alert")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -122,7 +122,7 @@ class MonitoringIntegrationTest {
     @Test
     @DisplayName("Should return monitoring status via REST endpoint")
     void getMonitoringStatus_ShouldReturnStatus() throws Exception {
-        mockMvc.perform(get("/api/monitoring/status")
+        mockMvc.perform(get("/monitoring/status")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -139,7 +139,7 @@ class MonitoringIntegrationTest {
     void clearAlert_WithInvalidId_ShouldHandleGracefully() throws Exception {
         String invalidAlertId = "nonexistent_alert";
 
-        mockMvc.perform(delete("/api/monitoring/alerts/{alertId}", invalidAlertId)
+        mockMvc.perform(delete("/monitoring/alerts/{alertId}", invalidAlertId)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -150,7 +150,7 @@ class MonitoringIntegrationTest {
     @Test
     @DisplayName("Should return proper error for invalid endpoints")
     void invalidEndpoint_ShouldReturnNotFound() throws Exception {
-        mockMvc.perform(get("/api/monitoring/invalid")
+        mockMvc.perform(get("/monitoring/invalid")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
@@ -163,13 +163,13 @@ class MonitoringIntegrationTest {
         
         // Trigger multiple alerts concurrently
         for (int i = 0; i < 5; i++) {
-            mockMvc.perform(post("/api/monitoring/test-alert")
+            mockMvc.perform(post("/monitoring/test-alert")
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk());
         }
 
         // Verify system is still responsive
-        mockMvc.perform(get("/api/monitoring/status")
+        mockMvc.perform(get("/monitoring/status")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
     }
@@ -178,23 +178,23 @@ class MonitoringIntegrationTest {
     @DisplayName("Should maintain service state across requests")
     void serviceStateConsistency_ShouldBeMaintained() throws Exception {
         // Trigger an alert
-        mockMvc.perform(post("/api/monitoring/test-alert")
+        mockMvc.perform(post("/monitoring/test-alert")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
         // Check status
-        mockMvc.perform(get("/api/monitoring/status")
+        mockMvc.perform(get("/monitoring/status")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.alerting.active").value(true));
 
         // Clear all alerts
-        mockMvc.perform(delete("/api/monitoring/alerts")
+        mockMvc.perform(delete("/monitoring/alerts")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
         // Verify alerts are cleared
-        mockMvc.perform(get("/api/monitoring/alerts")
+        mockMvc.perform(get("/monitoring/alerts")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -206,10 +206,10 @@ class MonitoringIntegrationTest {
     void jsonResponseConsistency_ShouldBeConsistent() throws Exception {
         // Test that all endpoints return consistent JSON structure
         String[] endpoints = {
-            "/api/monitoring/health",
-            "/api/monitoring/alerts",
-            "/api/monitoring/metrics/summary",
-            "/api/monitoring/status"
+            "/monitoring/health",
+            "/monitoring/alerts",
+            "/monitoring/metrics/summary",
+            "/monitoring/status"
         };
 
         for (String endpoint : endpoints) {
@@ -230,7 +230,7 @@ class MonitoringIntegrationTest {
         metricsService.incrementCacheHit();
 
         // Verify metrics endpoint still works
-        mockMvc.perform(get("/api/monitoring/metrics/summary")
+        mockMvc.perform(get("/monitoring/metrics/summary")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.system").exists())
@@ -246,7 +246,7 @@ class MonitoringIntegrationTest {
         assertTrue(healthStatus.containsKey("overallStatus"));
 
         // Verify health endpoint works
-        mockMvc.perform(get("/api/monitoring/health")
+        mockMvc.perform(get("/monitoring/health")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.overallStatus").exists());

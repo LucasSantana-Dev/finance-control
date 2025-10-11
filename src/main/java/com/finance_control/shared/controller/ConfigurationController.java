@@ -18,13 +18,13 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/config")
+@RequestMapping("/config")
 @RequiredArgsConstructor
 @Tag(name = "Configuration", description = "Configuration management endpoints")
 public class ConfigurationController {
-    
+
     private final ConfigurationService configurationService;
-    
+
     @GetMapping
     @Operation(summary = "Get all configuration", description = "Retrieves all application configuration information")
     public ResponseEntity<Map<String, Object>> getAllConfiguration() {
@@ -32,7 +32,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getAllConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/database")
     @Operation(summary = "Get database configuration", description = "Retrieves database configuration information")
     public ResponseEntity<Map<String, Object>> getDatabaseConfiguration() {
@@ -40,7 +40,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getDatabaseConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/security")
     @Operation(summary = "Get security configuration", description = "Retrieves security configuration information")
     public ResponseEntity<Map<String, Object>> getSecurityConfiguration() {
@@ -48,7 +48,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getSecurityConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/server")
     @Operation(summary = "Get server configuration", description = "Retrieves server configuration information")
     public ResponseEntity<Map<String, Object>> getServerConfiguration() {
@@ -56,7 +56,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getServerConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/logging")
     @Operation(summary = "Get logging configuration", description = "Retrieves logging configuration information")
     public ResponseEntity<Map<String, Object>> getLoggingConfiguration() {
@@ -64,7 +64,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getLoggingConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/jpa")
     @Operation(summary = "Get JPA configuration", description = "Retrieves JPA configuration information")
     public ResponseEntity<Map<String, Object>> getJpaConfiguration() {
@@ -72,7 +72,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getJpaConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/flyway")
     @Operation(summary = "Get Flyway configuration", description = "Retrieves Flyway configuration information")
     public ResponseEntity<Map<String, Object>> getFlywayConfiguration() {
@@ -80,7 +80,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getFlywayConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/actuator")
     @Operation(summary = "Get Actuator configuration", description = "Retrieves Actuator configuration information")
     public ResponseEntity<Map<String, Object>> getActuatorConfiguration() {
@@ -88,7 +88,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getActuatorConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/openapi")
     @Operation(summary = "Get OpenAPI configuration", description = "Retrieves OpenAPI configuration information")
     public ResponseEntity<Map<String, Object>> getOpenApiConfiguration() {
@@ -96,7 +96,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getOpenApiConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/pagination")
     @Operation(summary = "Get pagination configuration", description = "Retrieves pagination configuration information")
     public ResponseEntity<Map<String, Object>> getPaginationConfiguration() {
@@ -104,7 +104,7 @@ public class ConfigurationController {
         Map<String, Object> config = configurationService.getPaginationConfig();
         return ResponseEntity.ok(config);
     }
-    
+
     @GetMapping("/environment")
     @Operation(summary = "Get environment information", description = "Retrieves environment information")
     public ResponseEntity<Map<String, Object>> getEnvironmentInfo() {
@@ -112,4 +112,4 @@ public class ConfigurationController {
         Map<String, Object> info = configurationService.getEnvironmentInfo();
         return ResponseEntity.ok(info);
     }
-} 
+}

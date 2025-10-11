@@ -39,7 +39,7 @@ class MonitoringControllerTest {
 
     @BeforeEach
     void setUp() {
-        monitoringController = new MonitoringController(healthCheckService, metricsService, alertingService);
+        monitoringController = new MonitoringController(metricsService, alertingService, healthCheckService);
     }
 
     @Test

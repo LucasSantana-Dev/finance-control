@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter;
  * Provides endpoints for exporting user data in various formats.
  */
 @RestController
-@RequestMapping("/api/export")
+@RequestMapping("/export")
 @Tag(name = "Data Export", description = "Endpoints for exporting user data in various formats")
 @RequiredArgsConstructor
 @Slf4j

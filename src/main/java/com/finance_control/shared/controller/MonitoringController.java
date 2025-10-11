@@ -1,6 +1,7 @@
 package com.finance_control.shared.controller;
 
 import com.finance_control.shared.monitoring.AlertingService;
+import com.finance_control.shared.monitoring.HealthCheckService;
 import com.finance_control.shared.monitoring.MetricsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -20,7 +21,7 @@ import java.util.Map;
  * Provides access to system health, metrics, and alerting information.
  */
 @RestController
-@RequestMapping("/api/monitoring")
+@RequestMapping("/monitoring")
 @Tag(name = "Monitoring", description = "System monitoring and observability endpoints")
 @RequiredArgsConstructor
 @Slf4j
@@ -28,6 +29,7 @@ public class MonitoringController {
 
     private final MetricsService metricsService;
     private final AlertingService alertingService;
+    private final HealthCheckService healthCheckService;
 
     @GetMapping("/health")
     @Operation(summary = "Get basic system health status", description = "Returns basic health information")
@@ -40,10 +42,7 @@ public class MonitoringController {
         log.debug("Health status requested");
 
         try {
-            Map<String, Object> healthStatus = new HashMap<>();
-            healthStatus.put("status", "UP");
-            healthStatus.put("timestamp", System.currentTimeMillis());
-            healthStatus.put("message", "Basic health check - detailed health checks disabled");
+            Map<String, Object> healthStatus = healthCheckService.getDetailedHealthStatus();
             return ResponseEntity.ok(healthStatus);
         } catch (Exception e) {
             log.error("Error retrieving health status", e);
@@ -198,11 +197,20 @@ public class MonitoringController {
                 "status", alerts.isEmpty() ? "HEALTHY" : "ALERTS_ACTIVE"
             ));
 
-            status.put("healthCheck", Map.of(
-                "active", false,
-                "status", "DISABLED",
-                "message", "Detailed health checks temporarily disabled"
-            ));
+            try {
+                Map<String, Object> healthStatus = healthCheckService.getDetailedHealthStatus();
+                status.put("healthCheck", Map.of(
+                    "active", true,
+                    "status", healthStatus.get("overallStatus"),
+                    "message", "Health checks active"
+                ));
+            } catch (Exception e) {
+                status.put("healthCheck", Map.of(
+                    "active", false,
+                    "status", "ERROR",
+                    "message", "Health checks failed: " + e.getMessage()
+                ));
+            }
 
             status.put("timestamp", System.currentTimeMillis());
 

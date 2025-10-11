@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
  * Provides endpoints for stocks, FIIs, and economic indicators.
  */
 @RestController
-@RequestMapping("/api/brazilian-market")
+@RequestMapping("/brazilian-market")
 @Tag(name = "Brazilian Market", description = "Endpoints for Brazilian market data including stocks, FIIs, and economic indicators")
 @Slf4j
 public class BrazilianMarketController {

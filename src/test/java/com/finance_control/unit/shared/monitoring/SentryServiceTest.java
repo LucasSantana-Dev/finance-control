@@ -11,10 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 /**
  * Unit tests for SentryService.
@@ -22,13 +19,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SentryServiceTest {
 
-    @Mock
     private SentryService sentryService;
 
     @BeforeEach
     void setUp() {
-        // Reset mocks before each test
-        reset(sentryService);
+        sentryService = new SentryService();
     }
 
     @Test
@@ -38,11 +33,8 @@ class SentryServiceTest {
         Map<String, Object> context = new HashMap<>();
         context.put("key", "value");
 
-        // When
-        sentryService.captureException(exception, context);
-
-        // Then
-        verify(sentryService).captureException(exception, context);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.captureException(exception, context));
     }
 
     @Test
@@ -52,11 +44,8 @@ class SentryServiceTest {
         Long userId = 123L;
         String userEmail = "test@example.com";
 
-        // When
-        sentryService.captureException(exception, userId, userEmail);
-
-        // Then
-        verify(sentryService).captureException(exception, userId, userEmail);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.captureException(exception, userId, userEmail));
     }
 
     @Test
@@ -65,11 +54,8 @@ class SentryServiceTest {
         String message = "Test message";
         SentryLevel level = SentryLevel.ERROR;
 
-        // When
-        sentryService.captureMessage(message, level);
-
-        // Then
-        verify(sentryService).captureMessage(message, level);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.captureMessage(message, level));
     }
 
     @Test
@@ -77,11 +63,8 @@ class SentryServiceTest {
         // Given
         String message = "Test error";
 
-        // When
-        sentryService.captureError(message);
-
-        // Then
-        verify(sentryService).captureError(message);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.captureError(message));
     }
 
     @Test
@@ -89,11 +72,8 @@ class SentryServiceTest {
         // Given
         String message = "Test warning";
 
-        // When
-        sentryService.captureWarning(message);
-
-        // Then
-        verify(sentryService).captureWarning(message);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.captureWarning(message));
     }
 
     @Test
@@ -101,11 +81,8 @@ class SentryServiceTest {
         // Given
         String message = "Test info";
 
-        // When
-        sentryService.captureInfo(message);
-
-        // Then
-        verify(sentryService).captureInfo(message);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.captureInfo(message));
     }
 
     @Test
@@ -115,11 +92,8 @@ class SentryServiceTest {
         String category = "test";
         SentryLevel level = SentryLevel.INFO;
 
-        // When
-        sentryService.addBreadcrumb(message, category, level);
-
-        // Then
-        verify(sentryService).addBreadcrumb(message, category, level);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.addBreadcrumb(message, category, level));
     }
 
     @Test
@@ -129,11 +103,8 @@ class SentryServiceTest {
         String userEmail = "test@example.com";
         String username = "testuser";
 
-        // When
-        sentryService.setUserContext(userId, userEmail, username);
-
-        // Then
-        verify(sentryService).setUserContext(userId, userEmail, username);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.setUserContext(userId, userEmail, username));
     }
 
     @Test
@@ -143,11 +114,8 @@ class SentryServiceTest {
         tags.put("environment", "test");
         tags.put("service", "finance-control");
 
-        // When
-        sentryService.setTags(tags);
-
-        // Then
-        verify(sentryService).setTags(tags);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.setTags(tags));
     }
 
     @Test
@@ -156,28 +124,19 @@ class SentryServiceTest {
         String key = "test_key";
         Object value = "test_value";
 
-        // When
-        sentryService.setContext(key, value);
-
-        // Then
-        verify(sentryService).setContext(key, value);
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.setContext(key, value));
     }
 
     @Test
     void clearUserContext_ShouldCallSentryService() {
-        // When
-        sentryService.clearUserContext();
-
-        // Then
-        verify(sentryService).clearUserContext();
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.clearUserContext());
     }
 
     @Test
     void isEnabled_ShouldCallSentryService() {
-        // When
-        sentryService.isEnabled();
-
-        // Then
-        verify(sentryService).isEnabled();
+        // When & Then - Should not throw exception
+        assertDoesNotThrow(() -> sentryService.isEnabled());
     }
 }

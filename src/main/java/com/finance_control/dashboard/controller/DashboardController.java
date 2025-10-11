@@ -19,7 +19,7 @@ import java.util.List;
  * Provides endpoints for financial dashboard data and metrics.
  */
 @RestController
-@RequestMapping("/api/dashboard")
+@RequestMapping("/dashboard")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Dashboard", description = "Financial dashboard endpoints for metrics and analytics")
