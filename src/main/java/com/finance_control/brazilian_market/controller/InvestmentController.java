@@ -50,13 +50,13 @@ public class InvestmentController {
     public ResponseEntity<Investment> createInvestment(
             @Valid @RequestBody Investment investment,
             @AuthenticationPrincipal User user) {
-        
+
         log.debug("Creating investment: {} for user: {}", investment.getTicker(), user.getId());
-        
+
         if (investmentService.investmentExists(investment.getTicker(), user)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
-        
+
         Investment createdInvestment = investmentService.createInvestment(investment, user);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdInvestment);
     }
@@ -72,7 +72,7 @@ public class InvestmentController {
     public ResponseEntity<Page<Investment>> getAllInvestments(
             @AuthenticationPrincipal User user,
             Pageable pageable) {
-        
+
         log.debug("Getting all investments for user: {}", user.getId());
         Page<Investment> investments = investmentService.getAllInvestments(user, pageable);
         return ResponseEntity.ok(investments);
@@ -90,7 +90,7 @@ public class InvestmentController {
     public ResponseEntity<Investment> getInvestmentById(
             @Parameter(description = "Investment ID") @PathVariable Long id,
             @AuthenticationPrincipal User user) {
-        
+
         log.debug("Getting investment: {} for user: {}", id, user.getId());
         Optional<Investment> investment = investmentService.getInvestmentById(id, user);
         return investment.map(ResponseEntity::ok)
@@ -109,7 +109,7 @@ public class InvestmentController {
     public ResponseEntity<Investment> getInvestmentByTicker(
             @Parameter(description = "Investment ticker symbol") @PathVariable String ticker,
             @AuthenticationPrincipal User user) {
-        
+
         log.debug("Getting investment by ticker: {} for user: {}", ticker, user.getId());
         Optional<Investment> investment = investmentService.getInvestmentByTicker(ticker, user);
         return investment.map(ResponseEntity::ok)
@@ -130,9 +130,9 @@ public class InvestmentController {
             @Parameter(description = "Investment ID") @PathVariable Long id,
             @Valid @RequestBody Investment investment,
             @AuthenticationPrincipal User user) {
-        
+
         log.debug("Updating investment: {} for user: {}", id, user.getId());
-        
+
         try {
             Investment updatedInvestment = investmentService.updateInvestment(id, investment, user);
             return ResponseEntity.ok(updatedInvestment);
@@ -153,9 +153,9 @@ public class InvestmentController {
     public ResponseEntity<Void> deleteInvestment(
             @Parameter(description = "Investment ID") @PathVariable Long id,
             @AuthenticationPrincipal User user) {
-        
+
         log.debug("Deleting investment: {} for user: {}", id, user.getId());
-        
+
         try {
             investmentService.deleteInvestment(id, user);
             return ResponseEntity.noContent().build();
@@ -175,7 +175,7 @@ public class InvestmentController {
     public ResponseEntity<List<Investment>> getInvestmentsByType(
             @Parameter(description = "Investment type") @PathVariable Investment.InvestmentType type,
             @AuthenticationPrincipal User user) {
-        
+
         log.debug("Getting investments by type: {} for user: {}", type, user.getId());
         List<Investment> investments = investmentService.getInvestmentsByType(user, type);
         return ResponseEntity.ok(investments);
@@ -193,7 +193,7 @@ public class InvestmentController {
             @Parameter(description = "Investment type") @PathVariable Investment.InvestmentType type,
             @Parameter(description = "Investment subtype") @PathVariable Investment.InvestmentSubtype subtype,
             @AuthenticationPrincipal User user) {
-        
+
         log.debug("Getting investments by type: {} and subtype: {} for user: {}", type, subtype, user.getId());
         List<Investment> investments = investmentService.getInvestmentsByTypeAndSubtype(user, type, subtype);
         return ResponseEntity.ok(investments);
@@ -210,7 +210,7 @@ public class InvestmentController {
     public ResponseEntity<List<Investment>> searchInvestments(
             @Parameter(description = "Search term") @RequestParam String q,
             @AuthenticationPrincipal User user) {
-        
+
         log.debug("Searching investments with term: {} for user: {}", q, user.getId());
         List<Investment> investments = investmentService.searchInvestments(user, q);
         return ResponseEntity.ok(investments);
@@ -228,14 +228,14 @@ public class InvestmentController {
     public ResponseEntity<Investment> updateMarketData(
             @Parameter(description = "Investment ID") @PathVariable Long id,
             @AuthenticationPrincipal User user) {
-        
+
         log.debug("Updating market data for investment: {} for user: {}", id, user.getId());
-        
+
         Optional<Investment> investmentOpt = investmentService.getInvestmentById(id, user);
         if (investmentOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         Investment updatedInvestment = investmentService.updateMarketData(investmentOpt.get());
         return ResponseEntity.ok(updatedInvestment);
     }
@@ -250,10 +250,10 @@ public class InvestmentController {
     })
     public ResponseEntity<Map<String, String>> updateAllMarketData(@AuthenticationPrincipal User user) {
         log.debug("Updating all market data for user: {}", user.getId());
-        
+
         // Run in background to avoid timeout
         new Thread(() -> investmentService.updateAllMarketData(user)).start();
-        
+
         return ResponseEntity.ok(Map.of("message", "Market data update initiated"));
     }
 
@@ -267,7 +267,7 @@ public class InvestmentController {
     })
     public ResponseEntity<Map<String, Object>> getMetadata(@AuthenticationPrincipal User user) {
         log.debug("Getting investment metadata for user: {}", user.getId());
-        
+
         Map<String, Object> metadata = Map.of(
                 "sectors", investmentService.getSectors(user),
                 "industries", investmentService.getIndustries(user),
@@ -275,7 +275,7 @@ public class InvestmentController {
                 "supportedExchanges", externalMarketDataService.getSupportedExchanges(),
                 "supportedCurrencies", externalMarketDataService.getSupportedCurrencies()
         );
-        
+
         return ResponseEntity.ok(metadata);
     }
 
@@ -290,7 +290,7 @@ public class InvestmentController {
     public ResponseEntity<List<Investment>> getTopPerformers(
             @AuthenticationPrincipal User user,
             Pageable pageable) {
-        
+
         log.debug("Getting top performing investments for user: {}", user.getId());
         List<Investment> investments = investmentService.getTopPerformers(user, pageable);
         return ResponseEntity.ok(investments);
@@ -307,7 +307,7 @@ public class InvestmentController {
     public ResponseEntity<List<Investment>> getWorstPerformers(
             @AuthenticationPrincipal User user,
             Pageable pageable) {
-        
+
         log.debug("Getting worst performing investments for user: {}", user.getId());
         List<Investment> investments = investmentService.getWorstPerformers(user, pageable);
         return ResponseEntity.ok(investments);
@@ -324,7 +324,7 @@ public class InvestmentController {
     public ResponseEntity<List<Investment>> getTopDividendYield(
             @AuthenticationPrincipal User user,
             Pageable pageable) {
-        
+
         log.debug("Getting top dividend yield investments for user: {}", user.getId());
         List<Investment> investments = investmentService.getTopDividendYield(user, pageable);
         return ResponseEntity.ok(investments);
@@ -340,13 +340,13 @@ public class InvestmentController {
     })
     public ResponseEntity<Map<String, Object>> getPortfolioSummary(@AuthenticationPrincipal User user) {
         log.debug("Getting portfolio summary for user: {}", user.getId());
-        
+
         Map<String, Object> summary = Map.of(
                 "totalMarketValue", investmentService.getTotalMarketValue(user).orElse(0.0),
                 "marketValueByType", investmentService.getMarketValueByType(user),
                 "totalInvestments", investmentService.getAllInvestments(user).size()
         );
-        
+
         return ResponseEntity.ok(summary);
     }
 }

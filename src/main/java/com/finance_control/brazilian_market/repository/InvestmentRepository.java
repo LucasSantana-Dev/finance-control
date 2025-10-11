@@ -43,8 +43,8 @@ public interface InvestmentRepository extends JpaRepository<Investment, Long> {
      * Find investments by type and subtype for a specific user
      */
     List<Investment> findByUserIdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(
-            Long userId, 
-            Investment.InvestmentType investmentType, 
+            Long userId,
+            Investment.InvestmentType investmentType,
             Investment.InvestmentSubtype investmentSubtype
     );
 
@@ -88,7 +88,7 @@ public interface InvestmentRepository extends JpaRepository<Investment, Long> {
      */
     @Query("SELECT DISTINCT i.investmentSubtype FROM Investment i WHERE i.userId = :userId AND i.investmentType = :investmentType AND i.isActive = true AND i.investmentSubtype IS NOT NULL ORDER BY i.investmentSubtype")
     List<Investment.InvestmentSubtype> findDistinctInvestmentSubtypesByUserIdAndType(
-            @Param("userId") Long userId, 
+            @Param("userId") Long userId,
             @Param("investmentType") Investment.InvestmentType investmentType
     );
 

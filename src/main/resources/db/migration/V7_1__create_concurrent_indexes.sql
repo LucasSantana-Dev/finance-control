@@ -26,13 +26,8 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_financial_goals_active_user_deadline
 ON financial_goals(user_id, deadline)
 WHERE is_active = true;
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_brazilian_stocks_active_user_ticker
-ON brazilian_stocks(user_id, ticker)
-WHERE is_active = true;
-
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_fii_funds_active_user_ticker
-ON fii_funds(user_id, ticker)
-WHERE is_active = true;
+-- Note: brazilian_stocks and fii_funds tables are replaced by investments table in V8
+-- These indexes will be created in V8 migration for the unified investments table
 
 -- Indexes for dashboard and analytics queries
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transactions_user_category_type_date
@@ -43,13 +38,10 @@ ON transactions(user_id, subcategory_id, type, date DESC);
 
 -- Indexes for Brazilian market data queries
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_market_indicators_type_date
-ON market_indicators(type, date DESC);
+ON market_indicators(indicator_type, date DESC);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_brazilian_stocks_ticker_date
-ON brazilian_stocks(ticker, date DESC);
-
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_fiis_ticker_date
-ON fiis(ticker, date DESC);
+-- Note: brazilian_stocks and fii_funds tables are replaced by investments table in V8
+-- These indexes will be created in V8 migration for the unified investments table
 
 -- Indexes for user profile and authentication
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_active

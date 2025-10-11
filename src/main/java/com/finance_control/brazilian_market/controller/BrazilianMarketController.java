@@ -1,9 +1,12 @@
 package com.finance_control.brazilian_market.controller;
 
-import com.finance_control.brazilian_market.model.BrazilianStock;
-import com.finance_control.brazilian_market.model.FII;
+import com.finance_control.brazilian_market.dto.InvestmentDTO;
+import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.model.MarketIndicator;
 import com.finance_control.brazilian_market.service.BrazilianMarketDataService;
+import com.finance_control.brazilian_market.service.InvestmentService;
+import com.finance_control.users.model.User;
+import com.finance_control.users.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,9 +31,13 @@ import java.util.concurrent.CompletableFuture;
 public class BrazilianMarketController {
 
     private final BrazilianMarketDataService marketDataService;
+    private final InvestmentService investmentService;
+    private final UserRepository userRepository;
 
-    public BrazilianMarketController(BrazilianMarketDataService marketDataService) {
+    public BrazilianMarketController(BrazilianMarketDataService marketDataService, InvestmentService investmentService, UserRepository userRepository) {
         this.marketDataService = marketDataService;
+        this.investmentService = investmentService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/indicators/selic")
@@ -89,66 +96,51 @@ public class BrazilianMarketController {
         return ResponseEntity.ok(future);
     }
 
-    @GetMapping("/stocks")
+    @GetMapping("/investments")
+    @Operation(summary = "Get user investments", description = "Retrieves all investments tracked by the authenticated user")
+    public ResponseEntity<List<Investment>> getUserInvestments(Authentication authentication) {
+        log.debug("GET request to retrieve user investments");
+        Long userId = getUserIdFromAuthentication(authentication);
+        List<Investment> investments = investmentService.getAllInvestments(getUserFromAuthentication(authentication));
+        return ResponseEntity.ok(investments);
+    }
+
+    @GetMapping("/investments/stocks")
     @Operation(summary = "Get user stocks", description = "Retrieves all stocks tracked by the authenticated user")
-    public ResponseEntity<List<BrazilianStock>> getUserStocks(Authentication authentication) {
+    public ResponseEntity<List<Investment>> getUserStocks(Authentication authentication) {
         log.debug("GET request to retrieve user stocks");
-        Long userId = getUserIdFromAuthentication(authentication);
-        List<BrazilianStock> stocks = marketDataService.getUserStocks(userId);
+        List<Investment> stocks = investmentService.getInvestmentsByType(getUserFromAuthentication(authentication), Investment.InvestmentType.STOCK);
         return ResponseEntity.ok(stocks);
     }
 
-    @GetMapping("/fiis")
+    @GetMapping("/investments/fiis")
     @Operation(summary = "Get user FIIs", description = "Retrieves all FIIs tracked by the authenticated user")
-    public ResponseEntity<List<FII>> getUserFIIs(Authentication authentication) {
+    public ResponseEntity<List<Investment>> getUserFIIs(Authentication authentication) {
         log.debug("GET request to retrieve user FIIs");
-        Long userId = getUserIdFromAuthentication(authentication);
-        List<FII> fiis = marketDataService.getUserFIIs(userId);
+        List<Investment> fiis = investmentService.getInvestmentsByType(getUserFromAuthentication(authentication), Investment.InvestmentType.FII);
         return ResponseEntity.ok(fiis);
     }
 
-    @GetMapping("/stocks/search")
-    @Operation(summary = "Search user stocks", description = "Searches stocks by ticker or company name for the authenticated user")
-    public ResponseEntity<List<BrazilianStock>> searchUserStocks(
-            @Parameter(description = "Search query (ticker or company name)") @RequestParam String query,
+    @GetMapping("/investments/search")
+    @Operation(summary = "Search user investments", description = "Searches investments by ticker or name for the authenticated user")
+    public ResponseEntity<List<Investment>> searchUserInvestments(
+            @Parameter(description = "Search query (ticker or name)") @RequestParam String query,
             Authentication authentication) {
-        log.debug("GET request to search user stocks with query: {}", query);
-        Long userId = getUserIdFromAuthentication(authentication);
-        List<BrazilianStock> stocks = marketDataService.searchUserStocks(userId, query);
-        return ResponseEntity.ok(stocks);
+        log.debug("GET request to search user investments with query: {}", query);
+        List<Investment> investments = investmentService.searchInvestments(getUserFromAuthentication(authentication), query);
+        return ResponseEntity.ok(investments);
     }
 
-    @GetMapping("/fiis/search")
-    @Operation(summary = "Search user FIIs", description = "Searches FIIs by ticker or fund name for the authenticated user")
-    public ResponseEntity<List<FII>> searchUserFIIs(
-            @Parameter(description = "Search query (ticker or fund name)") @RequestParam String query,
+    @PostMapping("/investments/{ticker}/update")
+    @Operation(summary = "Update investment data", description = "Fetches and updates real-time data for a specific investment")
+    public ResponseEntity<Investment> updateInvestmentData(
+            @Parameter(description = "Investment ticker symbol") @PathVariable String ticker,
             Authentication authentication) {
-        log.debug("GET request to search user FIIs with query: {}", query);
-        Long userId = getUserIdFromAuthentication(authentication);
-        List<FII> fiis = marketDataService.searchUserFIIs(userId, query);
-        return ResponseEntity.ok(fiis);
-    }
-
-    @PostMapping("/stocks/{ticker}/update")
-    @Operation(summary = "Update stock data", description = "Fetches and updates real-time data for a specific stock")
-    public ResponseEntity<CompletableFuture<BrazilianStock>> updateStockData(
-            @Parameter(description = "Stock ticker symbol") @PathVariable String ticker,
-            Authentication authentication) {
-        log.debug("POST request to update stock data for ticker: {}", ticker);
-        Long userId = getUserIdFromAuthentication(authentication);
-        CompletableFuture<BrazilianStock> future = marketDataService.updateStockData(ticker, userId);
-        return ResponseEntity.ok(future);
-    }
-
-    @PostMapping("/fiis/{ticker}/update")
-    @Operation(summary = "Update FII data", description = "Fetches and updates real-time data for a specific FII")
-    public ResponseEntity<CompletableFuture<FII>> updateFIIData(
-            @Parameter(description = "FII ticker symbol") @PathVariable String ticker,
-            Authentication authentication) {
-        log.debug("POST request to update FII data for ticker: {}", ticker);
-        Long userId = getUserIdFromAuthentication(authentication);
-        CompletableFuture<FII> future = marketDataService.updateFIIData(ticker, userId);
-        return ResponseEntity.ok(future);
+        log.debug("POST request to update investment data for ticker: {}", ticker);
+        Investment investment = investmentService.getInvestmentByTicker(ticker, getUserFromAuthentication(authentication))
+                .orElseThrow(() -> new IllegalArgumentException("Investment not found: " + ticker));
+        Investment updatedInvestment = investmentService.updateMarketData(investment);
+        return ResponseEntity.ok(updatedInvestment);
     }
 
     @GetMapping("/summary")
@@ -184,5 +176,11 @@ public class BrazilianMarketController {
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Invalid user ID in authentication");
         }
+    }
+
+    private User getUserFromAuthentication(Authentication authentication) {
+        Long userId = getUserIdFromAuthentication(authentication);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
     }
 }

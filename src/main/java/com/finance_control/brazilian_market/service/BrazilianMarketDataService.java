@@ -1,12 +1,9 @@
 package com.finance_control.brazilian_market.service;
 
 import com.finance_control.brazilian_market.client.BCBApiClient;
-import com.finance_control.brazilian_market.client.BrazilianStocksApiClient;
-import com.finance_control.brazilian_market.model.*;
-import com.finance_control.brazilian_market.repository.*;
+import com.finance_control.brazilian_market.model.MarketIndicator;
+import com.finance_control.brazilian_market.repository.MarketIndicatorRepository;
 import com.finance_control.shared.monitoring.MetricsService;
-import com.finance_control.users.model.User;
-import com.finance_control.users.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
@@ -24,8 +21,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Service for managing Brazilian market data including stocks, FIIs, and economic indicators.
- * Provides real-time data fetching, caching, and analysis capabilities.
+ * Service for managing Brazilian market indicators and economic data.
+ * Provides real-time data fetching, caching, and analysis capabilities for market indicators.
  */
 @Service
 @Transactional
@@ -33,27 +30,15 @@ import java.util.concurrent.CompletableFuture;
 public class BrazilianMarketDataService {
 
     private final BCBApiClient bcbApiClient;
-    private final BrazilianStocksApiClient stocksApiClient;
-    private final BrazilianStockRepository stockRepository;
-    private final FIIRepository fiiRepository;
     private final MarketIndicatorRepository indicatorRepository;
-    private final UserRepository userRepository;
     private final MetricsService metricsService;
 
     @Autowired
     public BrazilianMarketDataService(BCBApiClient bcbApiClient,
-                                    BrazilianStocksApiClient stocksApiClient,
-                                    BrazilianStockRepository stockRepository,
-                                    FIIRepository fiiRepository,
                                     MarketIndicatorRepository indicatorRepository,
-                                    UserRepository userRepository,
                                     MetricsService metricsService) {
         this.bcbApiClient = bcbApiClient;
-        this.stocksApiClient = stocksApiClient;
-        this.stockRepository = stockRepository;
-        this.fiiRepository = fiiRepository;
         this.indicatorRepository = indicatorRepository;
-        this.userRepository = userRepository;
         this.metricsService = metricsService;
     }
 
@@ -156,83 +141,7 @@ public class BrazilianMarketDataService {
         }
     }
 
-    @Async
-    public CompletableFuture<BrazilianStock> updateStockData(String ticker, Long userId) {
-        try {
-            log.info("Updating stock data for ticker: {} for user: {}", ticker, userId);
 
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-            BrazilianStock stockData = stocksApiClient.getStockQuote(ticker);
-            if (stockData == null) {
-                throw new IllegalArgumentException("Stock data not found for ticker: " + ticker);
-            }
-
-            stockData.setUser(user);
-
-            Optional<BrazilianStock> existingStock = stockRepository.findByTickerAndUserId(ticker, userId);
-            if (existingStock.isPresent()) {
-                BrazilianStock existing = existingStock.get();
-                existing.updatePrice(stockData.getCurrentPrice());
-                existing.setVolume(stockData.getVolume());
-                existing.setMarketCap(stockData.getMarketCap());
-                existing.setLastUpdated(LocalDateTime.now());
-
-                BrazilianStock saved = stockRepository.save(existing);
-                log.info("Stock data updated for ticker: {}", ticker);
-                return CompletableFuture.completedFuture(saved);
-            } else {
-                BrazilianStock saved = stockRepository.save(stockData);
-                log.info("New stock data saved for ticker: {}", ticker);
-                return CompletableFuture.completedFuture(saved);
-            }
-        } catch (Exception e) {
-            log.error("Error updating stock data for ticker: {}", ticker, e);
-            return CompletableFuture.failedFuture(e);
-        }
-    }
-
-    @Async
-    public CompletableFuture<FII> updateFIIData(String ticker, Long userId) {
-        try {
-            log.info("Updating FII data for ticker: {} for user: {}", ticker, userId);
-
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-            FII fiiData = stocksApiClient.getFIIQuote(ticker);
-            if (fiiData == null) {
-                throw new IllegalArgumentException("FII data not found for ticker: " + ticker);
-            }
-
-            fiiData.setUser(user);
-
-            Optional<FII> existingFII = fiiRepository.findByTickerAndUserId(ticker, userId);
-            if (existingFII.isPresent()) {
-                FII existing = existingFII.get();
-                existing.updatePrice(fiiData.getCurrentPrice());
-                existing.setVolume(fiiData.getVolume());
-                existing.setMarketCap(fiiData.getMarketCap());
-                existing.setDividendYield(fiiData.getDividendYield());
-                existing.setLastDividend(fiiData.getLastDividend());
-                existing.setLastDividendDate(fiiData.getLastDividendDate());
-                existing.setNetWorth(fiiData.getNetWorth());
-                existing.setLastUpdated(LocalDateTime.now());
-
-                FII saved = fiiRepository.save(existing);
-                log.info("FII data updated for ticker: {}", ticker);
-                return CompletableFuture.completedFuture(saved);
-            } else {
-                FII saved = fiiRepository.save(fiiData);
-                log.info("New FII data saved for ticker: {}", ticker);
-                return CompletableFuture.completedFuture(saved);
-            }
-        } catch (Exception e) {
-            log.error("Error updating FII data for ticker: {}", ticker, e);
-            return CompletableFuture.failedFuture(e);
-        }
-    }
 
     @Cacheable(value = "market-data", key = "'selic_rate'")
     public BigDecimal getCurrentSelicRate() {
@@ -260,21 +169,6 @@ public class BrazilianMarketDataService {
         return indicatorRepository.findKeyIndicators();
     }
 
-    public List<BrazilianStock> getUserStocks(Long userId) {
-        return stockRepository.findByUserId(userId);
-    }
-
-    public List<FII> getUserFIIs(Long userId) {
-        return fiiRepository.findByUserId(userId);
-    }
-
-    public List<BrazilianStock> searchUserStocks(Long userId, String query) {
-        return stockRepository.searchByUserAndQuery(userId, query);
-    }
-
-    public List<FII> searchUserFIIs(Long userId, String query) {
-        return fiiRepository.searchByUserAndQuery(userId, query);
-    }
 
     @Scheduled(fixedRate = 3600000)
     @CacheEvict(value = "market-data", allEntries = true)
@@ -296,7 +190,8 @@ public class BrazilianMarketDataService {
     public Object getMarketSummary() {
         var sample = metricsService.startMarketDataFetchTimer();
         try {
-            return stocksApiClient.getMarketSummary();
+            // Return market indicators as summary since we no longer have stock/FII data
+            return getKeyIndicators();
         } finally {
             metricsService.recordMarketDataFetchTime(sample);
         }

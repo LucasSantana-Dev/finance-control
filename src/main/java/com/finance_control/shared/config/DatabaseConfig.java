@@ -66,22 +66,22 @@ public class DatabaseConfig {
         String url = appProperties.getDatabase().getUrl();
         String port = appProperties.getDatabase().getPort();
         String dbName = appProperties.getDatabase().getName();
-        
+
         // If URL already contains the database name, use it as-is
         if (url.contains("/" + dbName)) {
             return url + "?sslmode=disable";
         }
-        
+
         // If URL already contains a port (like jdbc:postgresql://host:5432), add database name
         if (url.matches(".*:\\d+$")) {
             return url + "/" + dbName + "?sslmode=disable";
         }
-        
+
         // If URL is just jdbc:postgresql://host, add port and database name
         if (url.matches("jdbc:postgresql://[^:]+$")) {
             return url + ":" + port + "/" + dbName + "?sslmode=disable";
         }
-        
+
         // Otherwise, build the URL from components
         return url + ":" + port + "/" + dbName + "?sslmode=disable";
     }

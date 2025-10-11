@@ -1,161 +1,106 @@
 package com.finance_control.brazilian_market.service;
 
+import com.finance_control.brazilian_market.client.MarketDataProvider;
+import com.finance_control.brazilian_market.client.MarketQuote;
 import com.finance_control.brazilian_market.model.Investment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.client.RestClientException;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 
 /**
  * Service for fetching market data from external APIs.
- * Currently supports Alpha Vantage API for Brazilian market data.
+ * Uses generic market data providers that can be easily swapped.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ExternalMarketDataService {
 
-    private final RestTemplate restTemplate;
+    @Qualifier("brazilianMarketDataProvider")
+    private final MarketDataProvider brazilianMarketProvider;
 
-    @Value("${app.market-data.alpha-vantage.api-key:demo}")
-    private String alphaVantageApiKey;
-
-    @Value("${app.market-data.alpha-vantage.base-url:https://www.alphavantage.co/query}")
-    private String alphaVantageBaseUrl;
-
-    @Value("${app.market-data.update-interval-minutes:15}")
-    private int updateIntervalMinutes;
+    @Qualifier("usMarketDataProvider")
+    private final MarketDataProvider usMarketProvider;
 
     /**
-     * Fetch current market data for an investment from Alpha Vantage API
+     * Fetch current market data for an investment from appropriate provider
      */
-    public Optional<MarketData> fetchMarketData(String ticker, Investment.InvestmentType investmentType) {
+    public Optional<MarketQuote> fetchMarketData(String ticker, Investment.InvestmentType investmentType) {
         try {
             log.debug("Fetching market data for ticker: {} of type: {}", ticker, investmentType);
-            
-            // Format ticker for Alpha Vantage (Brazilian stocks need .SAO suffix)
-            String formattedTicker = formatTickerForAlphaVantage(ticker, investmentType);
-            
-            // Build API URL
-            String url = buildAlphaVantageUrl(formattedTicker);
-            
-            // Make API call
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-            
-            if (response == null || response.containsKey("Error Message")) {
-                log.warn("Alpha Vantage API returned error for ticker: {}", ticker);
+
+            MarketDataProvider provider = selectProvider(investmentType);
+            if (provider == null) {
+                log.warn("No provider available for investment type: {}", investmentType);
                 return Optional.empty();
             }
-            
-            // Parse response based on investment type
-            return parseAlphaVantageResponse(response, ticker, investmentType);
-            
-        } catch (RestClientException e) {
+
+            log.debug("Using provider: {} for ticker: {}", provider.getProviderName(), ticker);
+            return provider.getQuote(ticker);
+        } catch (Exception e) {
             log.error("Error fetching market data for ticker: {}", ticker, e);
             return Optional.empty();
-        } catch (Exception e) {
-            log.error("Unexpected error fetching market data for ticker: {}", ticker, e);
-            return Optional.empty();
         }
     }
 
     /**
-     * Format ticker for Alpha Vantage API
-     * Brazilian stocks need .SAO suffix, others might need different suffixes
+     * Fetch market data for multiple investments
      */
-    private String formatTickerForAlphaVantage(String ticker, Investment.InvestmentType investmentType) {
-        // Remove any existing suffix
-        String baseTicker = ticker.split("\\.")[0];
-        
-        switch (investmentType) {
-            case STOCK:
-            case FII:
-                // Brazilian stocks and FIIs use .SAO suffix
-                return baseTicker + ".SAO";
-            case BOND:
-                // Bonds might need different handling
-                return baseTicker;
-            default:
-                return baseTicker;
-        }
-    }
-
-    /**
-     * Build Alpha Vantage API URL
-     */
-    private String buildAlphaVantageUrl(String formattedTicker) {
-        return String.format("%s?function=GLOBAL_QUOTE&symbol=%s&apikey=%s", 
-                           alphaVantageBaseUrl, formattedTicker, alphaVantageApiKey);
-    }
-
-    /**
-     * Parse Alpha Vantage API response
-     */
-    private Optional<MarketData> parseAlphaVantageResponse(Map<String, Object> response, String originalTicker, Investment.InvestmentType investmentType) {
+    public List<MarketQuote> fetchMarketData(List<String> tickers, Investment.InvestmentType investmentType) {
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, String> quote = (Map<String, String>) response.get("Global Quote");
-            
-            if (quote == null || quote.isEmpty()) {
-                log.warn("No quote data found in Alpha Vantage response for ticker: {}", originalTicker);
+            log.debug("Fetching market data for {} tickers of type: {}", tickers.size(), investmentType);
+
+            MarketDataProvider provider = selectProvider(investmentType);
+            if (provider == null) {
+                log.warn("No provider available for investment type: {}", investmentType);
+                return List.of();
+            }
+
+            log.debug("Using provider: {} for {} tickers", provider.getProviderName(), tickers.size());
+            return provider.getQuotes(tickers);
+        } catch (Exception e) {
+            log.error("Error fetching market data for tickers: {}", tickers, e);
+            return List.of();
+        }
+    }
+
+    /**
+     * Fetch historical data for an investment
+     */
+    public Optional<com.finance_control.brazilian_market.client.HistoricalData> fetchHistoricalData(
+            String ticker, Investment.InvestmentType investmentType, String period, String interval) {
+        try {
+            log.debug("Fetching historical data for ticker: {} of type: {}", ticker, investmentType);
+
+            MarketDataProvider provider = selectProvider(investmentType);
+            if (provider == null) {
+                log.warn("No provider available for investment type: {}", investmentType);
                 return Optional.empty();
             }
 
-            MarketData marketData = MarketData.builder()
-                    .ticker(originalTicker)
-                    .currentPrice(parseDecimal(quote.get("05. price")))
-                    .previousClose(parseDecimal(quote.get("08. previous close")))
-                    .dayChange(parseDecimal(quote.get("09. change")))
-                    .dayChangePercent(parseDecimal(quote.get("10. change percent").replace("%", "")))
-                    .volume(parseLong(quote.get("06. volume")))
-                    .lastUpdated(LocalDateTime.now())
-                    .build();
-
-            log.debug("Successfully parsed market data for ticker: {}", originalTicker);
-            return Optional.of(marketData);
-            
+            log.debug("Using provider: {} for historical data of ticker: {}", provider.getProviderName(), ticker);
+            return provider.getHistoricalData(ticker, period, interval);
         } catch (Exception e) {
-            log.error("Error parsing Alpha Vantage response for ticker: {}", originalTicker, e);
+            log.error("Error fetching historical data for ticker: {}", ticker, e);
             return Optional.empty();
         }
     }
 
     /**
-     * Parse decimal value from string
+     * Select the appropriate market data provider based on investment type
      */
-    private BigDecimal parseDecimal(String value) {
-        if (value == null || value.trim().isEmpty() || "N/A".equals(value)) {
-            return null;
+    private MarketDataProvider selectProvider(Investment.InvestmentType investmentType) {
+        if (brazilianMarketProvider.supportsInvestmentType(investmentType)) {
+            return brazilianMarketProvider;
+        } else if (usMarketProvider.supportsInvestmentType(investmentType)) {
+            return usMarketProvider;
         }
-        try {
-            return new BigDecimal(value.trim());
-        } catch (NumberFormatException e) {
-            log.warn("Could not parse decimal value: {}", value);
-            return null;
-        }
-    }
-
-    /**
-     * Parse long value from string
-     */
-    private Long parseLong(String value) {
-        if (value == null || value.trim().isEmpty() || "N/A".equals(value)) {
-            return null;
-        }
-        try {
-            return Long.parseLong(value.trim());
-        } catch (NumberFormatException e) {
-            log.warn("Could not parse long value: {}", value);
-            return null;
-        }
+        return null;
     }
 
     /**
@@ -165,29 +110,15 @@ public class ExternalMarketDataService {
         if (lastUpdated == null) {
             return true;
         }
-        return lastUpdated.isBefore(LocalDateTime.now().minusMinutes(updateIntervalMinutes));
-    }
-
-    /**
-     * Market data DTO
-     */
-    @lombok.Data
-    @lombok.Builder
-    public static class MarketData {
-        private String ticker;
-        private BigDecimal currentPrice;
-        private BigDecimal previousClose;
-        private BigDecimal dayChange;
-        private BigDecimal dayChangePercent;
-        private Long volume;
-        private LocalDateTime lastUpdated;
+        // Update every 15 minutes by default
+        return lastUpdated.isBefore(LocalDateTime.now().minusMinutes(15));
     }
 
     /**
      * Get supported exchanges
      */
-    public Map<String, String> getSupportedExchanges() {
-        Map<String, String> exchanges = new HashMap<>();
+    public java.util.Map<String, String> getSupportedExchanges() {
+        java.util.Map<String, String> exchanges = new java.util.HashMap<>();
         exchanges.put("B3", "Brasil Bolsa Balcão (Brazil)");
         exchanges.put("NYSE", "New York Stock Exchange");
         exchanges.put("NASDAQ", "NASDAQ");
@@ -198,12 +129,22 @@ public class ExternalMarketDataService {
     /**
      * Get supported currencies
      */
-    public Map<String, String> getSupportedCurrencies() {
-        Map<String, String> currencies = new HashMap<>();
+    public java.util.Map<String, String> getSupportedCurrencies() {
+        java.util.Map<String, String> currencies = new java.util.HashMap<>();
         currencies.put("BRL", "Brazilian Real");
         currencies.put("USD", "US Dollar");
         currencies.put("EUR", "Euro");
         currencies.put("GBP", "British Pound");
         return currencies;
+    }
+
+    /**
+     * Get provider information
+     */
+    public java.util.Map<String, String> getProviderInfo() {
+        java.util.Map<String, String> providers = new java.util.HashMap<>();
+        providers.put("Brazilian Market", brazilianMarketProvider.getProviderName());
+        providers.put("US Market", usMarketProvider.getProviderName());
+        return providers;
     }
 }

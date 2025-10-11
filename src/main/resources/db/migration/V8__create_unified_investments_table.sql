@@ -2,11 +2,7 @@
 -- Replaces separate brazilian_stocks, fii_funds, and brazilian_bonds tables
 -- with a single generic investments table
 
--- Drop existing indexes first
-DROP INDEX IF EXISTS idx_brazilian_stocks_active_user_ticker;
-DROP INDEX IF EXISTS idx_fii_funds_active_user_ticker;
-
--- Drop existing tables
+-- Drop existing tables and their indexes
 DROP TABLE IF EXISTS brazilian_bonds CASCADE;
 DROP TABLE IF EXISTS fii_funds CASCADE;
 DROP TABLE IF EXISTS brazilian_stocks CASCADE;
@@ -17,14 +13,14 @@ CREATE TABLE investments (
     ticker VARCHAR(20) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    
+
     -- Investment classification
     investment_type VARCHAR(50) NOT NULL, -- STOCK, FII, BOND, ETF, CRYPTO, etc.
     investment_subtype VARCHAR(50), -- ORDINARY, PREFERRED, UNIT, TIJOLO, PAPEL, etc.
     market_segment VARCHAR(50), -- NOVO_MERCADO, LEVEL_2, LEVEL_1, etc.
     sector VARCHAR(100), -- Technology, Healthcare, Real Estate, etc.
     industry VARCHAR(100), -- Software, Pharmaceuticals, Shopping Centers, etc.
-    
+
     -- Market data (from external API)
     current_price DECIMAL(19,2),
     previous_close DECIMAL(19,2),
@@ -32,7 +28,7 @@ CREATE TABLE investments (
     day_change_percent DECIMAL(8,4),
     volume BIGINT,
     market_cap DECIMAL(19,2),
-    
+
     -- Additional metrics (varies by investment type)
     dividend_yield DECIMAL(8,4), -- For stocks and FIIs
     last_dividend DECIMAL(19,2),
@@ -43,7 +39,7 @@ CREATE TABLE investments (
     yield_to_maturity DECIMAL(8,4), -- For bonds
     maturity_date DATE, -- For bonds
     credit_rating VARCHAR(10), -- For bonds
-    
+
     -- Metadata
     exchange VARCHAR(20) DEFAULT 'B3', -- B3, NYSE, NASDAQ, etc.
     currency VARCHAR(3) DEFAULT 'BRL',
@@ -52,11 +48,11 @@ CREATE TABLE investments (
     user_id BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Foreign key constraints
     CONSTRAINT fk_investments_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT uk_investments_ticker_user UNIQUE (ticker, user_id),
-    
+
     -- Check constraints
     CONSTRAINT chk_investment_type CHECK (investment_type IN ('STOCK', 'FII', 'BOND', 'ETF', 'CRYPTO', 'COMMODITY', 'CURRENCY', 'OTHER')),
     CONSTRAINT chk_stock_subtype CHECK (
@@ -90,13 +86,13 @@ CREATE INDEX idx_investments_active_user_ticker ON investments(user_id, ticker, 
 CREATE INDEX idx_investments_type_subtype ON investments(investment_type, investment_subtype);
 
 -- Create partial indexes for specific investment types
-CREATE INDEX idx_investments_stocks ON investments(user_id, ticker) 
+CREATE INDEX idx_investments_stocks ON investments(user_id, ticker)
 WHERE investment_type = 'STOCK' AND is_active = true;
 
-CREATE INDEX idx_investments_fiis ON investments(user_id, ticker) 
+CREATE INDEX idx_investments_fiis ON investments(user_id, ticker)
 WHERE investment_type = 'FII' AND is_active = true;
 
-CREATE INDEX idx_investments_bonds ON investments(user_id, ticker) 
+CREATE INDEX idx_investments_bonds ON investments(user_id, ticker)
 WHERE investment_type = 'BOND' AND is_active = true;
 
 -- Add comments for documentation

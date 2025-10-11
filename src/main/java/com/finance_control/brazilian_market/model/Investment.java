@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
  * with a single generic table that can handle any investment type.
  */
 @Entity
-@Table(name = "investments", 
+@Table(name = "investments",
        uniqueConstraints = @UniqueConstraint(columnNames = {"ticker", "user_id"}),
        indexes = {
            @Index(name = "idx_investments_user_id", columnList = "user_id"),
@@ -210,13 +210,13 @@ public class Investment {
         ORDINARY("Ordinary Share"),
         PREFERRED("Preferred Share"),
         UNIT("Unit"),
-        
+
         // FII subtypes
         TIJOLO("Brick (Real Estate)"),
         PAPEL("Paper (Securities)"),
         HIBRIDO("Hybrid"),
         FUNDO_DE_FUNDOS("Fund of Funds"),
-        
+
         // Bond subtypes
         CDB("Certificate of Bank Deposit"),
         RDB("Bank Deposit Receipt"),
@@ -225,7 +225,7 @@ public class Investment {
         LF("Financial Letter"),
         DEBENTURE("Debenture"),
         TESOURO_DIRETO("Treasury Direct"),
-        
+
         // Generic
         OTHER("Other");
 

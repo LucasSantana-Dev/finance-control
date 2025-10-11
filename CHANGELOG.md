@@ -8,16 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Generic Market Data Provider Architecture**: Complete API decoupling and flexible integration system
+  - Created `MarketDataProvider` interface for easy API provider swapping
+  - Implemented `BrazilianMarketDataProvider` for Brazilian stocks and FIIs
+  - Implemented `UsMarketDataProvider` for US stocks and ETFs
+  - Added generic `MarketQuote` and `HistoricalData` structures for consistent data handling
+  - Created comprehensive market data fetching with support for single and batch operations
+  - Added provider selection logic based on investment type (Brazilian vs US markets)
+  - Implemented fallback mechanisms and error handling for API failures
+  - Added integration tests for market data providers
+  - **Complete API Decoupling**: Removed all API-specific naming from codebase
+    - Renamed files: `BrapiApiClient.java` → `BrazilianMarketDataProvider.java`, `YahooFinanceApiClient.java` → `UsMarketDataProvider.java`
+    - Generic constants: `BRAPI_BASE_URL` → `BASE_URL`, `YAHOO_FINANCE_QUOTE_URL` → `QUOTE_BASE_URL`
+    - Generic response classes: `BrapiResponse` → `ApiResponse`, `YahooQuoteResponse` → `QuoteResponse`
+    - Generic log messages and comments throughout the codebase
+    - Provider names: `"Brapi API"` → `"Brazilian Market API"`, `"Yahoo Finance API"` → `"US Market API"`
+  - Created comprehensive documentation in `docs/MARKET_DATA_PROVIDERS.md`
+  - Architecture now supports easy API provider swapping without code changes
+
 - **Unified Investments Table**: Major architectural improvement to investment management
   - Created unified `investments` table to replace separate `brazilian_stocks`, `fii_funds`, and `brazilian_bonds` tables
   - Added comprehensive investment classification with type, subtype, sector, and industry fields
   - Implemented flexible investment entity supporting stocks, FIIs, bonds, ETFs, crypto, and other asset types
-  - Added external market data integration with Alpha Vantage API for real-time price updates
+  - Added external market data integration with multiple API providers for real-time price updates
   - Created comprehensive InvestmentRepository with advanced querying capabilities
   - Implemented InvestmentService with CRUD operations and market data management
   - Added InvestmentController with full REST API for investment management
   - Created ExternalMarketDataService for fetching real-time market data from external APIs
-  - Added support for Brazilian market tickers with proper Alpha Vantage formatting (.SAO suffix)
+  - Added support for Brazilian market tickers with proper API formatting
   - Implemented market data caching and rate limiting to respect API limits
   - Added portfolio analytics including top performers, dividend yield, and market value calculations
   - Created comprehensive search and filtering capabilities by type, sector, industry, etc.

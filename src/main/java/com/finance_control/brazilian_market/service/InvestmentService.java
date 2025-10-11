@@ -32,20 +32,20 @@ public class InvestmentService {
      */
     public Investment createInvestment(Investment investment, User user) {
         log.debug("Creating investment: {} for user: {}", investment.getTicker(), user.getId());
-        
+
         // Set user
         investment.setUser(user);
-        
+
         // Set timestamps
         investment.setCreatedAt(LocalDateTime.now());
         investment.setUpdatedAt(LocalDateTime.now());
-        
+
         // Fetch initial market data
         updateMarketData(investment);
-        
+
         Investment savedInvestment = investmentRepository.save(investment);
         log.info("Created investment: {} for user: {}", savedInvestment.getTicker(), user.getId());
-        
+
         return savedInvestment;
     }
 
@@ -54,15 +54,15 @@ public class InvestmentService {
      */
     public Investment updateInvestment(Long investmentId, Investment updatedInvestment, User user) {
         log.debug("Updating investment: {} for user: {}", investmentId, user.getId());
-        
+
         Investment existingInvestment = investmentRepository.findById(investmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Investment not found: " + investmentId));
-        
+
         // Verify ownership
         if (!existingInvestment.getUser().getId().equals(user.getId())) {
             throw new IllegalArgumentException("Investment does not belong to user: " + user.getId());
         }
-        
+
         // Update fields
         existingInvestment.setName(updatedInvestment.getName());
         existingInvestment.setDescription(updatedInvestment.getDescription());
@@ -74,10 +74,10 @@ public class InvestmentService {
         existingInvestment.setExchange(updatedInvestment.getExchange());
         existingInvestment.setCurrency(updatedInvestment.getCurrency());
         existingInvestment.setUpdatedAt(LocalDateTime.now());
-        
+
         Investment savedInvestment = investmentRepository.save(existingInvestment);
         log.info("Updated investment: {} for user: {}", savedInvestment.getTicker(), user.getId());
-        
+
         return savedInvestment;
     }
 
@@ -191,7 +191,7 @@ public class InvestmentService {
      */
     public Investment updateMarketData(Investment investment) {
         log.debug("Updating market data for investment: {}", investment.getTicker());
-        
+
         if (externalMarketDataService.needsUpdate(investment.getLastUpdated())) {
             externalMarketDataService.fetchMarketData(investment.getTicker(), investment.getInvestmentType())
                     .ifPresent(marketData -> {
@@ -202,11 +202,11 @@ public class InvestmentService {
                         investment.setVolume(marketData.getVolume());
                         investment.setLastUpdated(marketData.getLastUpdated());
                         investment.setUpdatedAt(LocalDateTime.now());
-                        
+
                         log.debug("Updated market data for investment: {}", investment.getTicker());
                     });
         }
-        
+
         return investmentRepository.save(investment);
     }
 
@@ -215,12 +215,12 @@ public class InvestmentService {
      */
     public void updateAllMarketData(User user) {
         log.debug("Updating market data for all investments of user: {}", user.getId());
-        
+
         LocalDateTime cutoffTime = LocalDateTime.now().minusMinutes(15);
         List<Investment> investmentsToUpdate = investmentRepository.findInvestmentsNeedingPriceUpdate(user.getId(), cutoffTime);
-        
+
         log.info("Found {} investments needing market data update for user: {}", investmentsToUpdate.size(), user.getId());
-        
+
         for (Investment investment : investmentsToUpdate) {
             try {
                 updateMarketData(investment);
@@ -234,7 +234,7 @@ public class InvestmentService {
                 log.error("Error updating market data for investment: {}", investment.getTicker(), e);
             }
         }
-        
+
         log.info("Completed market data update for user: {}", user.getId());
     }
 
@@ -243,20 +243,20 @@ public class InvestmentService {
      */
     public void deleteInvestment(Long investmentId, User user) {
         log.debug("Deleting investment: {} for user: {}", investmentId, user.getId());
-        
+
         Investment investment = investmentRepository.findById(investmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Investment not found: " + investmentId));
-        
+
         // Verify ownership
         if (!investment.getUser().getId().equals(user.getId())) {
             throw new IllegalArgumentException("Investment does not belong to user: " + user.getId());
         }
-        
+
         // Soft delete
         investment.setIsActive(false);
         investment.setUpdatedAt(LocalDateTime.now());
         investmentRepository.save(investment);
-        
+
         log.info("Deleted investment: {} for user: {}", investment.getTicker(), user.getId());
     }
 
