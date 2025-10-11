@@ -186,7 +186,7 @@ The project includes comprehensive API testing capabilities:
   - Authentication flow with JWT token management
   - Ready-to-use requests for all CRUD operations
 
-- **Authentication Flow**: 
+- **Authentication Flow**:
   - Register new users with secure password hashing
   - Login with JWT token generation
   - Access protected endpoints with Bearer token authentication
