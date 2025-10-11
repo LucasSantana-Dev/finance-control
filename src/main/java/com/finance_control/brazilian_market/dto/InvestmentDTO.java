@@ -146,3 +146,4 @@ public class InvestmentDTO extends BaseDTO {
         return String.format("%s (%s)", name, ticker);
     }
 }
+

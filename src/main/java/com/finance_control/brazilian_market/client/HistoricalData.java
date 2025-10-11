@@ -35,3 +35,4 @@ class HistoricalPoint {
     private BigDecimal close;
     private Long volume;
 }
+

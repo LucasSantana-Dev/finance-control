@@ -46,3 +46,4 @@ public class MarketQuote {
     private BigDecimal annualDividendRate;
     private BigDecimal annualDividendYield;
 }
+
