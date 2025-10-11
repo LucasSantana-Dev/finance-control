@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,19 +43,24 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     /** The user repository for data access operations */
     private final UserRepository userRepository;
 
+    /** The password encoder for secure password handling */
+    private final PasswordEncoder passwordEncoder;
+
     /**
-     * Constructs a new UserService with the specified repository.
-     * 
+     * Constructs a new UserService with the specified repository and password encoder.
+     *
      * @param userRepository the repository to use for user data access
+     * @param passwordEncoder the password encoder for secure password handling
      */
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         super(userRepository);
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
      * Find users with dynamic filtering.
-     * 
+     *
      * @param email    optional email filter (case-insensitive)
      * @param isActive optional active status filter
      * @param pageable pagination parameters
@@ -91,7 +97,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
 
     /**
      * Finds a user by their email address.
-     * 
+     *
      * @param email the email address to search for
      * @return an Optional containing the user DTO if found, empty otherwise
      * @throws IllegalArgumentException if the email is null or empty
@@ -108,7 +114,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
 
     /**
      * Checks if a user exists with the given email address.
-     * 
+     *
      * @param email the email address to check
      * @return true if a user exists with the email, false otherwise
      * @throws IllegalArgumentException if the email is null or empty
@@ -123,7 +129,8 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     protected User mapToEntity(UserDTO createDTO) {
         User user = new User();
         user.setEmail(createDTO.getEmail());
-        user.setPassword(createDTO.getPassword());
+        // Hash the password before storing
+        user.setPassword(passwordEncoder.encode(createDTO.getPassword()));
         user.setIsActive(createDTO.getIsActive());
         return user;
     }
@@ -134,7 +141,8 @@ public class UserService extends BaseService<User, Long, UserDTO> {
             entity.setEmail(updateDTO.getEmail());
         }
         if (updateDTO.getPassword() != null) {
-            entity.setPassword(updateDTO.getPassword());
+            // Hash the password before storing
+            entity.setPassword(passwordEncoder.encode(updateDTO.getPassword()));
         }
         if (updateDTO.getIsActive() != null) {
             entity.setIsActive(updateDTO.getIsActive());
@@ -170,7 +178,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
 
     /**
      * Soft delete a user by setting isActive to false.
-     * 
+     *
      * @param id the ID of the user to deactivate
      * @throws EntityNotFoundException if the user is not found
      */
@@ -183,7 +191,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
 
     /**
      * Reactivate a user by setting isActive to true.
-     * 
+     *
      * @param id the ID of the user to reactivate
      * @throws EntityNotFoundException if the user is not found
      */
@@ -194,10 +202,10 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         userRepository.save(user);
         log.info("User reactivated with ID: {}", id);
     }
-    
+
     /**
      * Reset a user's password by administrator.
-     * 
+     *
      * @param id the ID of the user
      * @param newPassword the new password
      * @param reason the reason for the password reset
@@ -206,17 +214,17 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     public void resetPassword(Long id, String newPassword, String reason) {
         validateId(id);
         User user = getEntityById(id);
-        
-        // TODO: Implement password encoding
-        user.setPassword(newPassword);
+
+        // Hash the password before storing
+        user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        
+
         log.info("Password reset for user ID: {} - Reason: {}", id, reason);
     }
-    
+
     /**
      * Update a user's active status.
-     * 
+     *
      * @param id the ID of the user
      * @param active the new active status
      * @param reason the reason for the status change
@@ -228,7 +236,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         User user = getEntityById(id);
         user.setIsActive(active);
         userRepository.save(user);
-        
+
         log.info("User status updated for ID: {} - Active: {} - Reason: {}", id, active, reason);
         return mapToResponseDTO(user);
     }

@@ -1,6 +1,7 @@
 package com.finance_control.shared.config;
 
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "app")
 public class AppProperties {
-    
+
     private Database database = new Database();
     private Security security = new Security();
     private Server server = new Server();
@@ -22,7 +23,7 @@ public class AppProperties {
     private Actuator actuator = new Actuator();
     private OpenApi openApi = new OpenApi();
     private Pagination pagination = new Pagination();
-    
+
     @Data
     public static class Database {
         private String url;
@@ -32,7 +33,7 @@ public class AppProperties {
         private String port;
         private String name;
         private Pool pool = new Pool();
-        
+
         @Data
         public static class Pool {
             private int initialSize = 5;
@@ -44,19 +45,14 @@ public class AppProperties {
             private long leakDetectionThreshold = 60000;
         }
     }
-    
+
     @Data
     public static class Security {
         private Jwt jwt = new Jwt();
         private Cors cors = new Cors();
-        private String[] publicEndpoints = {
-            "/api/auth/**",
-            "/api/health/**",
-            "/actuator/health",
-            "/swagger-ui/**",
-            "/v3/api-docs/**"
-        };
-        
+        @Value("${SECURITY_PUBLIC_ENDPOINTS:/api/auth/**,/api/users,/actuator/health,/swagger-ui/**,/v3/api-docs/**}")
+        private String[] publicEndpoints;
+
         @Data
         public static class Jwt {
             private String secret;
@@ -65,7 +61,7 @@ public class AppProperties {
             private String issuer = "finance-control";
             private String audience = "finance-control-users";
         }
-        
+
         @Data
         public static class Cors {
             private String[] allowedOrigins = {"http://localhost:3000", "http://localhost:8080"};
@@ -75,7 +71,7 @@ public class AppProperties {
             private long maxAge = 3600;
         }
     }
-    
+
     @Data
     public static class Server {
         private int port = 8080;
@@ -87,7 +83,7 @@ public class AppProperties {
         private int readTimeout = 30000;
         private int writeTimeout = 30000;
     }
-    
+
     @Data
     public static class Logging {
         private String level = "INFO";
@@ -100,7 +96,7 @@ public class AppProperties {
         private int queueSize = 512;
         private boolean async = true;
     }
-    
+
     @Data
     public static class Jpa {
         private String hibernateDdlAuto = "validate";
@@ -111,7 +107,7 @@ public class AppProperties {
         private String namingStrategy = "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl";
         private boolean deferDatasourceInitialization = false;
         private Properties properties = new Properties();
-        
+
         @Data
         public static class Properties {
             private String hibernateFormatSql = "false";
@@ -124,7 +120,7 @@ public class AppProperties {
             private String hibernateDefaultBatchFetchSize = "16";
         }
     }
-    
+
     @Data
     public static class Flyway {
         private boolean enabled = true;
@@ -136,7 +132,7 @@ public class AppProperties {
         private String cleanDisabled = "true";
         private String cleanOnValidationError = "false";
     }
-    
+
     @Data
     public static class Actuator {
         private boolean enabled = true;
@@ -146,7 +142,7 @@ public class AppProperties {
         private boolean showDetails = true;
         private boolean showComponents = true;
     }
-    
+
     @Data
     public static class OpenApi {
         private String title = "Finance Control API";
@@ -160,7 +156,7 @@ public class AppProperties {
         private String serverUrl = "http://localhost:8080";
         private String serverDescription = "Development server";
     }
-    
+
     @Data
     public static class Pagination {
         private int defaultPageSize = 10;
@@ -168,4 +164,4 @@ public class AppProperties {
         private String defaultSort = "id";
         private String defaultDirection = "ASC";
     }
-} 
+}

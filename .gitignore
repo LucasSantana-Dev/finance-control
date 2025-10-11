@@ -47,6 +47,7 @@ gradle-app.setting
 .env
 .env.local
 .env.*.local
+docker.env
 
 # Java
 *.class

@@ -28,6 +28,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scheduled Updates**: Automatic hourly updates for key economic indicators
 - **Database Migration**: V4 migration for Brazilian market data tables
 - **Unit Tests**: Comprehensive unit tests for Brazilian market data services
+- **Password Security Enhancement**: Implemented proper BCrypt password hashing in UserService
+  - Added PasswordEncoder dependency injection to UserService
+  - Enhanced mapToEntity() method to hash passwords during user creation
+  - Enhanced updateEntityFromDTO() method to hash passwords during user updates
+  - Enhanced resetPassword() method to hash passwords during password resets
+  - All passwords are now securely hashed using BCrypt algorithm
+- **Comprehensive API Testing**: Complete Postman collection for API endpoint testing
+  - Created "Finance Control - Complete API Testing" Postman collection
+  - Added requests for all major API endpoints (auth, users, transactions, dashboard, Brazilian market)
+  - Configured environment variables for easy testing
+  - Verified all public and authenticated endpoints functionality
+- **Security Configuration Improvements**: Enhanced security configuration for production readiness
+  - Fixed public endpoint configuration with proper `/api` prefix handling
+  - Corrected environment variable loading in Docker environment
+  - Enhanced CORS configuration for cross-origin requests
+  - Improved JWT authentication flow with proper token validation
+- **Docker Environment Optimization**: Improved Docker configuration and environment management
+  - Fixed environment variable loading from docker.env file
+  - Corrected database connection configuration for Docker containers
+  - Enhanced application properties for Docker environment
+  - Improved build process with test skipping option for faster deployments
+- **OpenAPI Documentation Fixes**: Resolved OpenAPI documentation generation issues
+  - Fixed springdoc configuration version format issues
+  - Corrected OpenAPI properties in application-docker.properties
+  - Enhanced Swagger UI accessibility and functionality
+  - Improved API documentation generation and display
 
 ### Fixed
 - **TransactionServiceTest Update Tests**: Fixed all failing update tests in TransactionServiceTest
@@ -44,6 +70,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed `TransactionCategoryServiceTestContainersTest` and `TransactionSubcategoryServiceTestContainersTest`
   - These tests required Docker-in-Docker setup not available in CI/CD environment
   - All remaining tests now passing successfully
+- **Authentication Security Issue**: Fixed critical password hashing vulnerability
+  - Resolved issue where passwords were stored in plain text instead of being hashed
+  - Implemented proper BCrypt password hashing in UserService
+  - Fixed authentication flow to work with hashed passwords
+  - Enhanced security configuration for production readiness
+- **Docker Configuration Issues**: Resolved multiple Docker environment problems
+  - Fixed environment variable loading from docker.env file
+  - Corrected database connection configuration for Docker containers
+  - Fixed boolean conversion errors in application-docker.properties
+  - Resolved JDBC URL construction issues in DatabaseConfig
+  - Enhanced Docker Compose configuration for proper service communication
+- **Security Configuration Conflicts**: Fixed security endpoint configuration issues
+  - Resolved conflict between WebConfig path prefix and SecurityConfig public endpoints
+  - Corrected public endpoint paths to include proper `/api` prefix
+  - Fixed CORS configuration for cross-origin requests
+  - Enhanced JWT authentication flow with proper token validation
+- **OpenAPI Documentation Generation**: Fixed OpenAPI documentation endpoint issues
+  - Resolved springdoc configuration version format problems
+  - Fixed OpenAPI properties in application-docker.properties
+  - Corrected Swagger UI accessibility and functionality
+  - Enhanced API documentation generation and display
 
 ### Changed
 - **Test Cleanup**: Removed TODO comments and AI-generated redundant comments from test files

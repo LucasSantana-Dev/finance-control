@@ -176,11 +176,45 @@ Once the application is running, you can access:
 - **Swagger UI**: http://localhost:${APPLICATION_PORT}/swagger-ui.html
 - **OpenAPI JSON**: http://localhost:${APPLICATION_PORT}/v3/api-docs
 
+### API Testing
+
+The project includes comprehensive API testing capabilities:
+
+- **Postman Collection**: Complete "Finance Control - Complete API Testing" collection
+  - All major endpoints covered (auth, users, transactions, dashboard, Brazilian market)
+  - Pre-configured environment variables for easy testing
+  - Authentication flow with JWT token management
+  - Ready-to-use requests for all CRUD operations
+
+- **Authentication Flow**: 
+  - Register new users with secure password hashing
+  - Login with JWT token generation
+  - Access protected endpoints with Bearer token authentication
+  - Complete user management and profile operations
+
+- **Endpoint Coverage**:
+  - ✅ Authentication endpoints (login, register, validate)
+  - ✅ User management endpoints (CRUD operations)
+  - ✅ Transaction endpoints (with filtering and pagination)
+  - ✅ Dashboard endpoints (summary, metrics, trends)
+  - ✅ Brazilian market data endpoints (stocks, FIIs, indicators)
+  - ✅ Financial goals endpoints (CRUD operations)
+  - ✅ Category management endpoints (categories and subcategories)
+
 ### Key Endpoints
 
 #### Authentication
 - `POST /auth/login` - User login
 - `POST /auth/validate` - Validate JWT token
+- `PUT /auth/password` - Change user password
+
+#### Dashboard
+- `GET /api/dashboard/summary` - Complete dashboard overview
+- `GET /api/dashboard/metrics` - Detailed financial metrics
+- `GET /api/dashboard/spending-categories` - Top spending categories
+- `GET /api/dashboard/monthly-trends` - Monthly income/expense trends
+- `GET /api/dashboard/current-month-metrics` - Current month data
+- `GET /api/dashboard/year-to-date-metrics` - Year-to-date data
 
 #### Transactions
 - `GET /transactions` - List transactions with filtering
@@ -189,10 +223,12 @@ Once the application is running, you can access:
 - `DELETE /transactions/{id}` - Delete transaction
 
 #### Financial Goals
-- `GET /goals` - List financial goals
-- `POST /goals` - Create new goal
-- `PUT /goals/{id}` - Update goal
-- `DELETE /goals/{id}` - Delete goal
+- `GET /financial-goals` - List financial goals
+- `POST /financial-goals` - Create new goal
+- `GET /financial-goals/active` - Get active goals
+- `GET /financial-goals/completed` - Get completed goals
+- `POST /financial-goals/{id}/progress` - Update goal progress
+- `POST /financial-goals/{id}/complete` - Complete goal
 
 #### Transaction Categories
 - `GET /transaction-categories` - List transaction categories
@@ -208,6 +244,22 @@ Once the application is running, you can access:
 - `GET /transaction-subcategories/category/{categoryId}` - Get subcategories by category
 - `GET /transaction-subcategories/category/{categoryId}/usage` - Get subcategories ordered by usage
 - `GET /transaction-subcategories/category/{categoryId}/count` - Get subcategory count by category
+
+#### Brazilian Market Data
+- `GET /api/brazilian-market/selic` - Get SELIC interest rate
+- `GET /api/brazilian-market/cdi` - Get CDI interest rate
+- `GET /api/brazilian-market/ipca` - Get IPCA inflation rate
+- `GET /api/brazilian-market/indicators` - Get all economic indicators
+- `GET /api/brazilian-market/stocks` - Get user's Brazilian stocks
+- `GET /api/brazilian-market/fiis` - Get user's FIIs (Real Estate Investment Funds)
+- `GET /api/brazilian-market/summary` - Get comprehensive market summary
+
+#### Users & Profile
+- `GET /users` - List users
+- `POST /users` - Create user
+- `GET /users/email/{email}` - Get user by email
+- `GET /profile` - Get current user profile
+- `PATCH /profile` - Update user profile
 
 #### Other Resources
 - `GET /transaction-sources` - List transaction sources
@@ -279,6 +331,12 @@ The project has recently undergone significant improvements:
 - **✅ Test Isolation**: Fixed optimistic locking issues in integration tests
 - **✅ Development Scripts**: Enhanced `dev.sh` with retry logic and better error handling
 - **✅ Repository Layer**: Enhanced with NameBasedRepository interface for standardized operations
+- **✅ Security Enhancement**: Implemented proper BCrypt password hashing for production security
+- **✅ API Testing**: Complete Postman collection for comprehensive endpoint testing
+- **✅ Docker Optimization**: Enhanced Docker configuration and environment management
+- **✅ Authentication Flow**: Complete JWT authentication system with proper token validation
+- **✅ OpenAPI Documentation**: Fixed and enhanced API documentation generation
+- **✅ Production Readiness**: All major security and configuration issues resolved
 
 ### Code Standards
 - **Java 24**: Latest LTS version with modern features

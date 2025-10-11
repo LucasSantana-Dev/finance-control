@@ -1,7 +1,6 @@
 package com.finance_control.unit.shared.service;
 
 import com.finance_control.shared.exception.EntityNotFoundException;
-import com.finance_control.shared.model.BaseModel;
 import com.finance_control.shared.repository.BaseRepository;
 import com.finance_control.shared.service.BaseService;
 import com.finance_control.shared.context.UserContext;

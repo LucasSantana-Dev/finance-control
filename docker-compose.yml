@@ -2,6 +2,8 @@ services:
   # Database service
   db:
     image: postgres:17
+    env_file:
+      - docker.env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${DB_USERNAME}
@@ -11,7 +13,7 @@ services:
       SONAR_DB_USER: ${SONAR_DB_USER}
       SONAR_DB_PASSWORD: ${SONAR_DB_PASSWORD}
     ports:
-      - "${DB_PORT}"
+      - "${DB_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/postgres-init-sonarqube.sh:/docker-entrypoint-initdb.d/postgres-init-sonarqube.sh
@@ -56,11 +58,10 @@ services:
       dockerfile: Dockerfile
       args:
         DEV_MODE: "${DEV_MODE}"
+    env_file:
+      - docker.env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:${DB_PORT}/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       JAVA_OPTS: "${JAVA_OPTS:-}"
     ports:
       - "${APPLICATION_PORT}:8080"

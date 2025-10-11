@@ -50,7 +50,7 @@ public interface FIIRepository extends JpaRepository<FII, Long> {
     /**
      * Searches FIIs by fund name or ticker for a specific user.
      */
-    @Query("SELECT f FROM FII f WHERE f.userId = :userId AND " +
+    @Query("SELECT f FROM FII f WHERE f.user.id = :userId AND " +
            "(LOWER(f.fundName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(f.ticker) LIKE LOWER(CONCAT('%', :search, '%')))")
     List<FII> searchByUserAndQuery(@Param("userId") Long userId, @Param("search") String search);
@@ -58,7 +58,7 @@ public interface FIIRepository extends JpaRepository<FII, Long> {
     /**
      * Searches FIIs by fund name or ticker for a specific user with pagination.
      */
-    @Query("SELECT f FROM FII f WHERE f.userId = :userId AND " +
+    @Query("SELECT f FROM FII f WHERE f.user.id = :userId AND " +
            "(LOWER(f.fundName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(f.ticker) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<FII> searchByUserAndQuery(@Param("userId") Long userId, @Param("search") String search, Pageable pageable);
@@ -66,35 +66,35 @@ public interface FIIRepository extends JpaRepository<FII, Long> {
     /**
      * Finds FIIs with dividend yield above a threshold.
      */
-    @Query("SELECT f FROM FII f WHERE f.userId = :userId AND " +
+    @Query("SELECT f FROM FII f WHERE f.user.id = :userId AND " +
            "f.dividendYield > :threshold")
     List<FII> findByUserAndDividendYieldAbove(@Param("userId") Long userId, @Param("threshold") java.math.BigDecimal threshold);
 
     /**
      * Finds FIIs with P/VP ratio below a threshold (potentially undervalued).
      */
-    @Query("SELECT f FROM FII f WHERE f.userId = :userId AND " +
+    @Query("SELECT f FROM FII f WHERE f.user.id = :userId AND " +
            "f.pvpRatio < :threshold")
     List<FII> findByUserAndPVPRatioBelow(@Param("userId") Long userId, @Param("threshold") java.math.BigDecimal threshold);
 
     /**
      * Finds FIIs with P/VP ratio above a threshold (potentially overvalued).
      */
-    @Query("SELECT f FROM FII f WHERE f.userId = :userId AND " +
+    @Query("SELECT f FROM FII f WHERE f.user.id = :userId AND " +
            "f.pvpRatio > :threshold")
     List<FII> findByUserAndPVPRatioAbove(@Param("userId") Long userId, @Param("threshold") java.math.BigDecimal threshold);
 
     /**
      * Finds the most traded FIIs by volume for a user.
      */
-    @Query("SELECT f FROM FII f WHERE f.userId = :userId " +
+    @Query("SELECT f FROM FII f WHERE f.user.id = :userId " +
            "ORDER BY f.volume DESC")
     List<FII> findTopByUserOrderByVolumeDesc(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * Finds FIIs by market cap range for a user.
      */
-    @Query("SELECT f FROM FII f WHERE f.userId = :userId AND " +
+    @Query("SELECT f FROM FII f WHERE f.user.id = :userId AND " +
            "f.marketCap BETWEEN :minCap AND :maxCap")
     List<FII> findByUserAndMarketCapBetween(@Param("userId") Long userId,
                                           @Param("minCap") java.math.BigDecimal minCap,
@@ -103,7 +103,7 @@ public interface FIIRepository extends JpaRepository<FII, Long> {
     /**
      * Finds FIIs with recent dividend payments.
      */
-    @Query("SELECT f FROM FII f WHERE f.userId = :userId AND " +
+    @Query("SELECT f FROM FII f WHERE f.user.id = :userId AND " +
            "f.lastDividendDate >= :sinceDate")
     List<FII> findByUserAndRecentDividends(@Param("userId") Long userId, @Param("sinceDate") java.time.LocalDate sinceDate);
 
@@ -125,7 +125,7 @@ public interface FIIRepository extends JpaRepository<FII, Long> {
     /**
      * Finds FIIs with the highest dividend yields for a user.
      */
-    @Query("SELECT f FROM FII f WHERE f.userId = :userId " +
+    @Query("SELECT f FROM FII f WHERE f.user.id = :userId " +
            "ORDER BY f.dividendYield DESC")
     List<FII> findTopByUserOrderByDividendYieldDesc(@Param("userId") Long userId, Pageable pageable);
 }

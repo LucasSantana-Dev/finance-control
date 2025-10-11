@@ -50,7 +50,7 @@ public interface BrazilianStockRepository extends JpaRepository<BrazilianStock, 
     /**
      * Searches stocks by company name or ticker for a specific user.
      */
-    @Query("SELECT s FROM BrazilianStock s WHERE s.userId = :userId AND " +
+    @Query("SELECT s FROM BrazilianStock s WHERE s.user.id = :userId AND " +
            "(LOWER(s.companyName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(s.ticker) LIKE LOWER(CONCAT('%', :search, '%')))")
     List<BrazilianStock> searchByUserAndQuery(@Param("userId") Long userId, @Param("search") String search);
@@ -58,7 +58,7 @@ public interface BrazilianStockRepository extends JpaRepository<BrazilianStock, 
     /**
      * Searches stocks by company name or ticker for a specific user with pagination.
      */
-    @Query("SELECT s FROM BrazilianStock s WHERE s.userId = :userId AND " +
+    @Query("SELECT s FROM BrazilianStock s WHERE s.user.id = :userId AND " +
            "(LOWER(s.companyName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(s.ticker) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<BrazilianStock> searchByUserAndQuery(@Param("userId") Long userId, @Param("search") String search, Pageable pageable);
@@ -66,28 +66,28 @@ public interface BrazilianStockRepository extends JpaRepository<BrazilianStock, 
     /**
      * Finds stocks with price changes above a threshold.
      */
-    @Query("SELECT s FROM BrazilianStock s WHERE s.userId = :userId AND " +
+    @Query("SELECT s FROM BrazilianStock s WHERE s.user.id = :userId AND " +
            "s.dayChangePercent > :threshold")
     List<BrazilianStock> findByUserAndPriceChangeAbove(@Param("userId") Long userId, @Param("threshold") java.math.BigDecimal threshold);
 
     /**
      * Finds stocks with price changes below a threshold.
      */
-    @Query("SELECT s FROM BrazilianStock s WHERE s.userId = :userId AND " +
+    @Query("SELECT s FROM BrazilianStock s WHERE s.user.id = :userId AND " +
            "s.dayChangePercent < :threshold")
     List<BrazilianStock> findByUserAndPriceChangeBelow(@Param("userId") Long userId, @Param("threshold") java.math.BigDecimal threshold);
 
     /**
      * Finds the most traded stocks by volume for a user.
      */
-    @Query("SELECT s FROM BrazilianStock s WHERE s.userId = :userId " +
+    @Query("SELECT s FROM BrazilianStock s WHERE s.user.id = :userId " +
            "ORDER BY s.volume DESC")
     List<BrazilianStock> findTopByUserOrderByVolumeDesc(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * Finds stocks by market cap range for a user.
      */
-    @Query("SELECT s FROM BrazilianStock s WHERE s.userId = :userId AND " +
+    @Query("SELECT s FROM BrazilianStock s WHERE s.user.id = :userId AND " +
            "s.marketCap BETWEEN :minCap AND :maxCap")
     List<BrazilianStock> findByUserAndMarketCapBetween(@Param("userId") Long userId,
                                                       @Param("minCap") java.math.BigDecimal minCap,

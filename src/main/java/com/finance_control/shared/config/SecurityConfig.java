@@ -36,21 +36,25 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    
+
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
     private final AppProperties appProperties;
-    
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        log.info("Configuring security with public endpoints: {}", 
+        log.info("Configuring security with public endpoints: {}",
                 Arrays.toString(appProperties.getSecurity().getPublicEndpoints()));
-        
+
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(appProperties.getSecurity().getPublicEndpoints()).permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/users").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/swagger-ui/**").permitAll()
+                .requestMatchers("/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
@@ -58,33 +62,33 @@ public class SecurityConfig {
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-        
+
         return http.build();
     }
-    
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
+
         AppProperties.Security.Cors cors = appProperties.getSecurity().getCors();
-        
+
         // Parse allowed origins from comma-separated string
         List<String> allowedOrigins = Arrays.asList(cors.getAllowedOrigins());
         configuration.setAllowedOriginPatterns(allowedOrigins);
-        
+
         configuration.setAllowedMethods(Arrays.asList(cors.getAllowedMethods()));
         configuration.setAllowedHeaders(Arrays.asList(cors.getAllowedHeaders()));
         configuration.setAllowCredentials(cors.isAllowCredentials());
         configuration.setMaxAge(cors.getMaxAge());
-        
-        log.info("CORS configured - Origins: {}, Methods: {}, Credentials: {}", 
+
+        log.info("CORS configured - Origins: {}, Methods: {}, Credentials: {}",
                 allowedOrigins, Arrays.toString(cors.getAllowedMethods()), cors.isAllowCredentials());
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-    
+
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -92,12 +96,12 @@ public class SecurityConfig {
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
-    
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
-    
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

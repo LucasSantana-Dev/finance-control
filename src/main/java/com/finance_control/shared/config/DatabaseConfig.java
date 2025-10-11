@@ -20,25 +20,25 @@ import javax.sql.DataSource;
 @RequiredArgsConstructor
 @EnableConfigurationProperties(AppProperties.class)
 public class DatabaseConfig {
-    
+
     private final AppProperties appProperties;
-    
+
     @Bean
     @Primary
     public DataSource dataSource() {
-        log.info("Configuring datasource with URL: {}", 
-                appProperties.getDatabase().getUrl() + ":" + 
-                appProperties.getDatabase().getPort() + "/" + 
+        log.info("Configuring datasource with URL: {}",
+                appProperties.getDatabase().getUrl() + ":" +
+                appProperties.getDatabase().getPort() + "/" +
                 appProperties.getDatabase().getName());
-        
+
         HikariConfig config = new HikariConfig();
-        
+
         // Basic datasource configuration
         config.setJdbcUrl(buildJdbcUrl());
         config.setUsername(appProperties.getDatabase().getUsername());
         config.setPassword(appProperties.getDatabase().getPassword());
         config.setDriverClassName(appProperties.getDatabase().getDriverClassName());
-        
+
         // Connection pool configuration
         AppProperties.Database.Pool pool = appProperties.getDatabase().getPool();
         config.setMaximumPoolSize(pool.getMaxSize());
@@ -47,23 +47,36 @@ public class DatabaseConfig {
         config.setIdleTimeout(pool.getIdleTimeout());
         config.setMaxLifetime(pool.getMaxLifetime());
         config.setLeakDetectionThreshold(pool.getLeakDetectionThreshold());
-        
+
         // Connection pool name for monitoring
         config.setPoolName("FinanceControlHikariPool");
-        
+
         // Connection validation
         config.setConnectionTestQuery("SELECT 1");
         config.setValidationTimeout(5000);
-        
-        log.info("Database pool configured - Max: {}, Min: {}, Timeout: {}ms", 
+
+        log.info("Database pool configured - Max: {}, Min: {}, Timeout: {}ms",
                 pool.getMaxSize(), pool.getMinIdle(), pool.getConnectionTimeout());
-        
+
         return new HikariDataSource(config);
     }
-    
+
+
     private String buildJdbcUrl() {
-        return appProperties.getDatabase().getUrl() + ":" + 
-               appProperties.getDatabase().getPort() + "/" + 
-               appProperties.getDatabase().getName();
+        String url = appProperties.getDatabase().getUrl();
+        // If URL already contains the database name, use it as-is
+        if (url.contains("/" + appProperties.getDatabase().getName())) {
+            return url + "?sslmode=disable";
+        }
+        // If URL already contains a port, don't add another one
+        if (url.contains(":")) {
+            return url + "/" + appProperties.getDatabase().getName() + "?sslmode=disable";
+        }
+        // Otherwise, build the URL from components
+        return url + ":" +
+               appProperties.getDatabase().getPort() + "/" +
+               appProperties.getDatabase().getName() +
+               "?sslmode=disable";
     }
-} 
+
+}

@@ -9,7 +9,7 @@
     <property name="LOG_MAX_HISTORY" value="${LOG_MAX_HISTORY:-30}"/>
     <property name="LOG_QUEUE_SIZE" value="${LOG_QUEUE_SIZE:-512}"/>
     <property name="LOG_ASYNC" value="${LOG_ASYNC:-true}"/>
-    
+
     <!-- Console Appender with colored output -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
@@ -18,22 +18,20 @@
             </pattern>
         </encoder>
     </appender>
-    
+
     <!-- File Appender for all logs -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_FILE}</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/finance-control.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
-                <maxFileSize>${LOG_MAX_FILE_SIZE}</maxFileSize>
-            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxFileSize>${LOG_MAX_FILE_SIZE}</maxFileSize>
             <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${LOG_PATTERN}</pattern>
         </encoder>
     </appender>
-    
+
     <!-- File Appender for error logs only -->
     <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_FILE_ERROR}</file>
@@ -42,63 +40,61 @@
             <onMatch>ACCEPT</onMatch>
             <onMismatch>DENY</onMismatch>
         </filter>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/finance-control-error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
-                <maxFileSize>${LOG_MAX_FILE_SIZE}</maxFileSize>
-            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxFileSize>${LOG_MAX_FILE_SIZE}</maxFileSize>
             <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
         </rollingPolicy>
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>${LOG_PATTERN}</pattern>
         </encoder>
     </appender>
-    
+
     <!-- Async Appender for better performance -->
     <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="FILE"/>
         <queueSize>${LOG_QUEUE_SIZE}</queueSize>
         <discardingThreshold>0</discardingThreshold>
     </appender>
-    
+
     <!-- Root logger configuration -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_FILE"/>
         <appender-ref ref="ERROR_FILE"/>
     </root>
-    
+
     <!-- Application specific loggers -->
     <logger name="com.finance_control" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_FILE"/>
         <appender-ref ref="ERROR_FILE"/>
     </logger>
-    
+
     <!-- Spring Framework loggers -->
     <logger name="org.springframework.security" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_FILE"/>
         <appender-ref ref="ERROR_FILE"/>
     </logger>
-    
+
     <logger name="org.springframework.web" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_FILE"/>
         <appender-ref ref="ERROR_FILE"/>
     </logger>
-    
+
     <!-- Hibernate SQL logging -->
     <logger name="org.hibernate.SQL" level="WARN" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_FILE"/>
     </logger>
-    
+
     <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="WARN" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_FILE"/>
     </logger>
-    
+
     <!-- Reduce noise from other frameworks -->
     <logger name="org.springframework.boot.autoconfigure" level="WARN"/>
     <logger name="org.springframework.boot.context.config" level="WARN"/>
@@ -106,60 +102,60 @@
     <logger name="org.springframework.beans" level="WARN"/>
     <logger name="org.springframework.core" level="WARN"/>
     <logger name="org.springframework.util" level="WARN"/>
-    
+
     <!-- Database connection pool logging -->
     <logger name="com.zaxxer.hikari" level="WARN"/>
     <logger name="com.zaxxer.hikari.HikariConfig" level="WARN"/>
     <logger name="com.zaxxer.hikari.pool" level="WARN"/>
-    
+
     <!-- Tomcat logging -->
     <logger name="org.apache.tomcat" level="WARN"/>
     <logger name="org.apache.catalina" level="WARN"/>
     <logger name="org.apache.coyote" level="WARN"/>
-    
+
     <!-- Jackson logging -->
     <logger name="com.fasterxml.jackson" level="WARN"/>
-    
+
     <!-- Flyway logging -->
     <logger name="org.flywaydb" level="INFO"/>
-    
+
     <!-- JPA/Hibernate general logging -->
     <logger name="org.hibernate" level="WARN"/>
     <logger name="org.hibernate.engine" level="WARN"/>
     <logger name="org.hibernate.stat" level="WARN"/>
-    
+
     <!-- Spring Data JPA logging -->
     <logger name="org.springframework.data.jpa" level="WARN"/>
     <logger name="org.springframework.orm.jpa" level="WARN"/>
-    
+
     <!-- Actuator logging -->
     <logger name="org.springframework.boot.actuate" level="WARN"/>
-    
+
     <!-- Validation logging -->
     <logger name="org.springframework.validation" level="WARN"/>
-    
+
     <!-- Transaction logging -->
     <logger name="org.springframework.transaction" level="WARN"/>
-    
+
     <!-- Cache logging -->
     <logger name="org.springframework.cache" level="WARN"/>
-    
+
     <!-- AOP logging -->
     <logger name="org.springframework.aop" level="WARN"/>
-    
+
     <!-- Scheduling logging -->
     <logger name="org.springframework.scheduling" level="WARN"/>
-    
+
     <!-- Async logging -->
     <logger name="org.springframework.scheduling.annotation" level="WARN"/>
-    
+
     <!-- Profile specific configurations -->
     <springProfile name="dev">
         <logger name="com.finance_control" level="DEBUG"/>
         <logger name="org.springframework.web" level="DEBUG"/>
         <logger name="org.springframework.security" level="DEBUG"/>
     </springProfile>
-    
+
     <springProfile name="prod">
         <logger name="com.finance_control" level="INFO"/>
         <logger name="org.springframework.web" level="WARN"/>
@@ -170,7 +166,7 @@
             <appender-ref ref="ERROR_FILE"/>
         </root>
     </springProfile>
-    
+
     <springProfile name="test">
         <logger name="com.finance_control" level="DEBUG"/>
         <logger name="org.springframework.test" level="DEBUG"/>
@@ -178,4 +174,4 @@
             <appender-ref ref="CONSOLE"/>
         </root>
     </springProfile>
-</configuration> 
+</configuration>

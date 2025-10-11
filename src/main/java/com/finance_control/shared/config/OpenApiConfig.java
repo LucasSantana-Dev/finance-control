@@ -18,19 +18,19 @@ import org.springframework.context.annotation.Configuration;
  * Configures Swagger UI and API documentation with settings from environment variables.
  */
 @Slf4j
-@Configuration
+// @Configuration  // Temporarily disabled to test SpringDoc auto-configuration
 @RequiredArgsConstructor
 public class OpenApiConfig {
-    
+
     private final AppProperties appProperties;
-    
+
     @Bean
     public OpenAPI customOpenAPI() {
         AppProperties.OpenApi openApi = appProperties.getOpenApi();
-        
-        log.info("Configuring OpenAPI with title: {}, version: {}", 
+
+        log.info("Configuring OpenAPI with title: {}, version: {}",
                 openApi.getTitle(), openApi.getVersion());
-        
+
         return new OpenAPI()
                 .info(new Info()
                         .title(openApi.getTitle())
@@ -55,4 +55,4 @@ public class OpenApiConfig {
                                 .description("JWT Authorization header using the Bearer scheme. " +
                                         "Enter 'Bearer' [space] and then your token in the text input below.")));
     }
-} 
+}

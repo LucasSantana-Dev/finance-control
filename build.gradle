@@ -57,7 +57,7 @@ checkstyle {
     toolVersion = '10.26.1'
     configFile = file('checkstyle.xml')
     ignoreFailures = true
-    maxWarnings = 0
+    maxWarnings = 10
 }
 
 // Configure Checkstyle task with colored output

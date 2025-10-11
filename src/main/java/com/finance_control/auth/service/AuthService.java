@@ -12,13 +12,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthService {
-    
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    
+
     /**
      * Authenticates a user by email and password.
-     * 
+     *
      * @param email the user's email
      * @param password the user's password
      * @return the user ID if authentication is successful
@@ -27,21 +27,21 @@ public class AuthService {
     public Long authenticate(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AuthenticationException("Invalid email or password"));
-        
+
         if (Boolean.FALSE.equals(user.getIsActive())) {
             throw new AuthenticationException("User account is disabled");
         }
-        
+
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new AuthenticationException("Invalid email or password");
         }
-        
+
         return user.getId();
     }
-    
+
     /**
      * Changes the password for the current authenticated user.
-     * 
+     *
      * @param currentPassword the current password for validation
      * @param newPassword the new password to set
      * @throws AuthenticationException if current password is invalid
@@ -50,11 +50,11 @@ public class AuthService {
         // TODO: Get current user from security context
         // For now, this is a placeholder implementation
         log.info("Password change requested");
-        
-        // Validate current password
-        // Update password
-        // Log the change
-    }
-    
 
-} 
+        // This method needs to be implemented with proper security context
+        // to get the current user and validate the current password
+        throw new UnsupportedOperationException("Password change not yet implemented - requires security context integration");
+    }
+
+
+}

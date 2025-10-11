@@ -1,6 +1,6 @@
-# Code Quality Tools Configuration
+# Code Quality Tools Configuration and Synchronization
 
-This document describes the comprehensive code quality tools implemented in the Finance Control project to ensure high code quality, proper linting, and code coverage validation.
+This document describes the comprehensive code quality tools implemented in the Finance Control project to ensure high code quality, proper linting, and code coverage validation, along with how these tools are synchronized to work together.
 
 ## Overview
 
@@ -32,10 +32,10 @@ The project implements the following code quality tools:
 **Usage**:
 ```bash
 # Run Checkstyle
-mvn checkstyle:check
+./gradlew checkstyleMain
 
 # Generate report
-mvn checkstyle:checkstyle
+./gradlew checkstyleMain
 ```
 
 **Thresholds**:
@@ -62,10 +62,10 @@ mvn checkstyle:checkstyle
 **Usage**:
 ```bash
 # Run PMD
-mvn pmd:check
+./gradlew pmdMain
 
 # Generate report
-mvn pmd:pmd
+./gradlew pmdMain
 ```
 
 **Rule Categories**:
@@ -82,7 +82,7 @@ mvn pmd:pmd
 
 **Purpose**: Bytecode analysis to find potential bugs in compiled Java code.
 
-**Configuration**: 
+**Configuration**:
 - `spotbugs-include.xml` - Include filters
 - `spotbugs-exclude.xml` - Exclude filters
 
@@ -97,10 +97,10 @@ mvn pmd:pmd
 **Usage**:
 ```bash
 # Run SpotBugs
-mvn spotbugs:check
+./gradlew spotbugsMain
 
 # Generate report
-mvn spotbugs:spotbugs
+./gradlew spotbugsMain
 ```
 
 **Settings**:
@@ -112,7 +112,7 @@ mvn spotbugs:spotbugs
 
 **Purpose**: Code coverage analysis and reporting.
 
-**Configuration**: Configured in `pom.xml`
+**Configuration**: Configured in `build.gradle`
 
 **Key Features**:
 - Line coverage analysis
@@ -125,13 +125,13 @@ mvn spotbugs:spotbugs
 **Usage**:
 ```bash
 # Run tests with coverage
-mvn clean test
+./gradlew clean test
 
 # Generate coverage report
-mvn jacoco:report
+./gradlew jacocoTestReport
 
 # Check coverage thresholds
-mvn jacoco:check
+./gradlew jacocoTestCoverageVerification
 ```
 
 **Coverage Thresholds**:
@@ -164,7 +164,7 @@ mvn jacoco:check
 **Usage**:
 ```bash
 # Run SonarQube analysis
-mvn clean verify sonar:sonar
+./gradlew clean build sonarqube
 ```
 
 **Quality Gates**:
@@ -174,45 +174,169 @@ mvn clean verify sonar:sonar
 - Security Hotspots Rating: A
 - Coverage: 80% minimum
 
-## Maven Integration
+## Code Quality Tools Synchronization
 
-### Build Lifecycle Integration
+This section describes how code quality tools (SonarLint, PMD, Checkstyle, SpotBugs) are configured to work together in the Finance Control project.
 
-All tools are integrated into the Maven build lifecycle:
+### Configured Tools
 
+#### 1. Checkstyle
+- **File**: `checkstyle.xml`
+- **Purpose**: Code standards, naming, formatting
+- **Integration**: Reports sent to SonarQube
+
+#### 2. PMD
+- **File**: `pmd-ruleset.xml`
+- **Purpose**: Static analysis, complexity, best practices
+- **Integration**: Reports sent to SonarQube
+
+#### 3. SpotBugs
+- **File**: `spotbugs-exclude.xml`
+- **Purpose**: Potential bug detection
+- **Integration**: Reports sent to SonarQube
+
+#### 4. SonarQube
+- **File**: `sonar-project.properties`
+- **Purpose**: Consolidated analysis and metrics
+- **Integration**: Consolidates reports from all tools
+
+### Synchronized Rules
+
+#### Cognitive Complexity
+- **Checkstyle**: `CyclomaticComplexity` - max 10
+- **PMD**: `CyclomaticComplexity` - reportLevel 10
+- **SonarQube**: `sonar.complexity.function.threshold=10`
+
+#### Method Size
+- **Checkstyle**: `MethodLength` - max 150
+- **PMD**: `ExcessiveMethodLength` - minimum 100
+- **SonarQube**: `sonar.size.limit.function=150`
+
+#### Class Size
+- **Checkstyle**: `FileLength` - max 2000
+- **PMD**: `ExcessiveClassLength` - minimum 1000
+- **SonarQube**: `sonar.size.limit.class=2000`
+
+#### Imports
+- **Checkstyle**: Custom rule to avoid inline imports
+- **PMD**: `UnusedImports`, `RedundantImports`
+- **SonarQube**: Automatic import rules
+
+#### Naming
+- **Checkstyle**: Specific naming rules
+- **PMD**: `AtLeastOneConstructor`, `OnlyOneReturn`
+- **SonarQube**: Automatic naming rules
+
+### Synchronized Exclusions
+
+#### Exclusion Patterns
 ```xml
-<executions>
-    <execution>
-        <id>validate</id>
-        <phase>validate</phase>
-        <goals>
-            <goal>check</goal>
-        </goals>
-    </execution>
-</executions>
+<!-- Checkstyle -->
+<module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value=".*[/\\]target[/\\].*"/>
+</module>
+
+<!-- PMD -->
+<exclude-pattern>*/target/*</exclude-pattern>
+<exclude-pattern>*/generated/*</exclude-pattern>
+<exclude-pattern>*/test/*</exclude-pattern>
+
+<!-- SpotBugs -->
+<Match>
+    <Class name="~.*\.generated\..*"/>
+</Match>
+<Match>
+    <Class name="~.*Test$"/>
+</Match>
 ```
 
-### Available Maven Goals
+#### Excluded Packages
+- `**/target/**`
+- `**/generated/**`
+- `**/test/**`
+- `**/config/**`
+- `**/dto/**`
+- `**/model/**`
+- `**/exception/**`
+- `**/enums/**`
+- `**/util/**`
+- `**/validation/**`
 
+## Gradle Configuration
+
+### Dependencies
+```gradle
+plugins {
+    id 'checkstyle'
+    id 'pmd'
+    id 'com.github.spotbugs'
+    id 'org.sonarqube'
+}
+
+checkstyle {
+    toolVersion = '10.12.5'
+    configFile = file('checkstyle.xml')
+    reportsDir = file("$buildDir/reports/checkstyle")
+}
+
+pmd {
+    toolVersion = '6.55.0'
+    ruleSetFiles = files('pmd-ruleset.xml')
+    reportsDir = file("$buildDir/reports/pmd")
+}
+
+spotbugs {
+    toolVersion = '4.7.3'
+    effort = 'max'
+    reportLevel = 'medium'
+    excludeFilter = file('spotbugs-exclude.xml')
+    reportsDir = file("$buildDir/reports/spotbugs")
+}
+```
+
+### SonarQube Integration
+```gradle
+sonarqube {
+    properties {
+        property 'sonar.java.checkstyle.reportPaths', 'build/reports/checkstyle/main.xml'
+        property 'sonar.java.pmd.reportPaths', 'build/reports/pmd/main.xml'
+        property 'sonar.java.spotbugs.reportPaths', 'build/reports/spotbugs/main.xml'
+    }
+}
+```
+
+## Workflow
+
+### 1. Local Development
 ```bash
-# Run all quality checks
-mvn clean verify
+# Check code quality
+./gradlew checkstyleMain pmdMain spotbugsMain
 
-# Run specific tools
-mvn checkstyle:check
-mvn pmd:check
-mvn spotbugs:check
-mvn jacoco:check
-
-# Generate reports
-mvn checkstyle:checkstyle
-mvn pmd:pmd
-mvn spotbugs:spotbugs
-mvn jacoco:report
-
-# SonarQube analysis
-mvn sonar:sonar
+# Complete analysis
+./gradlew sonarqube
 ```
+
+### 2. CI/CD Pipeline
+```yaml
+- name: Code Quality Analysis
+  run: |
+    ./gradlew checkstyleMain pmdMain spotbugsMain
+    ./gradlew sonarqube
+```
+
+### 3. Consolidated Reports
+- **Checkstyle**: `build/reports/checkstyle/`
+- **PMD**: `build/reports/pmd/`
+- **SpotBugs**: `build/reports/spotbugs/`
+- **SonarQube**: Online dashboard
+
+## Synchronization Benefits
+
+1. **Consistency**: Same rules applied by all tools
+2. **Coverage**: Different quality aspects covered
+3. **Integration**: Consolidated reports in SonarQube
+4. **Maintainability**: Centralized and documented configurations
+5. **Performance**: Optimized exclusions to avoid false positives
 
 ## IDE Integration
 
@@ -267,33 +391,33 @@ on: [push, pull_request]
 jobs:
   quality:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
-    - name: Set up JDK 24
+
+    - name: Set up JDK 21
       uses: actions/setup-java@v3
       with:
-        java-version: '24'
+        java-version: '21'
         distribution: 'temurin'
-    
+
     - name: Run Checkstyle
-      run: mvn checkstyle:check
-    
+      run: ./gradlew checkstyleMain
+
     - name: Run PMD
-      run: mvn pmd:check
-    
+      run: ./gradlew pmdMain
+
     - name: Run SpotBugs
-      run: mvn spotbugs:check
-    
+      run: ./gradlew spotbugsMain
+
     - name: Run tests with coverage
-      run: mvn clean test jacoco:report
-    
+      run: ./gradlew clean test jacocoTestReport
+
     - name: Check coverage thresholds
-      run: mvn jacoco:check
-    
+      run: ./gradlew jacocoTestCoverageVerification
+
     - name: SonarQube analysis
-      run: mvn sonar:sonar
+      run: ./gradlew sonarqube
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 ```
@@ -303,49 +427,49 @@ jobs:
 ```groovy
 pipeline {
     agent any
-    
+
     stages {
         stage('Checkstyle') {
             steps {
-                sh 'mvn checkstyle:check'
+                sh './gradlew checkstyleMain'
             }
         }
-        
+
         stage('PMD') {
             steps {
-                sh 'mvn pmd:check'
+                sh './gradlew pmdMain'
             }
         }
-        
+
         stage('SpotBugs') {
             steps {
-                sh 'mvn spotbugs:check'
+                sh './gradlew spotbugsMain'
             }
         }
-        
+
         stage('Test & Coverage') {
             steps {
-                sh 'mvn clean test jacoco:report'
-                sh 'mvn jacoco:check'
+                sh './gradlew clean test jacocoTestReport'
+                sh './gradlew jacocoTestCoverageVerification'
             }
         }
-        
+
         stage('SonarQube') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh 'mvn sonar:sonar'
+                    sh './gradlew sonarqube'
                 }
             }
         }
     }
-    
+
     post {
         always {
             publishHTML([
                 allowMissing: false,
                 alwaysLinkToLastBuild: true,
                 keepAll: true,
-                reportDir: 'target/site',
+                reportDir: 'build/reports',
                 reportFiles: 'index.html',
                 reportName: 'JaCoCo Coverage Report'
             ])
@@ -415,6 +539,34 @@ pipeline {
 - Monitor resource usage
 - Profile when necessary
 
+## Maintenance
+
+### Regular Tasks
+1. **Update tool versions** in `build.gradle`
+2. **Review and update rules** as needed
+3. **Monitor quality metrics** trends
+4. **Address technical debt** regularly
+5. **Update documentation** when rules change
+
+### Adding New Rule
+1. Identify the most appropriate tool
+2. Configure the rule in the specific file
+3. Synchronize with other tools if necessary
+4. Update this documentation
+5. Test with `./gradlew clean build`
+
+### Excluding False Positive
+1. Identify the false positive pattern
+2. Add exclusion in the appropriate file
+3. Document the reason for exclusion
+4. Verify if it affects other tools
+
+### Version Updates
+- Check for new tool versions monthly
+- Test new versions in development
+- Update configurations as needed
+- Document breaking changes
+
 ## Troubleshooting
 
 ### Common Issues
@@ -444,41 +596,58 @@ pipeline {
    - Reduce technical debt
    - Improve maintainability
 
+### Rule Conflicts
+- Check if the same rule is configured in multiple tools
+- Adjust priorities or thresholds as needed
+- Document configuration decisions
+
+### Performance
+- Optimize exclusions to reduce analysis time
+- Use `effort = 'max'` only when necessary
+- Consider incremental analysis for large projects
+
 ### Configuration Customization
 
 1. **Checkstyle**: Modify `checkstyle.xml` for project-specific rules
 2. **PMD**: Update `pmd-ruleset.xml` for custom rule configurations
 3. **SpotBugs**: Adjust include/exclude filters in XML files
-4. **JaCoCo**: Modify exclusions and thresholds in `pom.xml`
+4. **JaCoCo**: Modify exclusions and thresholds in `build.gradle`
 5. **SonarQube**: Update `sonar-project.properties` for project settings
 
 ## Reports and Artifacts
 
 ### Generated Reports
-- **Checkstyle**: `target/checkstyle-result.xml`
-- **PMD**: `target/pmd.xml`
-- **SpotBugs**: `target/spotbugs/`
-- **JaCoCo**: `target/site/jacoco/`
+- **Checkstyle**: `build/reports/checkstyle/main.xml`
+- **PMD**: `build/reports/pmd/main.xml`
+- **SpotBugs**: `build/reports/spotbugs/`
+- **JaCoCo**: `build/reports/jacoco/`
 - **SonarQube**: Online dashboard
 
 ### Report Locations
-- HTML reports: `target/site/`
-- XML reports: `target/`
-- Coverage reports: `target/site/jacoco/`
+- HTML reports: `build/reports/`
+- XML reports: `build/reports/`
+- Coverage reports: `build/reports/jacoco/`
 
-## Maintenance
+## Available Gradle Tasks
 
-### Regular Tasks
-1. **Update tool versions** in `pom.xml`
-2. **Review and update rules** as needed
-3. **Monitor quality metrics** trends
-4. **Address technical debt** regularly
-5. **Update documentation** when rules change
+```bash
+# Run all quality checks
+./gradlew clean build
 
-### Version Updates
-- Check for new tool versions monthly
-- Test new versions in development
-- Update configurations as needed
-- Document breaking changes
+# Run specific tools
+./gradlew checkstyleMain
+./gradlew pmdMain
+./gradlew spotbugsMain
+./gradlew jacocoTestCoverageVerification
 
-This comprehensive code quality setup ensures that the Finance Control project maintains high standards of code quality, security, and maintainability throughout its development lifecycle. 
+# Generate reports
+./gradlew checkstyleMain
+./gradlew pmdMain
+./gradlew spotbugsMain
+./gradlew jacocoTestReport
+
+# SonarQube analysis
+./gradlew sonarqube
+```
+
+This comprehensive code quality setup ensures that the Finance Control project maintains high standards of code quality, security, and maintainability throughout its development lifecycle.
