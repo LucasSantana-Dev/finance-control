@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Re-enabled database migration files for concurrent indexes and optimized functions
   - Fixed V7_1 migration for concurrent index creation (non-transactional)
   - Fixed V7_2 migration for optimized database functions and materialized views
+- **Monitoring Services Resilience**: Improved monitoring services to handle missing configuration gracefully
+  - Made SentryService resilient when Sentry is not configured or DSN is missing
+  - Added isSentryEnabled() checks to all Sentry operations to prevent initialization failures
+  - Changed error logging to warnings for non-critical Sentry failures
+  - Removed circular dependencies between monitoring services
+  - Removed MetricsService dependency from HealthCheckService and AlertingService
+  - Simplified service dependency graph to prevent initialization issues
 
 ### Added
 - **Financial Dashboard**: Interactive financial dashboard with comprehensive metrics and visualizations
