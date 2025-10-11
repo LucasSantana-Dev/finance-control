@@ -23,13 +23,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/monitoring")
 @Tag(name = "Monitoring", description = "System monitoring and observability endpoints")
+@RequiredArgsConstructor
 @Slf4j
 public class MonitoringController {
 
-    // Temporarily remove all dependencies to test
-    // private final MetricsService metricsService;
-    // private final AlertingService alertingService;
-    // private final HealthCheckService healthCheckService;
+    private final MetricsService metricsService;
+    private final AlertingService alertingService;
+    private final HealthCheckService healthCheckService;
 
     @GetMapping("/health")
     @Operation(summary = "Get basic system health status", description = "Returns basic health information")
@@ -42,12 +42,7 @@ public class MonitoringController {
         log.debug("Health status requested");
 
         try {
-            // Simple test response without dependencies
-            Map<String, Object> healthStatus = new HashMap<>();
-            healthStatus.put("status", "UP");
-            healthStatus.put("timestamp", System.currentTimeMillis());
-            healthStatus.put("message", "Monitoring controller is working");
-            healthStatus.put("overallStatus", "HEALTHY");
+            Map<String, Object> healthStatus = healthCheckService.getDetailedHealthStatus();
             return ResponseEntity.ok(healthStatus);
         } catch (Exception e) {
             log.error("Error retrieving health status", e);

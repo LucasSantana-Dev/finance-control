@@ -84,6 +84,7 @@ services:
       dockerfile: Dockerfile
       args:
         DEV_MODE: "${DEV_MODE}"
+        SKIP_TESTS: "${SKIP_TESTS:-false}"
     env_file:
       - docker.env
     environment:
