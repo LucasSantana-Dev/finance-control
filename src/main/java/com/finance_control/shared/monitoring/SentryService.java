@@ -19,16 +19,34 @@ import java.util.Map;
 public class SentryService {
 
     /**
+     * Check if Sentry is enabled and properly configured.
+     *
+     * @return true if Sentry is enabled, false otherwise
+     */
+    private boolean isSentryEnabled() {
+        try {
+            return Sentry.isEnabled();
+        } catch (Exception e) {
+            log.debug("Sentry not available: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Capture an exception.
      *
      * @param throwable The exception to capture
      */
     public void captureException(Throwable throwable) {
         try {
-            Sentry.captureException(throwable);
-            log.debug("Exception captured by Sentry: {}", throwable.getMessage());
+            if (isSentryEnabled()) {
+                Sentry.captureException(throwable);
+                log.debug("Exception captured by Sentry: {}", throwable.getMessage());
+            } else {
+                log.debug("Sentry not enabled, skipping exception capture: {}", throwable.getMessage());
+            }
         } catch (Exception e) {
-            log.error("Failed to capture exception in Sentry", e);
+            log.warn("Failed to capture exception in Sentry: {}", e.getMessage());
         }
     }
 
@@ -40,13 +58,17 @@ public class SentryService {
      */
     public void captureException(Throwable throwable, Map<String, Object> context) {
         try {
-            if (context != null && !context.isEmpty()) {
-                context.forEach((key, value) -> Sentry.setExtra(key, value.toString()));
+            if (isSentryEnabled()) {
+                if (context != null && !context.isEmpty()) {
+                    context.forEach((key, value) -> Sentry.setExtra(key, value.toString()));
+                }
+                Sentry.captureException(throwable);
+                log.debug("Exception captured by Sentry: {}", throwable.getMessage());
+            } else {
+                log.debug("Sentry not enabled, skipping exception capture: {}", throwable.getMessage());
             }
-            Sentry.captureException(throwable);
-            log.debug("Exception captured by Sentry: {}", throwable.getMessage());
         } catch (Exception e) {
-            log.error("Failed to capture exception in Sentry", e);
+            log.warn("Failed to capture exception in Sentry: {}", e.getMessage());
         }
     }
 
@@ -59,20 +81,24 @@ public class SentryService {
      */
     public void captureException(Throwable throwable, Long userId, String userEmail) {
         try {
-            if (userId != null || userEmail != null) {
-                User user = new User();
-                if (userId != null) {
-                    user.setId(userId.toString());
+            if (isSentryEnabled()) {
+                if (userId != null || userEmail != null) {
+                    User user = new User();
+                    if (userId != null) {
+                        user.setId(userId.toString());
+                    }
+                    if (userEmail != null) {
+                        user.setEmail(userEmail);
+                    }
+                    Sentry.setUser(user);
                 }
-                if (userEmail != null) {
-                    user.setEmail(userEmail);
-                }
-                Sentry.setUser(user);
+                Sentry.captureException(throwable);
+                log.debug("Exception captured by Sentry for user {}: {}", userId, throwable.getMessage());
+            } else {
+                log.debug("Sentry not enabled, skipping exception capture for user {}: {}", userId, throwable.getMessage());
             }
-            Sentry.captureException(throwable);
-            log.debug("Exception captured by Sentry for user {}: {}", userId, throwable.getMessage());
         } catch (Exception e) {
-            log.error("Failed to capture exception in Sentry", e);
+            log.warn("Failed to capture exception in Sentry: {}", e.getMessage());
         }
     }
 
@@ -83,10 +109,14 @@ public class SentryService {
      */
     public void captureMessage(String message) {
         try {
-            Sentry.captureMessage(message);
-            log.debug("Message captured by Sentry: {}", message);
+            if (isSentryEnabled()) {
+                Sentry.captureMessage(message);
+                log.debug("Message captured by Sentry: {}", message);
+            } else {
+                log.debug("Sentry not enabled, skipping message capture: {}", message);
+            }
         } catch (Exception e) {
-            log.error("Failed to capture message in Sentry", e);
+            log.warn("Failed to capture message in Sentry: {}", e.getMessage());
         }
     }
 
@@ -98,10 +128,14 @@ public class SentryService {
      */
     public void captureMessage(String message, SentryLevel level) {
         try {
-            Sentry.captureMessage(message, level);
-            log.debug("Message captured by Sentry: {}", message);
+            if (isSentryEnabled()) {
+                Sentry.captureMessage(message, level);
+                log.debug("Message captured by Sentry: {}", message);
+            } else {
+                log.debug("Sentry not enabled, skipping message capture: {}", message);
+            }
         } catch (Exception e) {
-            log.error("Failed to capture message in Sentry", e);
+            log.warn("Failed to capture message in Sentry: {}", e.getMessage());
         }
     }
 
@@ -140,10 +174,14 @@ public class SentryService {
      */
     public void addBreadcrumb(String message, String category) {
         try {
-            Sentry.addBreadcrumb(message, category);
-            log.debug("Breadcrumb added: {} - {}", category, message);
+            if (isSentryEnabled()) {
+                Sentry.addBreadcrumb(message, category);
+                log.debug("Breadcrumb added: {} - {}", category, message);
+            } else {
+                log.debug("Sentry not enabled, skipping breadcrumb: {} - {}", category, message);
+            }
         } catch (Exception e) {
-            log.error("Failed to add breadcrumb to Sentry", e);
+            log.warn("Failed to add breadcrumb to Sentry: {}", e.getMessage());
         }
     }
 
@@ -156,10 +194,14 @@ public class SentryService {
      */
     public void addBreadcrumb(String message, String category, SentryLevel level) {
         try {
-            Sentry.addBreadcrumb(message, category);
-            log.debug("Breadcrumb added: {} - {}", category, message);
+            if (isSentryEnabled()) {
+                Sentry.addBreadcrumb(message, category);
+                log.debug("Breadcrumb added: {} - {}", category, message);
+            } else {
+                log.debug("Sentry not enabled, skipping breadcrumb: {} - {}", category, message);
+            }
         } catch (Exception e) {
-            log.error("Failed to add breadcrumb to Sentry", e);
+            log.warn("Failed to add breadcrumb to Sentry: {}", e.getMessage());
         }
     }
 
@@ -171,17 +213,21 @@ public class SentryService {
      */
     public void setUser(String userId, String userEmail) {
         try {
-            User user = new User();
-            if (userId != null) {
-                user.setId(userId);
+            if (isSentryEnabled()) {
+                User user = new User();
+                if (userId != null) {
+                    user.setId(userId);
+                }
+                if (userEmail != null) {
+                    user.setEmail(userEmail);
+                }
+                Sentry.setUser(user);
+                log.debug("User context set for Sentry: {}", userId);
+            } else {
+                log.debug("Sentry not enabled, skipping user context setting: {}", userId);
             }
-            if (userEmail != null) {
-                user.setEmail(userEmail);
-            }
-            Sentry.setUser(user);
-            log.debug("User context set for Sentry: {}", userId);
         } catch (Exception e) {
-            log.error("Failed to set user context in Sentry", e);
+            log.warn("Failed to set user context in Sentry: {}", e.getMessage());
         }
     }
 
@@ -194,20 +240,24 @@ public class SentryService {
      */
     public void setUserContext(Long userId, String userEmail, String username) {
         try {
-            User user = new User();
-            if (userId != null) {
-                user.setId(userId.toString());
+            if (isSentryEnabled()) {
+                User user = new User();
+                if (userId != null) {
+                    user.setId(userId.toString());
+                }
+                if (userEmail != null) {
+                    user.setEmail(userEmail);
+                }
+                if (username != null) {
+                    user.setUsername(username);
+                }
+                Sentry.setUser(user);
+                log.debug("User context set for Sentry: {}", userId);
+            } else {
+                log.debug("Sentry not enabled, skipping user context setting: {}", userId);
             }
-            if (userEmail != null) {
-                user.setEmail(userEmail);
-            }
-            if (username != null) {
-                user.setUsername(username);
-            }
-            Sentry.setUser(user);
-            log.debug("User context set for Sentry: {}", userId);
         } catch (Exception e) {
-            log.error("Failed to set user context in Sentry", e);
+            log.warn("Failed to set user context in Sentry: {}", e.getMessage());
         }
     }
 
@@ -218,12 +268,14 @@ public class SentryService {
      */
     public void setTags(Map<String, String> tags) {
         try {
-            if (tags != null && !tags.isEmpty()) {
+            if (isSentryEnabled() && tags != null && !tags.isEmpty()) {
                 tags.forEach(Sentry::setTag);
                 log.debug("Tags set for Sentry: {}", tags);
+            } else {
+                log.debug("Sentry not enabled, skipping tags setting: {}", tags);
             }
         } catch (Exception e) {
-            log.error("Failed to set tags in Sentry", e);
+            log.warn("Failed to set tags in Sentry: {}", e.getMessage());
         }
     }
 
@@ -235,10 +287,14 @@ public class SentryService {
      */
     public void setContext(String key, Object value) {
         try {
-            Sentry.setExtra(key, value.toString());
-            log.debug("Context set for Sentry: {} = {}", key, value);
+            if (isSentryEnabled()) {
+                Sentry.setExtra(key, value.toString());
+                log.debug("Context set for Sentry: {} = {}", key, value);
+            } else {
+                log.debug("Sentry not enabled, skipping context setting: {} = {}", key, value);
+            }
         } catch (Exception e) {
-            log.error("Failed to set context in Sentry", e);
+            log.warn("Failed to set context in Sentry: {}", e.getMessage());
         }
     }
 
@@ -247,10 +303,14 @@ public class SentryService {
      */
     public void clearUserContext() {
         try {
-            Sentry.setUser(null);
-            log.debug("User context cleared in Sentry");
+            if (isSentryEnabled()) {
+                Sentry.setUser(null);
+                log.debug("User context cleared in Sentry");
+            } else {
+                log.debug("Sentry not enabled, skipping user context clearing");
+            }
         } catch (Exception e) {
-            log.error("Failed to clear user context in Sentry", e);
+            log.warn("Failed to clear user context in Sentry: {}", e.getMessage());
         }
     }
 
@@ -263,7 +323,7 @@ public class SentryService {
         try {
             return Sentry.isEnabled();
         } catch (Exception e) {
-            log.error("Failed to check Sentry status", e);
+            log.warn("Failed to check Sentry status: {}", e.getMessage());
             return false;
         }
     }

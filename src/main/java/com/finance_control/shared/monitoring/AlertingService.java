@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class AlertingService {
 
-    private final MetricsService metricsService;
     private final SentryService sentryService;
     private final AppProperties appProperties;
 
