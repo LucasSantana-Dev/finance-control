@@ -3,17 +3,15 @@ package com.finance_control.shared.monitoring;
 import com.finance_control.shared.config.AppProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.actuator.health.Health;
-import org.springframework.boot.actuator.health.HealthIndicator;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 /**
  * Custom health check service for monitoring application components.
@@ -22,61 +20,57 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class HealthCheckService implements HealthIndicator {
+public class HealthCheckService {
 
     private final DataSource dataSource;
     private final RedisTemplate<String, Object> redisTemplate;
     private final AppProperties appProperties;
     private final MetricsService metricsService;
 
-    @Override
-    public Health health() {
+    public Map<String, Object> health() {
         try {
             Map<String, Object> details = new HashMap<>();
             boolean isHealthy = true;
 
-            Health databaseHealth = checkDatabaseHealth();
-            details.put("database", databaseHealth.getDetails());
-            if (databaseHealth.getStatus() != Health.up().getStatus()) {
+            Map<String, Object> databaseHealth = checkDatabaseHealth();
+            details.put("database", databaseHealth);
+            if (!"UP".equals(databaseHealth.get("status"))) {
                 isHealthy = false;
             }
 
-            Health redisHealth = checkRedisHealth();
-            details.put("redis", redisHealth.getDetails());
-            if (redisHealth.getStatus() != Health.up().getStatus()) {
+            Map<String, Object> redisHealth = checkRedisHealth();
+            details.put("redis", redisHealth);
+            if (!"UP".equals(redisHealth.get("status"))) {
                 isHealthy = false;
             }
 
-            Health configHealth = checkConfigurationHealth();
-            details.put("configuration", configHealth.getDetails());
-            if (configHealth.getStatus() != Health.up().getStatus()) {
+            Map<String, Object> configHealth = checkConfigurationHealth();
+            details.put("configuration", configHealth);
+            if (!"UP".equals(configHealth.get("status"))) {
                 isHealthy = false;
             }
 
             details.put("timestamp", LocalDateTime.now().toString());
             details.put("version", getApplicationVersion());
-            details.put("environment", appProperties.getServer().getEnvironment());
+            details.put("environment", "docker");
 
-            if (isHealthy) {
-                return Health.up()
-                        .withDetails(details)
-                        .build();
-            } else {
-                return Health.down()
-                        .withDetails(details)
-                        .build();
-            }
+            Map<String, Object> result = new HashMap<>();
+            result.put("status", isHealthy ? "UP" : "DOWN");
+            result.put("details", details);
+
+            return result;
 
         } catch (Exception e) {
             log.error("Error during health check", e);
-            return Health.down()
-                    .withDetail("error", e.getMessage())
-                    .withDetail("timestamp", LocalDateTime.now().toString())
-                    .build();
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("status", "DOWN");
+            errorResult.put("error", e.getMessage());
+            errorResult.put("timestamp", LocalDateTime.now().toString());
+            return errorResult;
         }
     }
 
-    private Health checkDatabaseHealth() {
+    private Map<String, Object> checkDatabaseHealth() {
         try (Connection connection = dataSource.getConnection()) {
             boolean isValid = connection.isValid(5);
 
@@ -87,22 +81,19 @@ public class HealthCheckService implements HealthIndicator {
             details.put("version", connection.getMetaData().getDriverVersion());
             details.put("checkTime", LocalDateTime.now().toString());
 
-            if (isValid) {
-                return Health.up().withDetails(details).build();
-            } else {
-                return Health.down().withDetails(details).build();
-            }
+            return details;
 
         } catch (SQLException e) {
             log.error("Database health check failed", e);
-            return Health.down()
-                    .withDetail("error", e.getMessage())
-                    .withDetail("checkTime", LocalDateTime.now().toString())
-                    .build();
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("status", "DOWN");
+            errorDetails.put("error", e.getMessage());
+            errorDetails.put("checkTime", LocalDateTime.now().toString());
+            return errorDetails;
         }
     }
 
-    private Health checkRedisHealth() {
+    private Map<String, Object> checkRedisHealth() {
         try {
             String pong = redisTemplate.getConnectionFactory()
                     .getConnection()
@@ -116,20 +107,21 @@ public class HealthCheckService implements HealthIndicator {
             details.put("database", appProperties.getRedis().getDatabase());
             details.put("checkTime", LocalDateTime.now().toString());
 
-            return Health.up().withDetails(details).build();
+            return details;
 
         } catch (Exception e) {
             log.error("Redis health check failed", e);
-            return Health.down()
-                    .withDetail("error", e.getMessage())
-                    .withDetail("host", appProperties.getRedis().getHost())
-                    .withDetail("port", appProperties.getRedis().getPort())
-                    .withDetail("checkTime", LocalDateTime.now().toString())
-                    .build();
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("status", "DOWN");
+            errorDetails.put("error", e.getMessage());
+            errorDetails.put("host", appProperties.getRedis().getHost());
+            errorDetails.put("port", appProperties.getRedis().getPort());
+            errorDetails.put("checkTime", LocalDateTime.now().toString());
+            return errorDetails;
         }
     }
 
-    private Health checkConfigurationHealth() {
+    private Map<String, Object> checkConfigurationHealth() {
         Map<String, Object> details = new HashMap<>();
         boolean isHealthy = true;
 
@@ -141,7 +133,7 @@ public class HealthCheckService implements HealthIndicator {
                 details.put("databaseUrl", "CONFIGURED");
             }
 
-            if (appProperties.getSecurity().getJwtSecret() == null || appProperties.getSecurity().getJwtSecret().isEmpty()) {
+            if (appProperties.getSecurity().getJwt().getSecret() == null || appProperties.getSecurity().getJwt().getSecret().isEmpty()) {
                 details.put("jwtSecret", "MISSING");
                 isHealthy = false;
             } else {
@@ -160,19 +152,17 @@ public class HealthCheckService implements HealthIndicator {
             details.put("monitoringEnabled", appProperties.getMonitoring().isEnabled());
 
             details.put("checkTime", LocalDateTime.now().toString());
+            details.put("status", isHealthy ? "UP" : "DOWN");
 
-            if (isHealthy) {
-                return Health.up().withDetails(details).build();
-            } else {
-                return Health.down().withDetails(details).build();
-            }
+            return details;
 
         } catch (Exception e) {
             log.error("Configuration health check failed", e);
-            return Health.down()
-                    .withDetail("error", e.getMessage())
-                    .withDetail("checkTime", LocalDateTime.now().toString())
-                    .build();
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("status", "DOWN");
+            errorDetails.put("error", e.getMessage());
+            errorDetails.put("checkTime", LocalDateTime.now().toString());
+            return errorDetails;
         }
     }
 

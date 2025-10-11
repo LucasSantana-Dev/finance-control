@@ -175,6 +175,37 @@ cd finance-control
 # Run tests with coverage
 ./gradlew jacocoTestReport
 ./gradlew jacocoTestCoverageVerification
+
+# Test Sentry configuration
+./scripts/test-sentry.sh
+```
+
+### API Testing with Postman
+```bash
+# Start the application
+docker compose up -d
+
+# Test monitoring endpoints
+curl http://localhost:8080/actuator/health
+curl http://localhost:8080/api/monitoring/status
+curl -X POST http://localhost:8080/api/monitoring/test-alert
+
+# Test security configuration
+curl http://localhost:8080/api/transactions  # Should return 403
+curl http://localhost:8080/api/monitoring/status  # Should return 500 (not 403)
+```
+
+### Monitoring & Health Checks
+```bash
+# Check application health
+curl http://localhost:8080/actuator/health
+
+# Test monitoring endpoints
+curl http://localhost:8080/api/monitoring/status
+curl http://localhost:8080/api/monitoring/alerts
+
+# Trigger Sentry test alert
+curl -X POST http://localhost:8080/api/monitoring/test-alert
 ```
 
 ### Code Quality Checks
@@ -394,6 +425,9 @@ The project has recently undergone significant improvements:
 - **✅ Monitoring Infrastructure**: Enterprise-grade monitoring with Sentry integration
 - **✅ Test Infrastructure**: Comprehensive test coverage with 20+ enabled test files
 - **✅ API Testing**: Enhanced Postman collections with monitoring endpoints
+- **✅ Security Configuration**: Properly configured public and protected endpoints
+- **✅ Database Optimization**: Performance indexes and concurrent migration support
+- **✅ Sentry Integration**: Complete error tracking and performance monitoring setup
 
 ### Code Standards
 - **Java 24**: Latest LTS version with modern features

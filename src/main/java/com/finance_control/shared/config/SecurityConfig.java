@@ -51,15 +51,22 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/users").permitAll()
-                .requestMatchers("/api/monitoring/**").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers("/swagger-ui/**").permitAll()
-                .requestMatchers("/v3/api-docs/**").permitAll()
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> {
+                // Configure public endpoints from properties
+                String[] publicEndpoints = appProperties.getSecurity().getPublicEndpoints();
+                if (publicEndpoints != null && publicEndpoints.length > 0) {
+                    auth.requestMatchers(publicEndpoints).permitAll();
+                } else {
+                    // Fallback to hardcoded endpoints
+                    auth.requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/users").permitAll()
+                        .requestMatchers("/api/monitoring/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/swagger-ui/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**").permitAll();
+                }
+                auth.anyRequest().authenticated();
+            })
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )

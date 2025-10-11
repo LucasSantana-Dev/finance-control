@@ -2,7 +2,6 @@ package com.finance_control.shared.config;
 
 import io.sentry.Sentry;
 import io.sentry.SentryOptions;
-import io.sentry.spring.jakarta.SentrySpringConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -13,7 +12,7 @@ import jakarta.annotation.PostConstruct;
 
 /**
  * Sentry configuration for error tracking and performance monitoring.
- * 
+ *
  * This configuration class sets up Sentry with comprehensive monitoring
  * capabilities including error tracking, performance monitoring, and
  * custom context information.
@@ -99,7 +98,7 @@ public class SentryConfig {
                 // Configure before send callback for filtering
                 options.setBeforeSend((event, hint) -> {
                     // Filter out health check requests
-                    if (event.getRequest() != null && 
+                    if (event.getRequest() != null &&
                         event.getRequest().getUrl() != null &&
                         event.getRequest().getUrl().contains("/actuator/health")) {
                         return null;
@@ -110,9 +109,9 @@ public class SentryConfig {
                 // Configure before breadcrumb callback
                 options.setBeforeBreadcrumb((breadcrumb, hint) -> {
                     // Filter out noisy breadcrumbs
-                    if (breadcrumb.getCategory() != null && 
+                    if (breadcrumb.getCategory() != null &&
                         breadcrumb.getCategory().equals("http")) {
-                        String url = breadcrumb.getData("url");
+                        String url = (String) breadcrumb.getData("url");
                         if (url != null && url.contains("/actuator/health")) {
                             return null;
                         }
@@ -121,20 +120,15 @@ public class SentryConfig {
                 });
             });
 
-            log.info("Sentry initialized successfully for environment: {} with release: {}", 
+            log.info("Sentry initialized successfully for environment: {} with release: {}",
                     environment, release);
-            
+
             // Add initial breadcrumb
-            Sentry.addBreadcrumb("Sentry initialized", "system", "info");
-            
+            Sentry.addBreadcrumb("Sentry initialized", "system");
+
         } catch (Exception e) {
             log.error("Failed to initialize Sentry", e);
         }
     }
 
-    @Bean
-    @Profile("!test")
-    public SentrySpringConfig sentrySpringConfig() {
-        return new SentrySpringConfig();
-    }
 }

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -59,7 +60,7 @@ public class MetricsService {
     public void recordTransactionProcessingTime(Instant startTime) {
         Duration duration = Duration.between(startTime, Instant.now());
         if (duration.toMillis() > 1000) {
-            sentryService.addBreadcrumb("Slow transaction processing: " + duration.toMillis() + "ms", 
+            sentryService.addBreadcrumb("Slow transaction processing: " + duration.toMillis() + "ms",
                     "performance", SentryLevel.WARNING);
         }
         log.debug("Transaction processing time: {}ms", duration.toMillis());
@@ -87,7 +88,7 @@ public class MetricsService {
     public void recordAuthenticationTime(Instant startTime) {
         Duration duration = Duration.between(startTime, Instant.now());
         if (duration.toMillis() > 500) {
-            Sentry.addBreadcrumb("Slow authentication: " + duration.toMillis() + "ms");
+            sentryService.addBreadcrumb("Slow authentication: " + duration.toMillis() + "ms", "performance");
         }
         log.debug("Authentication time: {}ms", duration.toMillis());
     }
@@ -135,7 +136,7 @@ public class MetricsService {
     public void recordDashboardGenerationTime(Instant startTime) {
         Duration duration = Duration.between(startTime, Instant.now());
         if (duration.toMillis() > 2000) {
-            sentryService.addBreadcrumb("Slow dashboard generation: " + duration.toMillis() + "ms", 
+            sentryService.addBreadcrumb("Slow dashboard generation: " + duration.toMillis() + "ms",
                     "performance", SentryLevel.WARNING);
         }
         log.debug("Dashboard generation time: {}ms", duration.toMillis());
@@ -148,7 +149,7 @@ public class MetricsService {
     public void recordMarketDataFetchTime(Instant startTime) {
         Duration duration = Duration.between(startTime, Instant.now());
         if (duration.toMillis() > 3000) {
-            sentryService.addBreadcrumb("Slow market data fetch: " + duration.toMillis() + "ms", 
+            sentryService.addBreadcrumb("Slow market data fetch: " + duration.toMillis() + "ms",
                     "performance", SentryLevel.WARNING);
         }
         log.debug("Market data fetch time: {}ms", duration.toMillis());
@@ -166,21 +167,21 @@ public class MetricsService {
 
     public void recordTransactionAmount(double amount, String type) {
         if (amount > 10000) {
-            Sentry.addBreadcrumb("Large transaction: " + amount + " for type: " + type);
+            sentryService.addBreadcrumb("Large transaction: " + amount + " for type: " + type, "business");
         }
         log.debug("Transaction amount recorded: {} for type: {}", amount, type);
     }
 
     public void recordGoalProgress(double progressPercentage, String goalType) {
         if (progressPercentage > 90) {
-            Sentry.addBreadcrumb("Goal near completion: " + progressPercentage + "% for type: " + goalType);
+            sentryService.addBreadcrumb("Goal near completion: " + progressPercentage + "% for type: " + goalType, "business");
         }
         log.debug("Goal progress recorded: {}% for type: {}", progressPercentage, goalType);
     }
 
     public void recordCacheSize(String cacheName, long size) {
         if (size > 1000) {
-            Sentry.addBreadcrumb("Large cache size: " + size + " for cache: " + cacheName);
+            sentryService.addBreadcrumb("Large cache size: " + size + " for cache: " + cacheName, "performance");
         }
         log.debug("Cache size recorded: {} for cache: {}", size, cacheName);
     }
@@ -188,33 +189,27 @@ public class MetricsService {
     public void recordDatabaseConnectionPool(String poolName, int active, int idle, int total) {
         double utilization = (double) active / total * 100;
         if (utilization > 80) {
-            Sentry.addBreadcrumb("High DB utilization: " + utilization + "% for pool: " + poolName);
+            sentryService.addBreadcrumb("High DB utilization: " + utilization + "% for pool: " + poolName, "performance");
         }
         log.debug("Database pool metrics recorded for pool: {} - active: {}, idle: {}, total: {}",
                 poolName, active, idle, total);
     }
     public void captureException(Exception exception, String context) {
-        Sentry.captureException(exception, scope -> {
-            scope.setTag("context", context);
-            scope.setLevel(SentryLevel.ERROR);
-        });
+        sentryService.captureException(exception);
+        sentryService.setTags(Map.of("context", context));
         log.error("Exception captured in Sentry: {}", exception.getMessage());
     }
 
     public void captureMessage(String message, SentryLevel level) {
-        Sentry.captureMessage(message, level);
+        sentryService.captureMessage(message);
         log.info("Message captured in Sentry: {}", message);
     }
 
     public void addUserContext(String userId, String email) {
-        Sentry.configureScope(scope -> {
-            scope.setUser(new io.sentry.protocol.User());
-            scope.getUser().setId(userId);
-            scope.getUser().setEmail(email);
-        });
+        sentryService.setUser(userId, email);
     }
 
     public void addBreadcrumb(String message, String category) {
-        Sentry.addBreadcrumb(message, category);
+        sentryService.addBreadcrumb(message, category);
     }
 }

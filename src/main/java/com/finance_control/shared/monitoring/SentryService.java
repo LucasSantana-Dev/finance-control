@@ -10,7 +10,7 @@ import java.util.Map;
 
 /**
  * Service for Sentry integration providing centralized error tracking and monitoring.
- * 
+ *
  * This service provides a clean interface for sending errors, exceptions, and
  * custom events to Sentry with proper context and user information.
  */
@@ -19,15 +19,29 @@ import java.util.Map;
 public class SentryService {
 
     /**
+     * Capture an exception.
+     *
+     * @param throwable The exception to capture
+     */
+    public void captureException(Throwable throwable) {
+        try {
+            Sentry.captureException(throwable);
+            log.debug("Exception captured by Sentry: {}", throwable.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to capture exception in Sentry", e);
+        }
+    }
+
+    /**
      * Capture an exception with optional context.
-     * 
+     *
      * @param throwable The exception to capture
      * @param context Additional context information
      */
     public void captureException(Throwable throwable, Map<String, Object> context) {
         try {
             if (context != null && !context.isEmpty()) {
-                context.forEach(Sentry::setExtra);
+                context.forEach((key, value) -> Sentry.setExtra(key, value.toString()));
             }
             Sentry.captureException(throwable);
             log.debug("Exception captured by Sentry: {}", throwable.getMessage());
@@ -38,7 +52,7 @@ public class SentryService {
 
     /**
      * Capture an exception with user context.
-     * 
+     *
      * @param throwable The exception to capture
      * @param userId The user ID associated with the error
      * @param userEmail The user email associated with the error
@@ -63,8 +77,22 @@ public class SentryService {
     }
 
     /**
+     * Capture a message.
+     *
+     * @param message The message to capture
+     */
+    public void captureMessage(String message) {
+        try {
+            Sentry.captureMessage(message);
+            log.debug("Message captured by Sentry: {}", message);
+        } catch (Exception e) {
+            log.error("Failed to capture message in Sentry", e);
+        }
+    }
+
+    /**
      * Capture a message with specified level.
-     * 
+     *
      * @param message The message to capture
      * @param level The severity level
      */
@@ -79,7 +107,7 @@ public class SentryService {
 
     /**
      * Capture an error message.
-     * 
+     *
      * @param message The error message
      */
     public void captureError(String message) {
@@ -88,7 +116,7 @@ public class SentryService {
 
     /**
      * Capture a warning message.
-     * 
+     *
      * @param message The warning message
      */
     public void captureWarning(String message) {
@@ -97,7 +125,7 @@ public class SentryService {
 
     /**
      * Capture an info message.
-     * 
+     *
      * @param message The info message
      */
     public void captureInfo(String message) {
@@ -106,14 +134,29 @@ public class SentryService {
 
     /**
      * Add breadcrumb for tracking user actions.
-     * 
+     *
+     * @param message The breadcrumb message
+     * @param category The breadcrumb category
+     */
+    public void addBreadcrumb(String message, String category) {
+        try {
+            Sentry.addBreadcrumb(message, category);
+            log.debug("Breadcrumb added: {} - {}", category, message);
+        } catch (Exception e) {
+            log.error("Failed to add breadcrumb to Sentry", e);
+        }
+    }
+
+    /**
+     * Add breadcrumb for tracking user actions.
+     *
      * @param message The breadcrumb message
      * @param category The breadcrumb category
      * @param level The breadcrumb level
      */
     public void addBreadcrumb(String message, String category, SentryLevel level) {
         try {
-            Sentry.addBreadcrumb(message, category, level);
+            Sentry.addBreadcrumb(message, category);
             log.debug("Breadcrumb added: {} - {}", category, message);
         } catch (Exception e) {
             log.error("Failed to add breadcrumb to Sentry", e);
@@ -122,7 +165,29 @@ public class SentryService {
 
     /**
      * Set user context for error tracking.
-     * 
+     *
+     * @param userId The user ID
+     * @param userEmail The user email
+     */
+    public void setUser(String userId, String userEmail) {
+        try {
+            User user = new User();
+            if (userId != null) {
+                user.setId(userId);
+            }
+            if (userEmail != null) {
+                user.setEmail(userEmail);
+            }
+            Sentry.setUser(user);
+            log.debug("User context set for Sentry: {}", userId);
+        } catch (Exception e) {
+            log.error("Failed to set user context in Sentry", e);
+        }
+    }
+
+    /**
+     * Set user context for error tracking.
+     *
      * @param userId The user ID
      * @param userEmail The user email
      * @param username The username
@@ -148,7 +213,7 @@ public class SentryService {
 
     /**
      * Set custom tags for error tracking.
-     * 
+     *
      * @param tags Map of tags to set
      */
     public void setTags(Map<String, String> tags) {
@@ -164,13 +229,13 @@ public class SentryService {
 
     /**
      * Set custom context data.
-     * 
+     *
      * @param key The context key
      * @param value The context value
      */
     public void setContext(String key, Object value) {
         try {
-            Sentry.setExtra(key, value);
+            Sentry.setExtra(key, value.toString());
             log.debug("Context set for Sentry: {} = {}", key, value);
         } catch (Exception e) {
             log.error("Failed to set context in Sentry", e);
@@ -182,7 +247,7 @@ public class SentryService {
      */
     public void clearUserContext() {
         try {
-            Sentry.clearUser();
+            Sentry.setUser(null);
             log.debug("User context cleared in Sentry");
         } catch (Exception e) {
             log.error("Failed to clear user context in Sentry", e);
@@ -191,7 +256,7 @@ public class SentryService {
 
     /**
      * Check if Sentry is enabled and configured.
-     * 
+     *
      * @return true if Sentry is enabled
      */
     public boolean isEnabled() {
