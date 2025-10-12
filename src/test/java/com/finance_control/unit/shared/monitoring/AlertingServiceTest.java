@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AlertingService Unit Tests")
@@ -39,8 +40,8 @@ class AlertingServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(appProperties.getMonitoring()).thenReturn(monitoringProperties);
-        when(monitoringProperties.isEnabled()).thenReturn(true);
+        lenient().when(appProperties.getMonitoring()).thenReturn(monitoringProperties);
+        lenient().when(monitoringProperties.isEnabled()).thenReturn(true);
 
         alertingService = new AlertingService(sentryService, appProperties);
     }
@@ -100,10 +101,8 @@ class AlertingServiceTest {
     void alertHighTransactionVolume_WithHighVolume_ShouldTriggerAlert() {
         long transactionCount = 1500L;
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            alertingService.alertHighTransactionVolume(transactionCount);
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        alertingService.alertHighTransactionVolume(transactionCount);
+        verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -112,13 +111,11 @@ class AlertingServiceTest {
         // Given
         long transactionCount = 500L;
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertHighTransactionVolume(transactionCount);
+        // When
+        alertingService.alertHighTransactionVolume(transactionCount);
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)), never());
-        }
+        // Then
+        verify(sentryService, never()).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -128,13 +125,11 @@ class AlertingServiceTest {
         String username = "testuser";
         String reason = "invalid_password";
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertFailedAuthentication(username, reason);
+        // When
+        alertingService.alertFailedAuthentication(username, reason);
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        // Then
+        verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -144,13 +139,11 @@ class AlertingServiceTest {
         String activity = "multiple_failed_logins";
         String details = "5 failed attempts in 1 minute";
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertSuspiciousActivity(activity, details);
+        // When
+        alertingService.alertSuspiciousActivity(activity, details);
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        // Then
+        verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -160,13 +153,11 @@ class AlertingServiceTest {
         String userId = "123";
         String exportType = "all_data";
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertDataExportRequest(userId, exportType);
+        // When
+        alertingService.alertDataExportRequest(userId, exportType);
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        // Then
+        verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -176,13 +167,11 @@ class AlertingServiceTest {
         String cacheName = "dashboard";
         double hitRate = 0.3; // 30% hit rate
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertCachePerformance(cacheName, hitRate);
+        // When
+        alertingService.alertCachePerformance(cacheName, hitRate);
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        // Then
+        verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -192,13 +181,11 @@ class AlertingServiceTest {
         String cacheName = "dashboard";
         double hitRate = 0.8; // 80% hit rate
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertCachePerformance(cacheName, hitRate);
+        // When
+        alertingService.alertCachePerformance(cacheName, hitRate);
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)), never());
-        }
+        // Then
+        verify(sentryService, never()).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -208,13 +195,11 @@ class AlertingServiceTest {
         String query = "SELECT * FROM transactions WHERE user_id = ?";
         long executionTime = 6000L; // 6 seconds
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertDatabaseSlowQuery(query, executionTime);
+        // When
+        alertingService.alertDatabaseSlowQuery(query, executionTime);
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        // Then
+        verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -224,13 +209,11 @@ class AlertingServiceTest {
         String query = "SELECT * FROM transactions WHERE user_id = ?";
         long executionTime = 2000L; // 2 seconds
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertDatabaseSlowQuery(query, executionTime);
+        // When
+        alertingService.alertDatabaseSlowQuery(query, executionTime);
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)), never());
-        }
+        // Then
+        verify(sentryService, never()).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -240,26 +223,22 @@ class AlertingServiceTest {
         String apiName = "BCB_API";
         String error = "Connection timeout";
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertExternalApiFailure(apiName, error);
+        // When
+        alertingService.alertExternalApiFailure(apiName, error);
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        // Then
+        verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
     @DisplayName("Should map severity levels correctly")
     void mapSeverityToSentryLevel_ShouldMapCorrectly() {
         // This tests the private method indirectly through alert triggering
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertFailedAuthentication("test", "reason");
+        // When
+        alertingService.alertFailedAuthentication("test", "reason");
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        // Then
+        verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -270,13 +249,11 @@ class AlertingServiceTest {
         doThrow(new RuntimeException("Listener error")).when(listener).onAlert(any());
         alertingService.addAlertListener(listener);
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When
-            alertingService.alertFailedAuthentication("test", "reason");
+        // When
+        alertingService.alertFailedAuthentication("test", "reason");
 
-            // Then - Should not throw exception
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        // Then - Should not throw exception
+        verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -285,13 +262,11 @@ class AlertingServiceTest {
         // Given
         String alertId = "test_alert";
 
-        try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When - Trigger same alert twice
-            alertingService.alertFailedAuthentication("test", "reason");
-            alertingService.alertFailedAuthentication("test", "reason");
+        // When - Trigger same alert twice
+        alertingService.alertFailedAuthentication("test", "reason");
+        alertingService.alertFailedAuthentication("test", "reason");
 
-            // Then - Should only capture once (due to duplicate prevention)
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)), atMostOnce());
-        }
+        // Then - Should only capture once (due to duplicate prevention)
+        verify(sentryService, atMostOnce()).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
     }
 }

@@ -60,7 +60,7 @@ class InvestmentControllerTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules(); // For LocalDateTime support
-        
+
         mockMvc = MockMvcBuilders.standaloneSetup(investmentController)
                 .build();
 
