@@ -8,16 +8,17 @@ import com.finance_control.users.model.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,7 +29,6 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -36,19 +36,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Unit tests for InvestmentController.
  * Tests the REST API endpoints for investment management.
  */
-@WebMvcTest(InvestmentController.class)
+@ExtendWith(MockitoExtension.class)
 class InvestmentControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Mock
     private InvestmentService investmentService;
 
-    @MockBean
+    @Mock
     private ExternalMarketDataService externalMarketDataService;
 
-    @Autowired
+    @InjectMocks
+    private InvestmentController investmentController;
+
     private ObjectMapper objectMapper;
 
     private User testUser;
@@ -57,6 +58,12 @@ class InvestmentControllerTest {
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
+        objectMapper.findAndRegisterModules(); // For LocalDateTime support
+        
+        mockMvc = MockMvcBuilders.standaloneSetup(investmentController)
+                .build();
+
         // Create test user
         testUser = new User();
         testUser.setId(1L);
@@ -87,7 +94,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void createInvestment_ShouldCreateInvestmentSuccessfully() throws Exception {
         // Given
         when(investmentService.createInvestment(any(Investment.class), any(User.class)))
@@ -95,7 +101,6 @@ class InvestmentControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/investments")
-                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testInvestmentDTO)))
                 .andExpect(status().isCreated())
@@ -107,14 +112,12 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void createInvestment_ShouldReturnConflictWhenInvestmentExists() throws Exception {
         // Given
         when(investmentService.investmentExists("PETR4", any(User.class))).thenReturn(true);
 
         // When & Then
         mockMvc.perform(post("/api/investments")
-                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testInvestmentDTO)))
                 .andExpect(status().isConflict());
@@ -124,7 +127,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getAllInvestments_ShouldReturnInvestmentsWithPagination() throws Exception {
         // Given
         Page<Investment> investmentPage = new PageImpl<>(List.of(testInvestment));
@@ -144,7 +146,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getInvestmentById_ShouldReturnInvestmentWhenFound() throws Exception {
         // Given
         when(investmentService.getInvestmentById(1L, any(User.class)))
@@ -160,7 +161,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getInvestmentById_ShouldReturnNotFoundWhenInvestmentNotFound() throws Exception {
         // Given
         when(investmentService.getInvestmentById(999L, any(User.class)))
@@ -174,7 +174,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void updateInvestment_ShouldUpdateInvestmentSuccessfully() throws Exception {
         // Given
         testInvestment.setName("Petrobras Updated");
@@ -183,7 +182,6 @@ class InvestmentControllerTest {
 
         // When & Then
         mockMvc.perform(put("/api/investments/1")
-                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testInvestmentDTO)))
                 .andExpect(status().isOk())
@@ -194,21 +192,19 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void deleteInvestment_ShouldDeleteInvestmentSuccessfully() throws Exception {
         // Given
         doNothing().when(investmentService).deleteInvestment(1L, any(User.class));
 
         // When & Then
         mockMvc.perform(delete("/api/investments/1")
-                        .with(csrf()))
+)
                 .andExpect(status().isNoContent());
 
         verify(investmentService).deleteInvestment(1L, any(User.class));
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getInvestmentsByType_ShouldReturnInvestmentsOfSpecificType() throws Exception {
         // Given
         when(investmentService.getInvestmentsByType(any(User.class), eq(Investment.InvestmentType.STOCK)))
@@ -225,7 +221,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getInvestmentsByTypeAndSubtype_ShouldReturnFilteredInvestments() throws Exception {
         // Given
         when(investmentService.getInvestmentsByTypeAndSubtype(any(User.class), eq(Investment.InvestmentType.STOCK), eq(Investment.InvestmentSubtype.ORDINARY)))
@@ -243,7 +238,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void searchInvestments_ShouldReturnMatchingInvestments() throws Exception {
         // Given
         when(investmentService.searchInvestments(any(User.class), eq("Petrobras")))
@@ -261,7 +255,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getSectors_ShouldReturnUniqueSectors() throws Exception {
         // Given
         when(investmentService.getSectors(any(User.class)))
@@ -278,7 +271,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getIndustries_ShouldReturnUniqueIndustries() throws Exception {
         // Given
         when(investmentService.getIndustries(any(User.class)))
@@ -295,7 +287,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getInvestmentTypes_ShouldReturnUniqueInvestmentTypes() throws Exception {
         // Given
         when(investmentService.getInvestmentTypes(any(User.class)))
@@ -312,7 +303,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getInvestmentSubtypes_ShouldReturnUniqueInvestmentSubtypes() throws Exception {
         // Given
         when(investmentService.getInvestmentSubtypes(any(User.class), eq(Investment.InvestmentType.STOCK)))
@@ -329,7 +319,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getTopPerformers_ShouldReturnTopPerformingInvestments() throws Exception {
         // Given
         Pageable pageable = PageRequest.of(0, 10);
@@ -348,7 +337,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getWorstPerformers_ShouldReturnWorstPerformingInvestments() throws Exception {
         // Given
         Pageable pageable = PageRequest.of(0, 10);
@@ -367,7 +355,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getTopDividendYield_ShouldReturnTopDividendYieldInvestments() throws Exception {
         // Given
         Pageable pageable = PageRequest.of(0, 10);
@@ -386,7 +373,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getTotalMarketValue_ShouldReturnTotalMarketValue() throws Exception {
         // Given
         when(investmentService.getTotalMarketValue(any(User.class)))
@@ -401,7 +387,6 @@ class InvestmentControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getMarketValueByType_ShouldReturnMarketValueByType() throws Exception {
         // Given
         when(investmentService.getMarketValueByType(any(User.class)))
