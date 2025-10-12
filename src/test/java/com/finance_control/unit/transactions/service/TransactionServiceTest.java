@@ -5,6 +5,7 @@ import com.finance_control.shared.exception.EntityNotFoundException;
 import com.finance_control.shared.enums.TransactionType;
 import com.finance_control.shared.enums.TransactionSubtype;
 import com.finance_control.shared.enums.TransactionSource;
+import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.transactions.dto.TransactionDTO;
 import com.finance_control.transactions.dto.TransactionReconciliationRequest;
 import com.finance_control.transactions.dto.responsibles.TransactionResponsiblesDTO;
@@ -72,6 +73,9 @@ class TransactionServiceTest {
 
     @Mock
     private TransactionResponsiblesRepository responsibleRepository;
+
+    @Mock
+    private MetricsService metricsService;
 
     @InjectMocks
     private TransactionService transactionService;

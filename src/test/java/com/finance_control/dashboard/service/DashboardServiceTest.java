@@ -6,6 +6,7 @@ import com.finance_control.goals.repository.FinancialGoalRepository;
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.enums.GoalType;
 import com.finance_control.shared.enums.TransactionType;
+import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.transactions.model.Transaction;
 import com.finance_control.transactions.model.category.TransactionCategory;
 import com.finance_control.transactions.repository.TransactionRepository;
@@ -39,6 +40,9 @@ class DashboardServiceTest {
 
     @Mock
     private FinancialGoalRepository financialGoalRepository;
+
+    @Mock
+    private MetricsService metricsService;
 
     @InjectMocks
     private DashboardService dashboardService;
