@@ -33,24 +33,38 @@ class MarketIndicatorRepositoryIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Create test indicators
-        selicIndicator = createTestIndicator("SELIC", "Taxa Selic",
-                MarketIndicator.IndicatorType.INTEREST_RATE, MarketIndicator.Frequency.DAILY,
-                new BigDecimal("13.75"), new BigDecimal("13.50"), LocalDate.now());
+        // Create test indicators only if they don't exist
+        selicIndicator = indicatorRepository.findByCode("SELIC")
+                .orElseGet(() -> {
+                    MarketIndicator indicator = createTestIndicator("SELIC", "Taxa Selic",
+                            MarketIndicator.IndicatorType.INTEREST_RATE, MarketIndicator.Frequency.DAILY,
+                            new BigDecimal("13.75"), new BigDecimal("13.50"), LocalDate.now());
+                    return indicatorRepository.save(indicator);
+                });
 
-        cdiIndicator = createTestIndicator("CDI", "CDI",
-                MarketIndicator.IndicatorType.INTEREST_RATE, MarketIndicator.Frequency.DAILY,
-                new BigDecimal("13.25"), new BigDecimal("13.00"), LocalDate.now());
+        cdiIndicator = indicatorRepository.findByCode("CDI")
+                .orElseGet(() -> {
+                    MarketIndicator indicator = createTestIndicator("CDI", "CDI",
+                            MarketIndicator.IndicatorType.INTEREST_RATE, MarketIndicator.Frequency.DAILY,
+                            new BigDecimal("13.25"), new BigDecimal("13.00"), LocalDate.now());
+                    return indicatorRepository.save(indicator);
+                });
 
-        ipcaIndicator = createTestIndicator("IPCA", "IPCA",
-                MarketIndicator.IndicatorType.INFLATION, MarketIndicator.Frequency.MONTHLY,
-                new BigDecimal("4.62"), new BigDecimal("4.50"), LocalDate.now().minusDays(1));
+        ipcaIndicator = indicatorRepository.findByCode("IPCA")
+                .orElseGet(() -> {
+                    MarketIndicator indicator = createTestIndicator("IPCA", "IPCA",
+                            MarketIndicator.IndicatorType.INFLATION, MarketIndicator.Frequency.MONTHLY,
+                            new BigDecimal("4.62"), new BigDecimal("4.50"), LocalDate.now().minusDays(1));
+                    return indicatorRepository.save(indicator);
+                });
 
-        exchangeRateIndicator = createTestIndicator("USD_BRL", "USD/BRL",
-                MarketIndicator.IndicatorType.EXCHANGE_RATE, MarketIndicator.Frequency.DAILY,
-                new BigDecimal("5.25"), new BigDecimal("5.20"), LocalDate.now());
-
-        indicatorRepository.saveAll(List.of(selicIndicator, cdiIndicator, ipcaIndicator, exchangeRateIndicator));
+        exchangeRateIndicator = indicatorRepository.findByCode("USD_BRL")
+                .orElseGet(() -> {
+                    MarketIndicator indicator = createTestIndicator("USD_BRL", "USD/BRL",
+                            MarketIndicator.IndicatorType.EXCHANGE_RATE, MarketIndicator.Frequency.DAILY,
+                            new BigDecimal("5.25"), new BigDecimal("5.20"), LocalDate.now());
+                    return indicatorRepository.save(indicator);
+                });
     }
 
     @Test

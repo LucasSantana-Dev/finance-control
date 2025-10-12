@@ -9,29 +9,29 @@
 ## Fixed Issues
 
 ### 1. Monitoring Endpoint Tests (3 tests fixed)
-**Problem**: Tests were using `/monitoring/*` endpoints instead of `/api/monitoring/*`  
-**Root Cause**: `WebConfig` adds `/api` prefix to all controllers via `configurePathMatch()`  
-**Solution**: Updated test endpoints to use `/api/monitoring/*` paths  
+**Problem**: Tests were using `/monitoring/*` endpoints instead of `/api/monitoring/*`
+**Root Cause**: `WebConfig` adds `/api` prefix to all controllers via `configurePathMatch()`
+**Solution**: Updated test endpoints to use `/api/monitoring/*` paths
 **Files Changed**:
 - `src/test/java/com/finance_control/integration/MonitoringEndpointTest.java`
 - `src/test/resources/application-test.properties`
 
 ### 2. MonitoringController Unit Test (1 test fixed)
-**Problem**: Test expected 'error' key but controller uses 'message' key  
-**Root Cause**: Mismatch between test expectations and actual implementation  
-**Solution**: Updated test to check for 'message' and 'status' keys instead  
+**Problem**: Test expected 'error' key but controller uses 'message' key
+**Root Cause**: Mismatch between test expectations and actual implementation
+**Solution**: Updated test to check for 'message' and 'status' keys instead
 **Files Changed**:
 - `src/test/java/com/finance_control/unit/shared/controller/MonitoringControllerTest.java`
 
 ## Remaining Issues (71 tests)
 
 ### Pattern 1: DataIntegrityViolationException (18 tests)
-**Error**: `Unique index or primary key violation: PUBLIC.CONSTRAINT_INDEX_8 ON PUBLIC.MARKET_INDICATORS(CODE NULLS FIRST) VALUES ('SELIC')`  
+**Error**: `Unique index or primary key violation: PUBLIC.CONSTRAINT_INDEX_8 ON PUBLIC.MARKET_INDICATORS(CODE NULLS FIRST) VALUES ('SELIC')`
 **Affected Tests**:
 - Various Brazilian Market integration and repository tests
 - Transaction service integration tests
 
-**Root Cause**: Tests are not properly isolated and are inserting duplicate market indicators  
+**Root Cause**: Tests are not properly isolated and are inserting duplicate market indicators
 **Proposed Solution**:
 1. Add `@BeforeEach` cleanup to delete existing market indicators
 2. Use `@DirtiesContext` to force Spring context reload
@@ -39,11 +39,11 @@
 4. Use `@Transactional` with proper rollback
 
 ### Pattern 2: @WebMvcTest ApplicationContext Failures (18 tests)
-**Error**: `ApplicationContext failure threshold (1) exceeded`  
+**Error**: `ApplicationContext failure threshold (1) exceeded`
 **Affected Tests**:
 - `InvestmentControllerTest` and related @WebMvcTest tests
 
-**Root Cause**: @WebMvcTest is attempting to load full application context instead of web layer only  
+**Root Cause**: @WebMvcTest is attempting to load full application context instead of web layer only
 **Proposed Solution**:
 1. Use `@WebMvcTest(InvestmentController.class)` to specify exact controller
 2. Add `@MockBean` for all required dependencies
@@ -51,36 +51,36 @@
 4. Use `@WebMvcTest` with `excludeAutoConfiguration` parameter
 
 ### Pattern 3: Sentry Mock Expectations (9 tests)
-**Error**: `Wanted but not invoked: Sentry.class.captureMessage(<any string>, <any io.sentry.SentryLevel>)`  
+**Error**: `Wanted but not invoked: Sentry.class.captureMessage(<any string>, <any io.sentry.SentryLevel>)`
 **Affected Tests**:
 - Various unit tests expecting Sentry integration
 
-**Root Cause**: Tests expect Sentry.captureMessage() to be called but it's not being invoked  
+**Root Cause**: Tests expect Sentry.captureMessage() to be called but it's not being invoked
 **Proposed Solution**:
 1. Review if Sentry integration is actually needed in these test scenarios
 2. Either remove the mock expectations or fix the code to actually call Sentry
 3. Use `lenient()` stubs if the calls are conditional
 
 ### Pattern 4: MockMvc Bean Not Available (9 tests)
-**Error**: `UnsatisfiedDependencyException: No qualifying bean of type 'org.springframework.test.web.servlet.MockMvc'`  
+**Error**: `UnsatisfiedDependencyException: No qualifying bean of type 'org.springframework.test.web.servlet.MockMvc'`
 **Affected Tests**:
 - `InvestmentControllerIntegrationTest` and related integration tests
 
-**Root Cause**: Integration tests using `@SpringBootTest` without `@AutoConfigureMockMvc`  
+**Root Cause**: Integration tests using `@SpringBootTest` without `@AutoConfigureMockMvc`
 **Proposed Solution**:
 1. Add `@AutoConfigureMockMvc` annotation to test classes
 2. Or change to use `TestRestTemplate` instead of `MockMvc`
 3. Follow the pattern from `InvestmentControllerIntegrationTest` which already works
 
 ### Pattern 5: UnnecessaryStubbingException (7 tests)
-**Error**: `Unnecessary stubbings detected` in `AlertingServiceTest`  
+**Error**: `Unnecessary stubbings detected` in `AlertingServiceTest`
 **Affected Tests**:
 - Various AlertingService tests
 
-**Root Cause**: Mock stubs defined in `@BeforeEach` but not used in all tests  
+**Root Cause**: Mock stubs defined in `@BeforeEach` but not used in all tests
 **Proposed Solution**:
 1. Move stub definitions to individual test methods where they're needed
-2. Use `@MockitoSettings(strictness = Strictness.LENIENT)` 
+2. Use `@MockitoSettings(strictness = Strictness.LENIENT)`
 3. Remove unused stubs from setup methods
 
 ### Other Issues (10 tests)
@@ -120,4 +120,3 @@ Coverage report will be available at:
 - Deleted: `src/test/java/com/finance_control/integration/MonitoringControllerRegistrationTest.java`
 - Deleted: `src/test/java/com/finance_control/integration/MonitoringIntegrationTestSimple.java`
 - Deleted: `Test.java`
-
