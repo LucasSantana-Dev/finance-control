@@ -18,6 +18,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @AutoConfigureWebMvc
@@ -160,7 +162,7 @@ class MonitoringIntegrationTest {
     void concurrentAlertOperations_ShouldHandleGracefully() throws Exception {
         // This test verifies that the monitoring system can handle concurrent operations
         // without throwing exceptions or causing data corruption
-        
+
         // Trigger multiple alerts concurrently
         for (int i = 0; i < 5; i++) {
             mockMvc.perform(post("/monitoring/test-alert")
