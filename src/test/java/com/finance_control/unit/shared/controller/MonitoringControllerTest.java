@@ -1,5 +1,6 @@
 package com.finance_control.unit.shared.controller;
 
+import com.finance_control.shared.controller.MonitoringController;
 import com.finance_control.shared.monitoring.AlertingService;
 import com.finance_control.shared.monitoring.HealthCheckService;
 import com.finance_control.shared.monitoring.MetricsService;

@@ -1,11 +1,13 @@
 package com.finance_control.unit.shared.monitoring;
 
 import com.finance_control.shared.monitoring.MetricsService;
+import com.finance_control.shared.monitoring.SentryService;
 import io.sentry.Sentry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,11 +23,14 @@ import static org.mockito.Mockito.*;
 @DisplayName("MetricsService Unit Tests")
 class MetricsServiceTest {
 
+    @Mock
+    private SentryService sentryService;
+    
     private MetricsService metricsService;
 
     @BeforeEach
     void setUp() {
-        metricsService = new MetricsService();
+        metricsService = new MetricsService(sentryService);
     }
 
     @Test
@@ -349,7 +354,7 @@ class MetricsServiceTest {
             metricsService.captureException(exception, context);
 
             // Then
-            sentryMock.verify(() -> Sentry.captureException(any(Exception.class), any()));
+            sentryMock.verify(() -> Sentry.captureException(any(Exception.class), any(io.sentry.Hint.class)));
         }
     }
 

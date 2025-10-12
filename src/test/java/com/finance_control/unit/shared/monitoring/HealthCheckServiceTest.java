@@ -9,10 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.actuator.health.Health;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -47,9 +46,10 @@ class HealthCheckServiceTest {
     @Mock
     private DatabaseMetaData databaseMetaData;
 
+
     @Mock
     private RedisConnectionFactory redisConnectionFactory;
-
+    
     @Mock
     private RedisConnection redisConnection;
 
@@ -79,7 +79,7 @@ class HealthCheckServiceTest {
         redisProperties.setDatabase(0);
 
         AppProperties.Security securityProperties = new AppProperties.Security();
-        securityProperties.setJwtSecret("test-secret");
+        securityProperties.getJwt().setSecret("test-secret");
 
         AppProperties.Database databaseProperties = new AppProperties.Database();
         databaseProperties.setUrl("jdbc:postgresql://localhost:5432/test");
@@ -88,21 +88,23 @@ class HealthCheckServiceTest {
         when(appProperties.getSecurity()).thenReturn(securityProperties);
         when(appProperties.getDatabase()).thenReturn(databaseProperties);
 
-        healthCheckService = new HealthCheckService(dataSource, redisTemplate, appProperties, metricsService);
+        healthCheckService = new HealthCheckService(dataSource, redisTemplate, appProperties);
     }
 
     @Test
     @DisplayName("Should return healthy status when all components are healthy")
     void health_WithAllComponentsHealthy_ShouldReturnUp() {
         // When
-        Health health = healthCheckService.health();
+        Map<String, Object> health = healthCheckService.health();
 
         // Then
-        assertEquals(Health.up().getStatus(), health.getStatus());
-        assertTrue(health.getDetails().containsKey("database"));
-        assertTrue(health.getDetails().containsKey("redis"));
-        assertTrue(health.getDetails().containsKey("configuration"));
-        assertTrue(health.getDetails().containsKey("timestamp"));
+        assertEquals("UP", health.get("status"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> details = (Map<String, Object>) health.get("details");
+        assertTrue(details.containsKey("database"));
+        assertTrue(details.containsKey("redis"));
+        assertTrue(details.containsKey("configuration"));
+        assertTrue(details.containsKey("timestamp"));
     }
 
     @Test
@@ -112,10 +114,10 @@ class HealthCheckServiceTest {
         when(connection.isValid(anyInt())).thenReturn(false);
 
         // When
-        Health health = healthCheckService.health();
+        Map<String, Object> health = healthCheckService.health();
 
         // Then
-        assertEquals(Health.down().getStatus(), health.getStatus());
+        assertEquals("DOWN", health.get("status"));
     }
 
     @Test
@@ -125,11 +127,13 @@ class HealthCheckServiceTest {
         when(dataSource.getConnection()).thenThrow(new SQLException("Connection failed"));
 
         // When
-        Health health = healthCheckService.health();
+        Map<String, Object> health = healthCheckService.health();
 
         // Then
-        assertEquals(Health.down().getStatus(), health.getStatus());
-        assertTrue(health.getDetails().containsKey("error"));
+        assertEquals("DOWN", health.get("status"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> details = (Map<String, Object>) health.get("details");
+        assertTrue(details.containsKey("error"));
     }
 
     @Test
@@ -139,10 +143,10 @@ class HealthCheckServiceTest {
         when(redisConnection.ping()).thenThrow(new RuntimeException("Redis connection failed"));
 
         // When
-        Health health = healthCheckService.health();
+        Map<String, Object> health = healthCheckService.health();
 
         // Then
-        assertEquals(Health.down().getStatus(), health.getStatus());
+        assertEquals("DOWN", health.get("status"));
     }
 
     @Test
@@ -154,10 +158,10 @@ class HealthCheckServiceTest {
         when(appProperties.getDatabase()).thenReturn(databaseProperties);
 
         // When
-        Health health = healthCheckService.health();
+        Map<String, Object> health = healthCheckService.health();
 
         // Then
-        assertEquals(Health.down().getStatus(), health.getStatus());
+        assertEquals("DOWN", health.get("status"));
     }
 
     @Test

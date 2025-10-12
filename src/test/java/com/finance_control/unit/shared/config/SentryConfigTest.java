@@ -39,7 +39,7 @@ class SentryConfigTest {
             sentryConfig.initializeSentry();
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.init(any()));
+            sentryMock.verify(() -> io.sentry.Sentry.init(any(io.sentry.SentryOptions.class)));
         }
     }
 
@@ -54,7 +54,7 @@ class SentryConfigTest {
             sentryConfig.initializeSentry();
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.init(any()), never());
+            sentryMock.verify(() -> io.sentry.Sentry.init(any(io.sentry.SentryOptions.class)), never());
         }
     }
 
@@ -69,7 +69,7 @@ class SentryConfigTest {
             sentryConfig.initializeSentry();
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.init(any()), never());
+            sentryMock.verify(() -> io.sentry.Sentry.init(any(io.sentry.SentryOptions.class)), never());
         }
     }
 }

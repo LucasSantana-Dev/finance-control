@@ -3,6 +3,7 @@ package com.finance_control.unit.shared.monitoring;
 import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.monitoring.AlertingService;
 import com.finance_control.shared.monitoring.MetricsService;
+import com.finance_control.shared.monitoring.SentryService;
 import io.sentry.Sentry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +27,7 @@ import static org.mockito.Mockito.*;
 class AlertingServiceTest {
 
     @Mock
-    private MetricsService metricsService;
+    private SentryService sentryService;
 
     @Mock
     private AppProperties appProperties;
@@ -41,7 +42,7 @@ class AlertingServiceTest {
         when(appProperties.getMonitoring()).thenReturn(monitoringProperties);
         when(monitoringProperties.isEnabled()).thenReturn(true);
 
-        alertingService = new AlertingService(metricsService, appProperties);
+        alertingService = new AlertingService(sentryService, appProperties);
     }
 
     @Test
@@ -101,7 +102,7 @@ class AlertingServiceTest {
 
         try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
             alertingService.alertHighTransactionVolume(transactionCount);
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()));
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
         }
     }
 
@@ -116,7 +117,7 @@ class AlertingServiceTest {
             alertingService.alertHighTransactionVolume(transactionCount);
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()), never());
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)), never());
         }
     }
 
@@ -132,7 +133,7 @@ class AlertingServiceTest {
             alertingService.alertFailedAuthentication(username, reason);
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()));
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
         }
     }
 
@@ -148,7 +149,7 @@ class AlertingServiceTest {
             alertingService.alertSuspiciousActivity(activity, details);
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()));
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
         }
     }
 
@@ -164,7 +165,7 @@ class AlertingServiceTest {
             alertingService.alertDataExportRequest(userId, exportType);
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()));
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
         }
     }
 
@@ -180,7 +181,7 @@ class AlertingServiceTest {
             alertingService.alertCachePerformance(cacheName, hitRate);
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()));
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
         }
     }
 
@@ -196,7 +197,7 @@ class AlertingServiceTest {
             alertingService.alertCachePerformance(cacheName, hitRate);
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()), never());
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)), never());
         }
     }
 
@@ -212,7 +213,7 @@ class AlertingServiceTest {
             alertingService.alertDatabaseSlowQuery(query, executionTime);
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()));
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
         }
     }
 
@@ -228,7 +229,7 @@ class AlertingServiceTest {
             alertingService.alertDatabaseSlowQuery(query, executionTime);
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()), never());
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)), never());
         }
     }
 
@@ -244,7 +245,7 @@ class AlertingServiceTest {
             alertingService.alertExternalApiFailure(apiName, error);
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()));
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
         }
     }
 
@@ -257,7 +258,7 @@ class AlertingServiceTest {
             alertingService.alertFailedAuthentication("test", "reason");
 
             // Then
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()));
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
         }
     }
 
@@ -274,7 +275,7 @@ class AlertingServiceTest {
             alertingService.alertFailedAuthentication("test", "reason");
 
             // Then - Should not throw exception
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()));
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
         }
     }
 
@@ -290,7 +291,7 @@ class AlertingServiceTest {
             alertingService.alertFailedAuthentication("test", "reason");
 
             // Then - Should only capture once (due to duplicate prevention)
-            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any()), atMostOnce());
+            sentryMock.verify(() -> io.sentry.Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)), atMostOnce());
         }
     }
 }
