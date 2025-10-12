@@ -319,6 +319,8 @@ class MonitoringControllerTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> healthCheck = (Map<String, Object>) response.getBody().get("healthCheck");
         assertEquals(false, healthCheck.get("active"));
-        assertTrue(healthCheck.containsKey("error"));
+        assertEquals("ERROR", healthCheck.get("status"));
+        assertTrue(healthCheck.containsKey("message"));
+        assertTrue(((String)healthCheck.get("message")).contains("Health check error"));
     }
 }
