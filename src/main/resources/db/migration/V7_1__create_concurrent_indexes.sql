@@ -38,7 +38,7 @@ ON transactions(user_id, subcategory_id, type, date DESC);
 
 -- Indexes for Brazilian market data queries
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_market_indicators_type_date
-ON market_indicators(indicator_type, date DESC);
+ON market_indicators(indicator_type, reference_date DESC);
 
 -- Note: brazilian_stocks and fii_funds tables are replaced by investments table in V8
 -- These indexes will be created in V8 migration for the unified investments table
@@ -48,6 +48,6 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email_active
 ON users(email)
 WHERE is_active = true;
 
+-- Note: user_profiles table doesn't have is_active column, so we create a simple index
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_profiles_user_id_active
-ON user_profiles(user_id)
-WHERE is_active = true;
+ON user_profiles(user_id);

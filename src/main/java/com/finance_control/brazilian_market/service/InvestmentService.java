@@ -95,7 +95,7 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public Optional<Investment> getInvestmentByTicker(String ticker, User user) {
-        return investmentRepository.findByTickerAndUserIdAndIsActiveTrue(ticker, user.getId());
+        return investmentRepository.findByTickerAndUser_IdAndIsActiveTrue(ticker, user.getId());
     }
 
     /**
@@ -103,7 +103,7 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public List<Investment> getAllInvestments(User user) {
-        return investmentRepository.findByUserIdAndIsActiveTrue(user.getId());
+        return investmentRepository.findByUser_IdAndIsActiveTrue(user.getId());
     }
 
     /**
@@ -111,7 +111,7 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public Page<Investment> getAllInvestments(User user, Pageable pageable) {
-        return investmentRepository.findByUserIdAndIsActiveTrue(user.getId(), pageable);
+        return investmentRepository.findByUser_IdAndIsActiveTrue(user.getId(), pageable);
     }
 
     /**
@@ -119,7 +119,7 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public List<Investment> getInvestmentsByType(User user, Investment.InvestmentType investmentType) {
-        return investmentRepository.findByUserIdAndInvestmentTypeAndIsActiveTrue(user.getId(), investmentType);
+        return investmentRepository.findByUser_IdAndInvestmentTypeAndIsActiveTrue(user.getId(), investmentType);
     }
 
     /**
@@ -127,7 +127,7 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public List<Investment> getInvestmentsByTypeAndSubtype(User user, Investment.InvestmentType investmentType, Investment.InvestmentSubtype investmentSubtype) {
-        return investmentRepository.findByUserIdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(user.getId(), investmentType, investmentSubtype);
+        return investmentRepository.findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(user.getId(), investmentType, investmentSubtype);
     }
 
     /**
@@ -135,7 +135,7 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public List<Investment> getInvestmentsBySector(User user, String sector) {
-        return investmentRepository.findByUserIdAndSectorAndIsActiveTrue(user.getId(), sector);
+        return investmentRepository.findByUser_IdAndSectorAndIsActiveTrue(user.getId(), sector);
     }
 
     /**
@@ -143,7 +143,7 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public List<Investment> getInvestmentsByIndustry(User user, String industry) {
-        return investmentRepository.findByUserIdAndIndustryAndIsActiveTrue(user.getId(), industry);
+        return investmentRepository.findByUser_IdAndIndustryAndIsActiveTrue(user.getId(), industry);
     }
 
     /**
@@ -265,7 +265,7 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public boolean investmentExists(String ticker, User user) {
-        return investmentRepository.existsByTickerAndUserIdAndIsActiveTrue(ticker, user.getId());
+        return investmentRepository.existsByTickerAndUser_IdAndIsActiveTrue(ticker, user.getId());
     }
 
     /**

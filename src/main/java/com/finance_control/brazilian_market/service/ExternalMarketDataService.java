@@ -17,15 +17,18 @@ import java.util.Optional;
  * Uses generic market data providers that can be easily swapped.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class ExternalMarketDataService {
 
-    @Qualifier("brazilianMarketDataProvider")
     private final MarketDataProvider brazilianMarketProvider;
-
-    @Qualifier("usMarketDataProvider")
     private final MarketDataProvider usMarketProvider;
+
+    public ExternalMarketDataService(
+            @Qualifier("brazilianMarketDataProvider") MarketDataProvider brazilianMarketProvider,
+            @Qualifier("usMarketDataProvider") MarketDataProvider usMarketProvider) {
+        this.brazilianMarketProvider = brazilianMarketProvider;
+        this.usMarketProvider = usMarketProvider;
+    }
 
     /**
      * Fetch current market data for an investment from appropriate provider

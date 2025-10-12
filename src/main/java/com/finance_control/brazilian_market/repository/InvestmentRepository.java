@@ -22,27 +22,27 @@ public interface InvestmentRepository extends JpaRepository<Investment, Long> {
     /**
      * Find all investments for a specific user
      */
-    List<Investment> findByUserIdAndIsActiveTrue(Long userId);
+    List<Investment> findByUser_IdAndIsActiveTrue(Long userId);
 
     /**
      * Find all investments for a specific user with pagination
      */
-    Page<Investment> findByUserIdAndIsActiveTrue(Long userId, Pageable pageable);
+    Page<Investment> findByUser_IdAndIsActiveTrue(Long userId, Pageable pageable);
 
     /**
      * Find investment by ticker and user
      */
-    Optional<Investment> findByTickerAndUserIdAndIsActiveTrue(String ticker, Long userId);
+    Optional<Investment> findByTickerAndUser_IdAndIsActiveTrue(String ticker, Long userId);
 
     /**
      * Find investments by type for a specific user
      */
-    List<Investment> findByUserIdAndInvestmentTypeAndIsActiveTrue(Long userId, Investment.InvestmentType investmentType);
+    List<Investment> findByUser_IdAndInvestmentTypeAndIsActiveTrue(Long userId, Investment.InvestmentType investmentType);
 
     /**
      * Find investments by type and subtype for a specific user
      */
-    List<Investment> findByUserIdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(
+    List<Investment> findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(
             Long userId,
             Investment.InvestmentType investmentType,
             Investment.InvestmentSubtype investmentSubtype
@@ -51,42 +51,42 @@ public interface InvestmentRepository extends JpaRepository<Investment, Long> {
     /**
      * Find investments by sector for a specific user
      */
-    List<Investment> findByUserIdAndSectorAndIsActiveTrue(Long userId, String sector);
+    List<Investment> findByUser_IdAndSectorAndIsActiveTrue(Long userId, String sector);
 
     /**
      * Find investments by industry for a specific user
      */
-    List<Investment> findByUserIdAndIndustryAndIsActiveTrue(Long userId, String industry);
+    List<Investment> findByUser_IdAndIndustryAndIsActiveTrue(Long userId, String industry);
 
     /**
      * Find investments that need price updates (last_updated is null or older than specified time)
      */
-    @Query("SELECT i FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND " +
+    @Query("SELECT i FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND " +
            "(i.lastUpdated IS NULL OR i.lastUpdated < :cutoffTime)")
     List<Investment> findInvestmentsNeedingPriceUpdate(@Param("userId") Long userId, @Param("cutoffTime") LocalDateTime cutoffTime);
 
     /**
      * Find all unique sectors for a specific user
      */
-    @Query("SELECT DISTINCT i.sector FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND i.sector IS NOT NULL ORDER BY i.sector")
+    @Query("SELECT DISTINCT i.sector FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND i.sector IS NOT NULL ORDER BY i.sector")
     List<String> findDistinctSectorsByUserId(@Param("userId") Long userId);
 
     /**
      * Find all unique industries for a specific user
      */
-    @Query("SELECT DISTINCT i.industry FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND i.industry IS NOT NULL ORDER BY i.industry")
+    @Query("SELECT DISTINCT i.industry FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND i.industry IS NOT NULL ORDER BY i.industry")
     List<String> findDistinctIndustriesByUserId(@Param("userId") Long userId);
 
     /**
      * Find all unique investment types for a specific user
      */
-    @Query("SELECT DISTINCT i.investmentType FROM Investment i WHERE i.userId = :userId AND i.isActive = true ORDER BY i.investmentType")
+    @Query("SELECT DISTINCT i.investmentType FROM Investment i WHERE i.user.id = :userId AND i.isActive = true ORDER BY i.investmentType")
     List<Investment.InvestmentType> findDistinctInvestmentTypesByUserId(@Param("userId") Long userId);
 
     /**
      * Find all unique investment subtypes for a specific user and investment type
      */
-    @Query("SELECT DISTINCT i.investmentSubtype FROM Investment i WHERE i.userId = :userId AND i.investmentType = :investmentType AND i.isActive = true AND i.investmentSubtype IS NOT NULL ORDER BY i.investmentSubtype")
+    @Query("SELECT DISTINCT i.investmentSubtype FROM Investment i WHERE i.user.id = :userId AND i.investmentType = :investmentType AND i.isActive = true AND i.investmentSubtype IS NOT NULL ORDER BY i.investmentSubtype")
     List<Investment.InvestmentSubtype> findDistinctInvestmentSubtypesByUserIdAndType(
             @Param("userId") Long userId,
             @Param("investmentType") Investment.InvestmentType investmentType
@@ -95,31 +95,31 @@ public interface InvestmentRepository extends JpaRepository<Investment, Long> {
     /**
      * Count investments by type for a specific user
      */
-    @Query("SELECT i.investmentType, COUNT(i) FROM Investment i WHERE i.userId = :userId AND i.isActive = true GROUP BY i.investmentType")
+    @Query("SELECT i.investmentType, COUNT(i) FROM Investment i WHERE i.user.id = :userId AND i.isActive = true GROUP BY i.investmentType")
     List<Object[]> countInvestmentsByType(@Param("userId") Long userId);
 
     /**
      * Find investments with highest dividend yield for a specific user
      */
-    @Query("SELECT i FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND i.dividendYield IS NOT NULL ORDER BY i.dividendYield DESC")
+    @Query("SELECT i FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND i.dividendYield IS NOT NULL ORDER BY i.dividendYield DESC")
     List<Investment> findTopInvestmentsByDividendYield(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * Find investments with highest day change for a specific user
      */
-    @Query("SELECT i FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND i.dayChangePercent IS NOT NULL ORDER BY i.dayChangePercent DESC")
+    @Query("SELECT i FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND i.dayChangePercent IS NOT NULL ORDER BY i.dayChangePercent DESC")
     List<Investment> findTopInvestmentsByDayChange(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * Find investments with lowest day change for a specific user
      */
-    @Query("SELECT i FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND i.dayChangePercent IS NOT NULL ORDER BY i.dayChangePercent ASC")
+    @Query("SELECT i FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND i.dayChangePercent IS NOT NULL ORDER BY i.dayChangePercent ASC")
     List<Investment> findBottomInvestmentsByDayChange(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * Search investments by name or ticker for a specific user
      */
-    @Query("SELECT i FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND " +
+    @Query("SELECT i FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND " +
            "(LOWER(i.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
            "LOWER(i.ticker) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     List<Investment> searchInvestments(@Param("userId") Long userId, @Param("searchTerm") String searchTerm);
@@ -127,29 +127,29 @@ public interface InvestmentRepository extends JpaRepository<Investment, Long> {
     /**
      * Find investments by exchange for a specific user
      */
-    List<Investment> findByUserIdAndExchangeAndIsActiveTrue(Long userId, String exchange);
+    List<Investment> findByUser_IdAndExchangeAndIsActiveTrue(Long userId, String exchange);
 
     /**
      * Check if investment exists by ticker and user
      */
-    boolean existsByTickerAndUserIdAndIsActiveTrue(String ticker, Long userId);
+    boolean existsByTickerAndUser_IdAndIsActiveTrue(String ticker, Long userId);
 
     /**
      * Find investments that haven't been updated recently
      */
-    @Query("SELECT i FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND " +
+    @Query("SELECT i FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND " +
            "(i.lastUpdated IS NULL OR i.lastUpdated < :cutoffTime) ORDER BY i.lastUpdated ASC NULLS FIRST")
     List<Investment> findStaleInvestments(@Param("userId") Long userId, @Param("cutoffTime") LocalDateTime cutoffTime);
 
     /**
      * Get total market value for a specific user
      */
-    @Query("SELECT SUM(i.currentPrice * i.volume) FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND i.currentPrice IS NOT NULL AND i.volume IS NOT NULL")
+    @Query("SELECT SUM(i.currentPrice * i.volume) FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND i.currentPrice IS NOT NULL AND i.volume IS NOT NULL")
     Optional<Double> getTotalMarketValue(@Param("userId") Long userId);
 
     /**
      * Get total market value by investment type for a specific user
      */
-    @Query("SELECT i.investmentType, SUM(i.currentPrice * i.volume) FROM Investment i WHERE i.userId = :userId AND i.isActive = true AND i.currentPrice IS NOT NULL AND i.volume IS NOT NULL GROUP BY i.investmentType")
+    @Query("SELECT i.investmentType, SUM(i.currentPrice * i.volume) FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND i.currentPrice IS NOT NULL AND i.volume IS NOT NULL GROUP BY i.investmentType")
     List<Object[]> getTotalMarketValueByType(@Param("userId") Long userId);
 }
