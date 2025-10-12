@@ -49,32 +49,32 @@ class BrazilianMarketDataServiceTest {
 
     @BeforeEach
     void setUp() {
-        selicIndicator = new MarketIndicator();
-        selicIndicator.setCode("SELIC");
-        selicIndicator.setName("Taxa Selic");
-        selicIndicator.setDescription("Taxa básica de juros da economia brasileira");
-        selicIndicator.setIndicatorType(MarketIndicator.IndicatorType.INTEREST_RATE);
-        selicIndicator.setFrequency(MarketIndicator.Frequency.DAILY);
-        selicIndicator.setCurrentValue(new BigDecimal("13.75"));
-        selicIndicator.setReferenceDate(LocalDate.now());
+        selicIndicator = mock(MarketIndicator.class);
+        lenient().when(selicIndicator.getCode()).thenReturn("SELIC");
+        lenient().when(selicIndicator.getName()).thenReturn("Taxa Selic");
+        lenient().when(selicIndicator.getDescription()).thenReturn("Taxa básica de juros da economia brasileira");
+        lenient().when(selicIndicator.getIndicatorType()).thenReturn(MarketIndicator.IndicatorType.INTEREST_RATE);
+        lenient().when(selicIndicator.getFrequency()).thenReturn(MarketIndicator.Frequency.DAILY);
+        lenient().when(selicIndicator.getCurrentValue()).thenReturn(new BigDecimal("13.75"));
+        lenient().when(selicIndicator.getReferenceDate()).thenReturn(LocalDate.now());
 
-        cdiIndicator = new MarketIndicator();
-        cdiIndicator.setCode("CDI");
-        cdiIndicator.setName("CDI");
-        cdiIndicator.setDescription("Certificado de Depósito Interbancário");
-        cdiIndicator.setIndicatorType(MarketIndicator.IndicatorType.INTEREST_RATE);
-        cdiIndicator.setFrequency(MarketIndicator.Frequency.DAILY);
-        cdiIndicator.setCurrentValue(new BigDecimal("13.65"));
-        cdiIndicator.setReferenceDate(LocalDate.now());
+        cdiIndicator = mock(MarketIndicator.class);
+        lenient().when(cdiIndicator.getCode()).thenReturn("CDI");
+        lenient().when(cdiIndicator.getName()).thenReturn("CDI");
+        lenient().when(cdiIndicator.getDescription()).thenReturn("Certificado de Depósito Interbancário");
+        lenient().when(cdiIndicator.getIndicatorType()).thenReturn(MarketIndicator.IndicatorType.INTEREST_RATE);
+        lenient().when(cdiIndicator.getFrequency()).thenReturn(MarketIndicator.Frequency.DAILY);
+        lenient().when(cdiIndicator.getCurrentValue()).thenReturn(new BigDecimal("13.65"));
+        lenient().when(cdiIndicator.getReferenceDate()).thenReturn(LocalDate.now());
 
-        ipcaIndicator = new MarketIndicator();
-        ipcaIndicator.setCode("IPCA");
-        ipcaIndicator.setName("IPCA");
-        ipcaIndicator.setDescription("Índice Nacional de Preços ao Consumidor Amplo");
-        ipcaIndicator.setIndicatorType(MarketIndicator.IndicatorType.INFLATION);
-        ipcaIndicator.setFrequency(MarketIndicator.Frequency.MONTHLY);
-        ipcaIndicator.setCurrentValue(new BigDecimal("4.62"));
-        ipcaIndicator.setReferenceDate(LocalDate.now());
+        ipcaIndicator = mock(MarketIndicator.class);
+        lenient().when(ipcaIndicator.getCode()).thenReturn("IPCA");
+        lenient().when(ipcaIndicator.getName()).thenReturn("IPCA");
+        lenient().when(ipcaIndicator.getDescription()).thenReturn("Índice Nacional de Preços ao Consumidor Amplo");
+        lenient().when(ipcaIndicator.getIndicatorType()).thenReturn(MarketIndicator.IndicatorType.INFLATION);
+        lenient().when(ipcaIndicator.getFrequency()).thenReturn(MarketIndicator.Frequency.MONTHLY);
+        lenient().when(ipcaIndicator.getCurrentValue()).thenReturn(new BigDecimal("4.62"));
+        lenient().when(ipcaIndicator.getReferenceDate()).thenReturn(LocalDate.now());
     }
 
     @Test

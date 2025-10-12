@@ -3,6 +3,7 @@ package com.finance_control.unit.brazilian_market.controller;
 import com.finance_control.brazilian_market.controller.InvestmentController;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.service.InvestmentService;
+import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.users.model.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,9 @@ class InvestmentControllerTest {
 
     @MockBean
     private InvestmentService investmentService;
+
+    @MockBean
+    private ExternalMarketDataService externalMarketDataService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -401,7 +405,7 @@ class InvestmentControllerTest {
     void getMarketValueByType_ShouldReturnMarketValueByType() throws Exception {
         // Given
         when(investmentService.getMarketValueByType(any(User.class)))
-                .thenReturn(List.of(new Object[]{"STOCK", 2600.0}));
+                .thenReturn(List.<Object[]>of(new Object[]{"STOCK", 2600.0}));
 
         // When & Then
         mockMvc.perform(get("/api/investments/market-value-by-type"))

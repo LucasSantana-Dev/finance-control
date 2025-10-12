@@ -87,7 +87,7 @@ class InvestmentServiceTest {
         assertThat(result.getCreatedAt()).isNotNull();
         assertThat(result.getUpdatedAt()).isNotNull();
 
-        verify(investmentRepository).save(testInvestment);
+        verify(investmentRepository, times(2)).save(any(Investment.class));
         verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
     }
 
@@ -298,7 +298,7 @@ class InvestmentServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getCurrentPrice()).isEqualTo(BigDecimal.valueOf(26.50));
 
-        verify(externalMarketDataService).needsUpdate(testInvestment.getLastUpdated());
+        verify(externalMarketDataService).needsUpdate(null);
         verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
         verify(investmentRepository).save(testInvestment);
     }
@@ -414,7 +414,7 @@ class InvestmentServiceTest {
         investmentService.updateAllMarketData(testUser);
 
         // Then
-        verify(investmentRepository).findInvestmentsNeedingPriceUpdate(1L, any());
+        verify(investmentRepository).findInvestmentsNeedingPriceUpdate(eq(1L), any());
         verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
         verify(investmentRepository).save(testInvestment);
     }

@@ -33,7 +33,6 @@ class ExternalMarketDataServiceTest {
     @Mock
     private MarketDataProvider usMarketProvider;
 
-    @InjectMocks
     private ExternalMarketDataService externalMarketDataService;
 
     private Investment brazilianStock;
@@ -45,6 +44,9 @@ class ExternalMarketDataServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Manually create the service instance with mocked providers
+        externalMarketDataService = new ExternalMarketDataService(brazilianMarketProvider, usMarketProvider);
+
         brazilianStock = new Investment();
         brazilianStock.setTicker("PETR4");
         brazilianStock.setName("Petrobras");

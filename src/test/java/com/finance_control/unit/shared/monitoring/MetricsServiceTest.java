@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -25,7 +26,7 @@ class MetricsServiceTest {
 
     @Mock
     private SentryService sentryService;
-    
+
     private MetricsService metricsService;
 
     @BeforeEach
@@ -63,10 +64,8 @@ class MetricsServiceTest {
     void recordTransactionProcessingTime_WithSlowTransaction_ShouldAddSentryBreadcrumb() {
         Instant startTime = Instant.now().minus(Duration.ofMillis(1500));
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            metricsService.recordTransactionProcessingTime(startTime);
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString()));
-        }
+        metricsService.recordTransactionProcessingTime(startTime);
+        verify(sentryService).addBreadcrumb(anyString(), eq("performance"), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -105,13 +104,11 @@ class MetricsServiceTest {
         // Given
         Instant startTime = Instant.now().minus(Duration.ofMillis(600));
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.recordAuthenticationTime(startTime);
+        // When
+        metricsService.recordAuthenticationTime(startTime);
 
-            // Then
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString()));
-        }
+        // Then
+        verify(sentryService).addBreadcrumb(anyString(), eq("performance"));
     }
 
     @Test
@@ -165,13 +162,11 @@ class MetricsServiceTest {
         // Given
         String errorType = "VALIDATION_ERROR";
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.incrementApiError(errorType);
+        // When
+        metricsService.incrementApiError(errorType);
 
-            // Then
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString()));
-        }
+        // Then
+        verify(sentryService).addBreadcrumb(anyString(), eq("error"), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -192,13 +187,11 @@ class MetricsServiceTest {
         // Given
         Instant startTime = Instant.now().minus(Duration.ofMillis(2500));
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.recordDashboardGenerationTime(startTime);
+        // When
+        metricsService.recordDashboardGenerationTime(startTime);
 
-            // Then
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString()));
-        }
+        // Then
+        verify(sentryService).addBreadcrumb(anyString(), eq("performance"), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -219,13 +212,11 @@ class MetricsServiceTest {
         // Given
         Instant startTime = Instant.now().minus(Duration.ofMillis(3500));
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.recordMarketDataFetchTime(startTime);
+        // When
+        metricsService.recordMarketDataFetchTime(startTime);
 
-            // Then
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString()));
-        }
+        // Then
+        verify(sentryService).addBreadcrumb(anyString(), eq("performance"), any(io.sentry.SentryLevel.class));
     }
 
     @Test
@@ -283,13 +274,11 @@ class MetricsServiceTest {
         double largeAmount = 15000.0;
         String type = "INCOME";
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.recordTransactionAmount(largeAmount, type);
+        // When
+        metricsService.recordTransactionAmount(largeAmount, type);
 
-            // Then
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString()));
-        }
+        // Then
+        verify(sentryService).addBreadcrumb(anyString(), eq("business"));
     }
 
     @Test
@@ -299,13 +288,11 @@ class MetricsServiceTest {
         double progressPercentage = 95.0;
         String goalType = "SAVINGS";
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.recordGoalProgress(progressPercentage, goalType);
+        // When
+        metricsService.recordGoalProgress(progressPercentage, goalType);
 
-            // Then
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString()));
-        }
+        // Then
+        verify(sentryService).addBreadcrumb(anyString(), eq("business"));
     }
 
     @Test
@@ -315,13 +302,11 @@ class MetricsServiceTest {
         String cacheName = "dashboard";
         long largeSize = 1500L;
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.recordCacheSize(cacheName, largeSize);
+        // When
+        metricsService.recordCacheSize(cacheName, largeSize);
 
-            // Then
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString()));
-        }
+        // Then
+        verify(sentryService).addBreadcrumb(anyString(), eq("performance"));
     }
 
     @Test
@@ -329,17 +314,15 @@ class MetricsServiceTest {
     void recordDatabaseConnectionPool_WithHighUtilization_ShouldAddSentryBreadcrumb() {
         // Given
         String poolName = "main";
-        int active = 8;
-        int idle = 2;
+        int active = 9;
+        int idle = 1;
         int total = 10;
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.recordDatabaseConnectionPool(poolName, active, idle, total);
+        // When
+        metricsService.recordDatabaseConnectionPool(poolName, active, idle, total);
 
-            // Then
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString()));
-        }
+        // Then
+        verify(sentryService).addBreadcrumb(anyString(), eq("performance"));
     }
 
     @Test
@@ -349,13 +332,12 @@ class MetricsServiceTest {
         Exception exception = new RuntimeException("Test exception");
         String context = "test_context";
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.captureException(exception, context);
+        // When
+        metricsService.captureException(exception, context);
 
-            // Then
-            sentryMock.verify(() -> Sentry.captureException(any(Exception.class), any(io.sentry.Hint.class)));
-        }
+        // Then
+        verify(sentryService).captureException(exception);
+        verify(sentryService).setTags(any(Map.class));
     }
 
     @Test
@@ -365,13 +347,11 @@ class MetricsServiceTest {
         String message = "Test message";
         io.sentry.SentryLevel level = io.sentry.SentryLevel.INFO;
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.captureMessage(message, level);
+        // When
+        metricsService.captureMessage(message, level);
 
-            // Then
-            sentryMock.verify(() -> Sentry.captureMessage(anyString(), any(io.sentry.SentryLevel.class)));
-        }
+        // Then
+        verify(sentryService).captureMessage(message);
     }
 
     @Test
@@ -381,13 +361,11 @@ class MetricsServiceTest {
         String userId = "123";
         String email = "test@example.com";
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.addUserContext(userId, email);
+        // When
+        metricsService.addUserContext(userId, email);
 
-            // Then
-            sentryMock.verify(() -> Sentry.configureScope(any()));
-        }
+        // Then
+        verify(sentryService).setUser(userId, email);
     }
 
     @Test
@@ -397,12 +375,10 @@ class MetricsServiceTest {
         String message = "Test breadcrumb";
         String category = "test";
 
-        try (MockedStatic<Sentry> sentryMock = Mockito.mockStatic(Sentry.class)) {
-            // When
-            metricsService.addBreadcrumb(message, category);
+        // When
+        metricsService.addBreadcrumb(message, category);
 
-            // Then
-            sentryMock.verify(() -> Sentry.addBreadcrumb(anyString(), anyString()));
-        }
+        // Then
+        verify(sentryService).addBreadcrumb(message, category);
     }
 }

@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,9 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
@@ -60,6 +64,7 @@ class UserServiceTest {
             dto.setPassword("Password123");
             dto.setIsActive(true);
 
+            when(passwordEncoder.encode("Password123")).thenReturn("encodedPassword");
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
             UserDTO result = userService.create(dto);

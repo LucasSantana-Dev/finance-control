@@ -67,6 +67,12 @@ public class DatabaseConfig {
         String port = appProperties.getDatabase().getPort();
         String dbName = appProperties.getDatabase().getName();
 
+        // For H2 databases, use the URL as-is (it already contains all necessary parameters)
+        if (url.startsWith("jdbc:h2:")) {
+            return url;
+        }
+
+        // For PostgreSQL databases, build the URL with sslmode parameter
         // If URL already contains the database name, use it as-is
         if (url.contains("/" + dbName)) {
             return url + "?sslmode=disable";
