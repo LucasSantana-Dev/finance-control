@@ -37,13 +37,11 @@ class TransactionCategoryServiceIntegrationTest extends BaseIntegrationTest {
         testCategory.setName("Test Category");
         testCategory = transactionCategoryRepository.save(testCategory);
 
-        // Set up user context for the service calls
         TestUtils.setupUserContext(1L);
     }
 
     @AfterEach
     void tearDown() {
-        // Clear user context after each test
         TestUtils.clearUserContext();
     }
 

@@ -13,6 +13,8 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -73,6 +75,52 @@ public class TransactionSubcategoryService extends
                 .getContent();
     }
 
+
+    /**
+     * Find subcategories by category ID ordered by usage with pagination.
+     *
+     * @param categoryId the category ID
+     * @param pageable pagination parameters
+     * @return a page of subcategory DTOs ordered by usage
+     */
+    public Page<TransactionSubcategoryDTO> findByCategoryIdOrderByUsage(Long categoryId, Pageable pageable) {
+        ValidationUtils.validateId(categoryId);
+        List<TransactionSubcategoryDTO> allSubcategories = findByCategoryIdOrderByUsage(categoryId);
+        
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), allSubcategories.size());
+        
+        List<TransactionSubcategoryDTO> pageContent = allSubcategories.subList(start, end);
+        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, allSubcategories.size());
+    }
+
+    /**
+     * Find subcategories by category ID with pagination.
+     *
+     * @param categoryId the category ID
+     * @param pageable pagination parameters
+     * @return a page of subcategory DTOs
+     */
+    public Page<TransactionSubcategoryDTO> findByCategoryId(Long categoryId, Pageable pageable) {
+        ValidationUtils.validateId(categoryId);
+        List<TransactionSubcategoryDTO> allSubcategories = findByCategoryId(categoryId);
+        
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), allSubcategories.size());
+        
+        List<TransactionSubcategoryDTO> pageContent = allSubcategories.subList(start, end);
+        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, allSubcategories.size());
+    }
+
+    /**
+     * Get total count of subcategories.
+     *
+     * @return total count
+     */
+    public Long getTotalCount() {
+        return transactionSubcategoryRepository.count();
+    }
+
     /**
      * Find subcategories by category ID ordered by usage.
      *
@@ -86,6 +134,7 @@ public class TransactionSubcategoryService extends
                 .map(this::mapToResponseDTO)
                 .toList();
     }
+
 
     /**
      * Count subcategories by category ID (active only).

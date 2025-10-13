@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -38,4 +39,10 @@ public interface TransactionCategoryRepository extends BaseRepository<Transactio
     default boolean existsByNameIgnoreCaseAndUserId(String name, Long userId) {
         throw new UnsupportedOperationException("Transaction categories are not user-aware. Use existsByNameIgnoreCase instead.");
     }
+
+    @Query("SELECT " +
+           "COUNT(*) as totalCategories, " +
+           "COUNT(CASE WHEN c.id IN (SELECT DISTINCT t.category.id FROM Transaction t) THEN 1 END) as usedCategories " +
+           "FROM TransactionCategory c")
+    Map<String, Object> getUsageStats();
 }

@@ -47,22 +47,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         try {
             String jwt = extractJwtFromRequest(request);
+            logger.debug("Extracted JWT from request: " + (jwt != null ? "YES" : "NO"));
 
             if (StringUtils.hasText(jwt) && jwtUtils.validateToken(jwt)) {
                 Long userId = jwtUtils.getUserIdFromToken(jwt);
+                logger.debug("Extracted user ID from JWT: " + userId);
 
                 if (userId != null) {
                     // Set user context for the current request
                     UserContext.setCurrentUserId(userId);
 
-                    // Set up Spring Security context
                     UserDetails userDetails = userDetailsService.loadUserByUsername(userId.toString());
+                    logger.debug("Loaded user details for ID " + userId + ": " + (userDetails != null ? "SUCCESS" : "FAILED"));
+                    
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    logger.debug("Set authentication in security context for user ID: " + userId);
                 }
+            } else {
+                logger.debug("JWT validation failed or no JWT found");
             }
         } catch (Exception e) {
             logger.error("Could not set user authentication in security context", e);
@@ -78,7 +84,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Extracts the JWT token from the Authorization header.
-     * 
+     *
      * @param request the HTTP request
      * @return the JWT token, or null if not found
      */

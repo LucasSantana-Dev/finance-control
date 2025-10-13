@@ -41,14 +41,6 @@ public class CustomUserDetailsService implements UserDetailsService {
      * @return UserDetails object
      */
     private UserDetails createUserDetails(User user) {
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getId().toString())
-                .password("") // Password is not used for JWT authentication
-                .authorities(Collections.singletonList(new SimpleGrantedAuthority("USER")))
-                .accountExpired(false)
-                .accountLocked(false)
-                .credentialsExpired(false)
-                .disabled(!user.getIsActive())
-                .build();
+        return new CustomUserDetails(user);
     }
 } 

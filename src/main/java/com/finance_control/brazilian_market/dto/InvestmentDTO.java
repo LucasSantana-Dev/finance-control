@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class InvestmentDTO extends BaseDTO {
+public class InvestmentDTO extends BaseDTO<Long> {
 
     @NotBlank(message = "Ticker is required")
     @Size(max = 20, message = "Ticker must not exceed 20 characters")
@@ -146,4 +146,3 @@ public class InvestmentDTO extends BaseDTO {
         return String.format("%s (%s)", name, ticker);
     }
 }
-

@@ -58,4 +58,31 @@ public class TransactionCategoryService extends BaseService<TransactionCategory,
         updateDTO.validateUpdate();
         super.validateUpdateDTO(updateDTO); // This calls the duplicate validation
     }
+
+    /**
+     * Find all active categories.
+     *
+     * @return list of active categories
+     */
+    public java.util.List<TransactionCategoryDTO> findAllActive() {
+        return findAll(null, null, "name", "asc", org.springframework.data.domain.Pageable.unpaged()).getContent();
+    }
+
+    /**
+     * Get total count of categories.
+     *
+     * @return total count
+     */
+    public Long getTotalCount() {
+        return ((TransactionCategoryRepository) repository).count();
+    }
+
+    /**
+     * Get usage statistics for categories.
+     *
+     * @return usage statistics
+     */
+    public java.util.Map<String, Object> getUsageStats() {
+        return ((TransactionCategoryRepository) repository).getUsageStats();
+    }
 }

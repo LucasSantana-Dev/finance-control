@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class MarketIndicatorDTO extends BaseDTO {
+public class MarketIndicatorDTO extends BaseDTO<Long> {
 
     @NotBlank(message = "Indicator code is required")
     private String code;

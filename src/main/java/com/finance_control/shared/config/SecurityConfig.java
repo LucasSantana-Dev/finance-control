@@ -52,7 +52,6 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> {
-                // Configure public endpoints from properties
                 String[] publicEndpoints = appProperties.getSecurity().getPublicEndpoints();
                 if (publicEndpoints != null && publicEndpoints.length > 0) {
                     auth.requestMatchers(publicEndpoints).permitAll();

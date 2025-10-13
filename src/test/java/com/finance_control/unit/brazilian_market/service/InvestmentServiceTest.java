@@ -1,6 +1,7 @@
 package com.finance_control.unit.brazilian_market.service;
 
 import com.finance_control.brazilian_market.client.MarketQuote;
+import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.repository.InvestmentRepository;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
@@ -47,6 +48,7 @@ class InvestmentServiceTest {
 
     private User testUser;
     private Investment testInvestment;
+    private InvestmentDTO testInvestmentDTO;
 
     @BeforeEach
     void setUp() {
@@ -67,6 +69,14 @@ class InvestmentServiceTest {
         testInvestment.setCreatedAt(LocalDateTime.now());
         testInvestment.setUpdatedAt(LocalDateTime.now());
         testInvestment.setUser(testUser);
+
+        testInvestmentDTO = new InvestmentDTO();
+        testInvestmentDTO.setTicker("PETR4");
+        testInvestmentDTO.setName("Petrobras");
+        testInvestmentDTO.setInvestmentType(Investment.InvestmentType.STOCK);
+        testInvestmentDTO.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        testInvestmentDTO.setCurrentPrice(BigDecimal.valueOf(26.00));
+        testInvestmentDTO.setIsActive(true);
     }
 
     @Test
@@ -78,7 +88,7 @@ class InvestmentServiceTest {
                 .thenReturn(Optional.of(createMarketQuote()));
 
         // When
-        Investment result = investmentService.createInvestment(testInvestment, testUser);
+        Investment result = investmentService.createInvestment(testInvestmentDTO, testUser);
 
         // Then
         assertThat(result).isNotNull();
@@ -94,15 +104,15 @@ class InvestmentServiceTest {
     @Test
     void updateInvestment_ShouldUpdateInvestmentSuccessfully() {
         // Given
-        Investment updatedInvestment = new Investment();
-        updatedInvestment.setName("Petrobras Updated");
-        updatedInvestment.setDescription("Updated description");
+        InvestmentDTO updatedInvestmentDTO = new InvestmentDTO();
+        updatedInvestmentDTO.setName("Petrobras Updated");
+        updatedInvestmentDTO.setDescription("Updated description");
 
         when(investmentRepository.findById(1L)).thenReturn(Optional.of(testInvestment));
         when(investmentRepository.save(any(Investment.class))).thenReturn(testInvestment);
 
         // When
-        Investment result = investmentService.updateInvestment(1L, updatedInvestment, testUser);
+        Investment result = investmentService.updateInvestment(1L, updatedInvestmentDTO, testUser);
 
         // Then
         assertThat(result).isNotNull();
@@ -116,11 +126,11 @@ class InvestmentServiceTest {
     @Test
     void updateInvestment_ShouldThrowExceptionWhenInvestmentNotFound() {
         // Given
-        Investment updatedInvestment = new Investment();
+        InvestmentDTO updatedInvestmentDTO = new InvestmentDTO();
         when(investmentRepository.findById(999L)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> investmentService.updateInvestment(999L, updatedInvestment, testUser))
+        assertThatThrownBy(() -> investmentService.updateInvestment(999L, updatedInvestmentDTO, testUser))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Investment not found: 999");
 
@@ -135,11 +145,11 @@ class InvestmentServiceTest {
         otherUser.setId(2L);
         testInvestment.setUser(otherUser);
 
-        Investment updatedInvestment = new Investment();
+        InvestmentDTO updatedInvestmentDTO = new InvestmentDTO();
         when(investmentRepository.findById(1L)).thenReturn(Optional.of(testInvestment));
 
         // When & Then
-        assertThatThrownBy(() -> investmentService.updateInvestment(1L, updatedInvestment, testUser))
+        assertThatThrownBy(() -> investmentService.updateInvestment(1L, updatedInvestmentDTO, testUser))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Investment does not belong to user: 1");
 

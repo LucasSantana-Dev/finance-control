@@ -56,7 +56,6 @@ class HealthCheckServiceTest {
 
     @BeforeEach
     void setUp() throws SQLException {
-        // Setup mocks with lenient stubbing to avoid UnnecessaryStubbingException
         lenient().when(dataSource.getConnection()).thenReturn(connection);
         lenient().when(connection.isValid(anyInt())).thenReturn(true);
         lenient().when(connection.getMetaData()).thenReturn(databaseMetaData);
@@ -71,7 +70,6 @@ class HealthCheckServiceTest {
         lenient().when(redisConnectionFactory.getConnection()).thenReturn(redisConnection);
         lenient().when(redisConnection.ping()).thenReturn("PONG");
 
-        // Setup AppProperties
         AppProperties.Redis redisProperties = new AppProperties.Redis();
         redisProperties.setHost("localhost");
         redisProperties.setPort(6379);

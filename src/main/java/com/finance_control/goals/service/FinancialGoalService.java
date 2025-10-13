@@ -238,6 +238,66 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
     }
 
     /**
+     * Get all goal types.
+     *
+     * @return list of distinct goal types
+     */
+    public List<String> getGoalTypes() {
+        return financialGoalRepository.findDistinctGoalTypes();
+    }
+
+    /**
+     * Get status summary for a user.
+     *
+     * @param userId the user ID
+     * @return status summary data
+     */
+    public Map<String, Object> getStatusSummary(Long userId) {
+        return financialGoalRepository.getStatusSummary(userId);
+    }
+
+    /**
+     * Get progress summary for a user.
+     *
+     * @param userId the user ID
+     * @return progress summary data
+     */
+    public Map<String, Object> getProgressSummary(Long userId) {
+        return financialGoalRepository.getProgressSummary(userId);
+    }
+
+    /**
+     * Get deadline alerts for a user.
+     *
+     * @param userId the user ID
+     * @return deadline alerts data
+     */
+    public List<Map<String, Object>> getDeadlineAlerts(Long userId) {
+        java.time.LocalDate alertDate = java.time.LocalDate.now().plusDays(30); // 30 days ahead
+        return financialGoalRepository.getDeadlineAlerts(userId, alertDate);
+    }
+
+    /**
+     * Get completion rate for a user.
+     *
+     * @param userId the user ID
+     * @return completion rate data
+     */
+    public Map<String, Object> getCompletionRate(Long userId) {
+        return financialGoalRepository.getCompletionRate(userId);
+    }
+
+    /**
+     * Get average completion time for a user.
+     *
+     * @param userId the user ID
+     * @return average completion time data
+     */
+    public Map<String, Object> getAverageCompletionTime(Long userId) {
+        return financialGoalRepository.getAverageCompletionTime(userId);
+    }
+
+    /**
      * Complete a financial goal with detailed completion data.
      * 
      * @param id      the ID of the goal to complete

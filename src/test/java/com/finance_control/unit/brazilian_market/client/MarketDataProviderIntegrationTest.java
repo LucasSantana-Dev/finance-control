@@ -56,7 +56,6 @@ class MarketDataProviderIntegrationTest {
         var quote = brazilianProvider.getQuote("VALE3");
 
         // The quote might be empty if the API is not available or the ticker doesn't exist
-        // This test mainly verifies the method doesn't throw exceptions
         assertNotNull(quote);
     }
 
@@ -66,7 +65,6 @@ class MarketDataProviderIntegrationTest {
         var quote = usProvider.getQuote("AAPL");
 
         // The quote might be empty if the API is not available or the ticker doesn't exist
-        // This test mainly verifies the method doesn't throw exceptions
         assertNotNull(quote);
     }
 
@@ -77,7 +75,6 @@ class MarketDataProviderIntegrationTest {
         var quotes = brazilianProvider.getQuotes(tickers);
 
         // The quotes might be empty if the API is not available
-        // This test mainly verifies the method doesn't throw exceptions
         assertNotNull(quotes);
     }
 
@@ -88,7 +85,6 @@ class MarketDataProviderIntegrationTest {
         var quotes = usProvider.getQuotes(tickers);
 
         // The quotes might be empty if the API is not available
-        // This test mainly verifies the method doesn't throw exceptions
         assertNotNull(quotes);
     }
 }

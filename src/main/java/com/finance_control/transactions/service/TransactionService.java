@@ -29,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -328,6 +330,86 @@ public class TransactionService
 
     private TransactionResponsibles getResponsibleById(Long responsibleId) {
         return findEntityById(responsibleRepository, responsibleId, "TransactionResponsible");
+    }
+
+    /**
+     * Get categories by user ID.
+     *
+     * @param userId the user ID
+     * @return list of categories used by the user
+     */
+    public List<TransactionCategory> getCategoriesByUserId(Long userId) {
+        return transactionRepository.findDistinctCategoriesByUserId(userId);
+    }
+
+    /**
+     * Get subcategories by category ID.
+     *
+     * @param categoryId the category ID
+     * @return list of subcategories for the category
+     */
+    public List<TransactionSubcategory> getSubcategoriesByCategoryId(Long categoryId) {
+        return subcategoryRepository.findByCategoryIdAndIsActiveTrueOrderByNameAsc(categoryId);
+    }
+
+    /**
+     * Get all transaction types.
+     *
+     * @return list of distinct transaction types
+     */
+    public List<String> getTransactionTypes() {
+        return transactionRepository.findDistinctTypes();
+    }
+
+    /**
+     * Get all source entities.
+     *
+     * @return list of all source entities
+     */
+    public List<TransactionSourceEntity> getSourceEntities() {
+        return sourceEntityRepository.findAll();
+    }
+
+    /**
+     * Get total amount by user ID.
+     *
+     * @param userId the user ID
+     * @return total amount for the user
+     */
+    public BigDecimal getTotalAmountByUserId(Long userId) {
+        return transactionRepository.getTotalAmountByUserId(userId);
+    }
+
+    /**
+     * Get amount by type for a user.
+     *
+     * @param userId the user ID
+     * @return map of type to total amount
+     */
+    public Map<String, BigDecimal> getAmountByType(Long userId) {
+        return transactionRepository.getAmountByType(userId);
+    }
+
+    /**
+     * Get amount by category for a user.
+     *
+     * @param userId the user ID
+     * @return map of category to total amount
+     */
+    public Map<String, BigDecimal> getAmountByCategory(Long userId) {
+        return transactionRepository.getAmountByCategory(userId);
+    }
+
+    /**
+     * Get monthly summary for a user within date range.
+     *
+     * @param userId the user ID
+     * @param startDate the start date
+     * @param endDate the end date
+     * @return monthly summary data
+     */
+    public Map<String, Object> getMonthlySummary(Long userId, LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.getMonthlySummary(userId, startDate, endDate);
     }
 
     /**

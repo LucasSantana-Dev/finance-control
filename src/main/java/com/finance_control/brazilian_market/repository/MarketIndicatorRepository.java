@@ -1,7 +1,7 @@
 package com.finance_control.brazilian_market.repository;
 
 import com.finance_control.brazilian_market.model.MarketIndicator;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.finance_control.shared.repository.BaseRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,7 +14,7 @@ import org.springframework.data.domain.Pageable;
  * Repository for market indicators and economic data.
  */
 @Repository
-public interface MarketIndicatorRepository extends JpaRepository<MarketIndicator, Long> {
+public interface MarketIndicatorRepository extends BaseRepository<MarketIndicator, Long> {
 
     /**
      * Finds an indicator by code.

@@ -60,8 +60,7 @@ public class AuthService {
         // For now, this is a placeholder implementation
         log.info("Password change requested");
 
-        // This method needs to be implemented with proper security context
-        // to get the current user and validate the current password
+        // TODO: Implement with proper security context to get current user and validate current password
         throw new UnsupportedOperationException("Password change not yet implemented - requires security context integration");
     }
 

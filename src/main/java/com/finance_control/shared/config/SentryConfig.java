@@ -95,7 +95,6 @@ public class SentryConfig {
                 options.setTag("java.version", System.getProperty("java.version"));
                 options.setTag("spring.profiles.active", environment);
 
-                // Configure before send callback for filtering
                 options.setBeforeSend((event, hint) -> {
                     // Filter out health check requests
                     if (event.getRequest() != null &&
@@ -106,7 +105,6 @@ public class SentryConfig {
                     return event;
                 });
 
-                // Configure before breadcrumb callback
                 options.setBeforeBreadcrumb((breadcrumb, hint) -> {
                     // Filter out noisy breadcrumbs
                     if (breadcrumb.getCategory() != null &&

@@ -1,10 +1,12 @@
 package com.finance_control.unit.brazilian_market.controller;
 
-import com.finance_control.brazilian_market.controller.InvestmentController;
+import com.finance_control.unit.brazilian_market.controller.TestInvestmentController;
+import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.users.model.User;
+import com.finance_control.shared.security.CustomUserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +50,7 @@ class InvestmentControllerTest {
     private ExternalMarketDataService externalMarketDataService;
 
     @InjectMocks
-    private InvestmentController investmentController;
+    private TestInvestmentController investmentController;
 
     private ObjectMapper objectMapper;
 
@@ -96,7 +98,7 @@ class InvestmentControllerTest {
     @Test
     void createInvestment_ShouldCreateInvestmentSuccessfully() throws Exception {
         // Given
-        when(investmentService.createInvestment(any(Investment.class), any(User.class)))
+        when(investmentService.createInvestment(any(InvestmentDTO.class), any(User.class)))
                 .thenReturn(testInvestment);
 
         // When & Then
@@ -108,7 +110,7 @@ class InvestmentControllerTest {
                 .andExpect(jsonPath("$.name").value("Petrobras"))
                 .andExpect(jsonPath("$.investmentType").value("STOCK"));
 
-        verify(investmentService).createInvestment(any(Investment.class), any(User.class));
+        verify(investmentService).createInvestment(any(InvestmentDTO.class), any(User.class));
     }
 
     @Test
@@ -123,7 +125,7 @@ class InvestmentControllerTest {
                 .andExpect(status().isConflict());
 
         verify(investmentService).investmentExists("PETR4", any(User.class));
-        verify(investmentService, never()).createInvestment(any(Investment.class), any(User.class));
+        verify(investmentService, never()).createInvestment(any(InvestmentDTO.class), any(User.class));
     }
 
     @Test
@@ -152,7 +154,8 @@ class InvestmentControllerTest {
                 .thenReturn(Optional.of(testInvestment));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/1"))
+        mockMvc.perform(get("/api/investments/1")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ticker").value("PETR4"))
                 .andExpect(jsonPath("$.name").value("Petrobras"));
@@ -177,7 +180,7 @@ class InvestmentControllerTest {
     void updateInvestment_ShouldUpdateInvestmentSuccessfully() throws Exception {
         // Given
         testInvestment.setName("Petrobras Updated");
-        when(investmentService.updateInvestment(eq(1L), any(Investment.class), any(User.class)))
+        when(investmentService.updateInvestment(eq(1L), any(InvestmentDTO.class), any(User.class)))
                 .thenReturn(testInvestment);
 
         // When & Then
@@ -188,7 +191,7 @@ class InvestmentControllerTest {
                 .andExpect(jsonPath("$.ticker").value("PETR4"))
                 .andExpect(jsonPath("$.name").value("Petrobras Updated"));
 
-        verify(investmentService).updateInvestment(eq(1L), any(Investment.class), any(User.class));
+        verify(investmentService).updateInvestment(eq(1L), any(InvestmentDTO.class), any(User.class));
     }
 
     @Test
@@ -261,7 +264,8 @@ class InvestmentControllerTest {
                 .thenReturn(List.of("Energy", "Technology"));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/sectors"))
+        mockMvc.perform(get("/api/investments/sectors")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0]").value("Energy"))
@@ -277,7 +281,8 @@ class InvestmentControllerTest {
                 .thenReturn(List.of("Oil & Gas", "Software"));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/industries"))
+        mockMvc.perform(get("/api/investments/industries")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0]").value("Oil & Gas"))
@@ -293,7 +298,8 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(Investment.InvestmentType.STOCK, Investment.InvestmentType.FII));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/types"))
+        mockMvc.perform(get("/api/investments/types")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0]").value("STOCK"))
@@ -309,7 +315,8 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(Investment.InvestmentSubtype.ORDINARY, Investment.InvestmentSubtype.PREFERRED));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/types/STOCK/subtypes"))
+        mockMvc.perform(get("/api/investments/types/STOCK/subtypes")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0]").value("ORDINARY"))
@@ -379,7 +386,8 @@ class InvestmentControllerTest {
                 .thenReturn(Optional.of(2600.0));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/total-market-value"))
+        mockMvc.perform(get("/api/investments/total-market-value")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").value(2600.0));
 
@@ -393,7 +401,8 @@ class InvestmentControllerTest {
                 .thenReturn(List.<Object[]>of(new Object[]{"STOCK", 2600.0}));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/market-value-by-type"))
+        mockMvc.perform(get("/api/investments/market-value-by-type")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0][0]").value("STOCK"))

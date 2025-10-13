@@ -64,13 +64,11 @@ class TransactionServiceIntegrationTest extends BaseIntegrationTest {
         testResponsible.setName("Test Responsible");
         testResponsible = responsibleRepository.save(testResponsible);
 
-        // Set up user context for the service calls
         TestUtils.setupUserContext(testUser.getId());
     }
 
     @AfterEach
     void tearDown() {
-        // Clear user context after each test
         TestUtils.clearUserContext();
     }
 

@@ -52,13 +52,11 @@ class TransactionSubcategoryServiceIntegrationTest extends BaseIntegrationTest {
         testSubcategory.setIsActive(true);
         testSubcategory = transactionSubcategoryRepository.save(testSubcategory);
 
-        // Set up user context for the service calls
         TestUtils.setupUserContext(1L);
     }
 
     @AfterEach
     void tearDown() {
-        // Clear user context after each test
         TestUtils.clearUserContext();
     }
 

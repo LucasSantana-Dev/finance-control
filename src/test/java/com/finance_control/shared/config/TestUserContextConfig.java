@@ -14,7 +14,6 @@ public class TestUserContextConfig {
 
     @PostConstruct
     public void initializeUserContext() {
-        // Configure user context for tests
         UserContext.setCurrentUserId(1L);
     }
-} 
+}

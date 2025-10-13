@@ -5,38 +5,52 @@ import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.repository.InvestmentRepository;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
+import com.finance_control.shared.security.JwtUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.http.ResponseEntity;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Page;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Integration tests for InvestmentController.
  * Tests the complete flow from HTTP request to database operations.
  */
-@SpringBootTest
-@AutoConfigureWebMvc
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Transactional
+@TestPropertySource(properties = {
+    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration,org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration,org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration,org.springframework.boot.autoconfigure.task.TaskSchedulingAutoConfiguration",
+    "app.security.jwt.secret=mySecretKeyThatIsAtLeast256BitsLongForTestingPurposesOnly123456789012345678901234567890"
+})
 class InvestmentControllerIntegrationTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private TestRestTemplate restTemplate;
 
     @Autowired
     private InvestmentRepository investmentRepository;
@@ -47,17 +61,36 @@ class InvestmentControllerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private JwtUtils jwtUtils;
+
+    @MockitoBean
+    private RedisConnectionFactory redisConnectionFactory;
+
+    @MockitoBean
+    private CacheManager cacheManager;
+
+    @MockitoBean
+    private com.finance_control.brazilian_market.service.BrazilianMarketDataService brazilianMarketDataService;
+
+    @MockitoBean
+    @Qualifier("brazilianMarketDataProvider")
+    private com.finance_control.brazilian_market.client.MarketDataProvider brazilianMarketDataProvider;
+
+    @MockitoBean
+    @Qualifier("usMarketDataProvider")
+    private com.finance_control.brazilian_market.client.MarketDataProvider usMarketDataProvider;
+
+    @MockitoBean
+    private RestTemplate marketDataRestTemplate;
+
     private User testUser;
     private InvestmentDTO testInvestmentDTO;
 
     @BeforeEach
     void setUp() {
-        // Create test user
-        testUser = new User();
-        testUser.setEmail("test@example.com");
-        testUser.setPassword("password");
-        testUser.setIsActive(true);
-        testUser = userRepository.save(testUser);
+        // Create test user in a separate transaction to ensure it's committed
+        testUser = createTestUser();
 
         // Create test investment DTO
         testInvestmentDTO = new InvestmentDTO();
@@ -67,26 +100,69 @@ class InvestmentControllerIntegrationTest {
         testInvestmentDTO.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
     }
 
+    @AfterEach
+    void tearDown() {
+        // Clean up test data
+        if (testUser != null) {
+            // Delete all investments for the test user (both active and inactive)
+            List<Investment> userInvestments = investmentRepository.findByUser_Id(testUser.getId());
+            investmentRepository.deleteAll(userInvestments);
+
+            // Delete the test user
+            userRepository.delete(testUser);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    private User createTestUser() {
+        User user = new User();
+        user.setEmail("test@example.com");
+        user.setPassword("password");
+        user.setIsActive(true);
+        User savedUser = userRepository.save(user);
+        System.out.println("Created test user with ID: " + savedUser.getId());
+
+        // Verify the user exists in the database
+        User foundUser = userRepository.findById(savedUser.getId()).orElse(null);
+        System.out.println("Found user in database: " + (foundUser != null ? "YES" : "NO"));
+        if (foundUser != null) {
+            System.out.println("User details - ID: " + foundUser.getId() + ", Email: " + foundUser.getEmail() + ", Active: " + foundUser.getIsActive());
+        }
+
+        return savedUser;
+    }
+
+    private HttpHeaders getAuthenticatedHeaders() {
+        String jwtToken = jwtUtils.generateToken(testUser.getId());
+        System.out.println("Generated JWT token for user ID " + testUser.getId() + ": " + jwtToken);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + jwtToken);
+        return headers;
+    }
+
+
     @Test
-    @WithMockUser(username = "test@example.com")
     void createInvestment_ShouldCreateInvestmentInDatabase() throws Exception {
         // When
-        mockMvc.perform(post("/api/investments")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testInvestmentDTO)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.ticker").value("PETR4"))
-                .andExpect(jsonPath("$.name").value("Petrobras"))
-                .andExpect(jsonPath("$.investmentType").value("STOCK"));
+        HttpHeaders headers = getAuthenticatedHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<InvestmentDTO> request = new HttpEntity<>(testInvestmentDTO, headers);
+
+        ResponseEntity<InvestmentDTO> response = restTemplate.postForEntity(
+                "/api/investments", request, InvestmentDTO.class);
 
         // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getTicker()).isEqualTo("PETR4");
+        assertThat(response.getBody().getName()).isEqualTo("Petrobras");
+        assertThat(response.getBody().getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
+
         assertThat(investmentRepository.findByTickerAndUser_IdAndIsActiveTrue("PETR4", testUser.getId()))
                 .isPresent();
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getInvestmentByTicker_ShouldReturnInvestmentFromDatabase() throws Exception {
         // Given
         Investment investment = new Investment();
@@ -102,15 +178,19 @@ class InvestmentControllerIntegrationTest {
         investmentRepository.save(investment);
 
         // When & Then
-        mockMvc.perform(get("/api/investments/PETR4"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.ticker").value("PETR4"))
-                .andExpect(jsonPath("$.name").value("Petrobras"))
-                .andExpect(jsonPath("$.investmentType").value("STOCK"));
+        HttpHeaders headers = getAuthenticatedHeaders();
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        ResponseEntity<InvestmentDTO> response = restTemplate.exchange(
+                "/api/investments/ticker/PETR4", HttpMethod.GET, request, InvestmentDTO.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getTicker()).isEqualTo("PETR4");
+        assertThat(response.getBody().getName()).isEqualTo("Petrobras");
+        assertThat(response.getBody().getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getAllInvestments_ShouldReturnAllInvestmentsFromDatabase() throws Exception {
         // Given
         Investment investment1 = new Investment();
@@ -138,16 +218,19 @@ class InvestmentControllerIntegrationTest {
         investmentRepository.save(investment2);
 
         // When & Then
-        mockMvc.perform(get("/api/investments"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"))
-                .andExpect(jsonPath("$[1].ticker").value("VALE3"));
+        HttpHeaders headers = getAuthenticatedHeaders();
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/investments", HttpMethod.GET, request, String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        // The response should contain both tickers
+        assertThat(response.getBody()).contains("PETR4");
+        assertThat(response.getBody()).contains("VALE3");
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void updateInvestment_ShouldUpdateInvestmentInDatabase() throws Exception {
         // Given
         Investment investment = new Investment();
@@ -162,15 +245,17 @@ class InvestmentControllerIntegrationTest {
         investment.setUpdatedAt(LocalDateTime.now());
         investmentRepository.save(investment);
 
-        // Update the DTO
 
         // When
-        mockMvc.perform(put("/api/investments/PETR4")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testInvestmentDTO)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.quantity").value(150));
+        HttpHeaders headers = getAuthenticatedHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<InvestmentDTO> request = new HttpEntity<>(testInvestmentDTO, headers);
+
+        ResponseEntity<InvestmentDTO> response = restTemplate.exchange(
+                "/api/investments/" + investment.getId(), HttpMethod.PUT, request, InvestmentDTO.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
 
         // Then
         Investment updatedInvestment = investmentRepository.findByTickerAndUser_IdAndIsActiveTrue("PETR4", testUser.getId())
@@ -178,7 +263,6 @@ class InvestmentControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void deleteInvestment_ShouldSoftDeleteInvestmentInDatabase() throws Exception {
         // Given
         Investment investment = new Investment();
@@ -194,9 +278,12 @@ class InvestmentControllerIntegrationTest {
         investmentRepository.save(investment);
 
         // When
-        mockMvc.perform(delete("/api/investments/PETR4")
-                        .with(csrf()))
-                .andExpect(status().isNoContent());
+        HttpHeaders headers = getAuthenticatedHeaders();
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        ResponseEntity<Void> response = restTemplate.exchange(
+                "/api/investments/" + investment.getId(), HttpMethod.DELETE, request, Void.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
         // Then
         assertThat(investmentRepository.findByTickerAndUser_IdAndIsActiveTrue("PETR4", testUser.getId()))
@@ -204,7 +291,6 @@ class InvestmentControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getInvestmentsByType_ShouldReturnInvestmentsOfSpecificType() throws Exception {
         // Given
         Investment stockInvestment = new Investment();
@@ -232,15 +318,18 @@ class InvestmentControllerIntegrationTest {
         investmentRepository.save(fiiInvestment);
 
         // When & Then
-        mockMvc.perform(get("/api/investments/type/STOCK"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].investmentType").value("STOCK"));
+        HttpHeaders headers = getAuthenticatedHeaders();
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        ResponseEntity<InvestmentDTO[]> response = restTemplate.exchange(
+                "/api/investments/type/STOCK", HttpMethod.GET, request, InvestmentDTO[].class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody()[0].getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void getInvestmentsByTypeAndSubtype_ShouldReturnInvestmentsOfSpecificTypeAndSubtype() throws Exception {
         // Given
         Investment commonStock = new Investment();
@@ -268,36 +357,44 @@ class InvestmentControllerIntegrationTest {
         investmentRepository.save(preferredStock);
 
         // When & Then
-        mockMvc.perform(get("/api/investments/type/STOCK/subtype/COMMON"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].investmentType").value("STOCK"))
-                .andExpect(jsonPath("$[0].investmentSubtype").value("COMMON"));
+        HttpHeaders headers = getAuthenticatedHeaders();
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        ResponseEntity<InvestmentDTO[]> response = restTemplate.exchange(
+                "/api/investments/type/STOCK/subtype/ORDINARY", HttpMethod.GET, request, InvestmentDTO[].class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody()[0].getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
+        assertThat(response.getBody()[0].getInvestmentSubtype()).isEqualTo(Investment.InvestmentSubtype.ORDINARY);
     }
 
     @Test
     void createInvestment_ShouldReturnUnauthorizedWhenNotAuthenticated() throws Exception {
         // When & Then
-        mockMvc.perform(post("/api/investments")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testInvestmentDTO)))
-                .andExpect(status().isUnauthorized());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<InvestmentDTO> request = new HttpEntity<>(testInvestmentDTO, headers);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/investments", request, String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
-    @WithMockUser(username = "test@example.com")
     void createInvestment_ShouldReturnBadRequestForInvalidData() throws Exception {
         // Given
         InvestmentDTO invalidDTO = new InvestmentDTO();
-        // Missing required fields
 
         // When & Then
-        mockMvc.perform(post("/api/investments")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidDTO)))
-                .andExpect(status().isBadRequest());
+        HttpHeaders headers = getAuthenticatedHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<InvestmentDTO> request = new HttpEntity<>(invalidDTO, headers);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/investments", request, String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }

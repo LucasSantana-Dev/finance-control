@@ -1,9 +1,11 @@
 package com.finance_control.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.users.model.User;
+import com.finance_control.shared.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -13,12 +15,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,14 +33,18 @@ import java.util.Optional;
  * Provides endpoints for CRUD operations and market data management.
  */
 @RestController
-@RequestMapping("/api/investments")
+@RequestMapping("/investments")
 @Tag(name = "Investments", description = "Investment management endpoints")
-@RequiredArgsConstructor
 @Slf4j
 public class InvestmentController {
 
     private final InvestmentService investmentService;
     private final ExternalMarketDataService externalMarketDataService;
+
+    public InvestmentController(InvestmentService investmentService, ExternalMarketDataService externalMarketDataService) {
+        this.investmentService = investmentService;
+        this.externalMarketDataService = externalMarketDataService;
+    }
 
     /**
      * Create a new investment
@@ -47,35 +56,156 @@ public class InvestmentController {
             @ApiResponse(responseCode = "400", description = "Invalid investment data"),
             @ApiResponse(responseCode = "409", description = "Investment with this ticker already exists")
     })
-    public ResponseEntity<Investment> createInvestment(
-            @Valid @RequestBody Investment investment,
-            @AuthenticationPrincipal User user) {
+    public ResponseEntity<InvestmentDTO> create(@Valid @RequestBody InvestmentDTO investmentDTO) {
+        log.debug("Creating investment: {} for current user", investmentDTO.getTicker());
+        
+        // Get current user from context
+        Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
+        if (currentUserId == null) {
+            log.error("User context not available");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        User user = new User();
+        user.setId(currentUserId);
 
-        log.debug("Creating investment: {} for user: {}", investment.getTicker(), user.getId());
-
-        if (investmentService.investmentExists(investment.getTicker(), user)) {
+        if (investmentService.investmentExists(investmentDTO.getTicker(), user)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 
-        Investment createdInvestment = investmentService.createInvestment(investment, user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdInvestment);
+        Investment createdInvestment = investmentService.createInvestment(investmentDTO, user);
+        InvestmentDTO responseDTO = investmentService.convertToResponseDTO(createdInvestment);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
     /**
-     * Get all investments for the authenticated user
+     * Get investments with filtering, sorting, pagination, or metadata
      */
     @GetMapping
-    @Operation(summary = "Get all investments", description = "Retrieve all investments for the authenticated user")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Investments retrieved successfully")
-    })
-    public ResponseEntity<Page<Investment>> getAllInvestments(
-            @AuthenticationPrincipal User user,
-            Pageable pageable) {
+    @Operation(summary = "Get investments with filtering",
+               description = "Retrieve investments with flexible filtering, sorting, and pagination options, or metadata")
+    public ResponseEntity<Object> getInvestments(
+            @Parameter(description = "Investment type filter")
+            @RequestParam(required = false) Investment.InvestmentType type,
+            @Parameter(description = "Investment subtype filter")
+            @RequestParam(required = false) Investment.InvestmentSubtype subtype,
+            @Parameter(description = "Sector filter")
+            @RequestParam(required = false) String sector,
+            @Parameter(description = "Industry filter")
+            @RequestParam(required = false) String industry,
+            @Parameter(description = "Exchange filter")
+            @RequestParam(required = false) String exchange,
+            @Parameter(description = "Search term for ticker or name")
+            @RequestParam(required = false) String search,
+            @Parameter(description = "Sort field")
+            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction")
+            @RequestParam(required = false, defaultValue = "desc") String sortDirection,
+            @Parameter(description = "Page number (0-based)")
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @Parameter(description = "Page size")
+            @RequestParam(required = false, defaultValue = "20") int size,
+            @Parameter(description = "Minimum current price filter")
+            @RequestParam(required = false) BigDecimal minPrice,
+            @Parameter(description = "Maximum current price filter")
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "Minimum dividend yield filter")
+            @RequestParam(required = false) BigDecimal minDividendYield,
+            @Parameter(description = "Maximum dividend yield filter")
+            @RequestParam(required = false) BigDecimal maxDividendYield,
+            @Parameter(description = "Type of data to retrieve (metadata types: sectors, industries, types, subtypes, exchanges, top-performers, worst-performers, top-dividend-yield, portfolio-summary)")
+            @RequestParam(required = false) String data,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        log.debug("Getting all investments for user: {}", user.getId());
-        Page<Investment> investments = investmentService.getAllInvestments(user, pageable);
-        return ResponseEntity.ok(investments);
+        User user = userDetails.getUser();
+        log.debug("GET request to retrieve investments with filtering for user: {}", user.getId());
+
+        // If data parameter is provided, return metadata
+        if (data != null && !data.trim().isEmpty()) {
+            return switch (data) {
+                case "sectors" -> ResponseEntity.ok(investmentService.getSectors(user));
+                case "industries" -> ResponseEntity.ok(investmentService.getIndustries(user));
+                case "types" -> ResponseEntity.ok(investmentService.getInvestmentTypes(user));
+                case "subtypes" -> {
+                    if (type == null) {
+                        throw new IllegalArgumentException("Investment type is required for subtypes data");
+                    }
+                    yield ResponseEntity.ok(investmentService.getInvestmentSubtypes(user, type));
+                }
+                case "exchanges" -> ResponseEntity.ok(externalMarketDataService.getSupportedExchanges());
+                case "top-performers" -> {
+                    Pageable pageable = PageRequest.of(page, size);
+                    List<Investment> topPerformers = investmentService.getTopPerformers(user, pageable);
+                    yield ResponseEntity.ok(topPerformers.stream().map(investmentService::convertToResponseDTO).toList());
+                }
+                case "worst-performers" -> {
+                    Pageable pageable = PageRequest.of(page, size);
+                    List<Investment> worstPerformers = investmentService.getWorstPerformers(user, pageable);
+                    yield ResponseEntity.ok(worstPerformers.stream().map(investmentService::convertToResponseDTO).toList());
+                }
+                case "top-dividend-yield" -> {
+                    Pageable pageable = PageRequest.of(page, size);
+                    List<Investment> topDividendYield = investmentService.getTopDividendYield(user, pageable);
+                    yield ResponseEntity.ok(topDividendYield.stream().map(investmentService::convertToResponseDTO).toList());
+                }
+                case "portfolio-summary" -> {
+                    Map<String, Object> summary = Map.of(
+                            "totalMarketValue", investmentService.getTotalMarketValue(user).orElse(0.0),
+                            "marketValueByType", investmentService.getMarketValueByType(user),
+                            "totalInvestments", investmentService.getAllInvestments(user).size()
+                    );
+                    yield ResponseEntity.ok(summary);
+                }
+                default -> throw new IllegalArgumentException("Invalid data type: " + data);
+            };
+        }
+
+        // Create pageable with sorting
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // Apply filters based on parameters
+        List<Investment> investments;
+
+        if (search != null && !search.trim().isEmpty()) {
+            investments = investmentService.searchInvestments(user, search);
+        } else if (type != null && subtype != null) {
+            investments = investmentService.getInvestmentsByTypeAndSubtype(user, type, subtype);
+        } else if (type != null) {
+            investments = investmentService.getInvestmentsByType(user, type);
+        } else if (sector != null && !sector.trim().isEmpty()) {
+            investments = investmentService.getInvestmentsBySector(user, sector);
+        } else if (industry != null && !industry.trim().isEmpty()) {
+            investments = investmentService.getInvestmentsByIndustry(user, industry);
+        } else {
+            investments = investmentService.getAllInvestments(user);
+        }
+
+        // Apply additional filters
+        if (minPrice != null || maxPrice != null || minDividendYield != null || maxDividendYield != null) {
+            investments = investments.stream()
+                    .filter(inv -> minPrice == null || (inv.getCurrentPrice() != null && inv.getCurrentPrice().compareTo(minPrice) >= 0))
+                    .filter(inv -> maxPrice == null || (inv.getCurrentPrice() != null && inv.getCurrentPrice().compareTo(maxPrice) <= 0))
+                    .filter(inv -> minDividendYield == null || (inv.getDividendYield() != null && inv.getDividendYield().compareTo(minDividendYield) >= 0))
+                    .filter(inv -> maxDividendYield == null || (inv.getDividendYield() != null && inv.getDividendYield().compareTo(maxDividendYield) <= 0))
+                    .toList();
+        }
+
+        // Convert to DTOs and create pagination manually
+        List<InvestmentDTO> investmentDTOs = investments.stream()
+                .map(investmentService::convertToResponseDTO)
+                .toList();
+
+        // Apply pagination manually
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), investmentDTOs.size());
+        List<InvestmentDTO> pagedDTOs = investmentDTOs.subList(start, end);
+
+        // Create a custom page response
+        Page<InvestmentDTO> result = new org.springframework.data.domain.PageImpl<>(
+                pagedDTOs, pageable, investmentDTOs.size());
+
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -87,34 +217,24 @@ public class InvestmentController {
             @ApiResponse(responseCode = "200", description = "Investment retrieved successfully"),
             @ApiResponse(responseCode = "404", description = "Investment not found")
     })
-    public ResponseEntity<Investment> getInvestmentById(
-            @Parameter(description = "Investment ID") @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
-
-        log.debug("Getting investment: {} for user: {}", id, user.getId());
+    public ResponseEntity<InvestmentDTO> findById(@PathVariable Long id) {
+        log.debug("Getting investment: {} for current user", id);
+        
+        // Get current user from context
+        Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
+        if (currentUserId == null) {
+            log.error("User context not available");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        User user = new User();
+        user.setId(currentUserId);
+        
         Optional<Investment> investment = investmentService.getInvestmentById(id, user);
-        return investment.map(ResponseEntity::ok)
+        return investment.map(inv -> ResponseEntity.ok(investmentService.convertToResponseDTO(inv)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Get investment by ticker
-     */
-    @GetMapping("/ticker/{ticker}")
-    @Operation(summary = "Get investment by ticker", description = "Retrieve a specific investment by its ticker symbol")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Investment retrieved successfully"),
-            @ApiResponse(responseCode = "404", description = "Investment not found")
-    })
-    public ResponseEntity<Investment> getInvestmentByTicker(
-            @Parameter(description = "Investment ticker symbol") @PathVariable String ticker,
-            @AuthenticationPrincipal User user) {
-
-        log.debug("Getting investment by ticker: {} for user: {}", ticker, user.getId());
-        Optional<Investment> investment = investmentService.getInvestmentByTicker(ticker, user);
-        return investment.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
 
     /**
      * Update an investment
@@ -126,16 +246,18 @@ public class InvestmentController {
             @ApiResponse(responseCode = "404", description = "Investment not found"),
             @ApiResponse(responseCode = "400", description = "Invalid investment data")
     })
-    public ResponseEntity<Investment> updateInvestment(
+    public ResponseEntity<InvestmentDTO> updateInvestment(
             @Parameter(description = "Investment ID") @PathVariable Long id,
-            @Valid @RequestBody Investment investment,
-            @AuthenticationPrincipal User user) {
+            @Valid @RequestBody InvestmentDTO investmentDTO,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
+        User user = userDetails.getUser();
         log.debug("Updating investment: {} for user: {}", id, user.getId());
 
         try {
-            Investment updatedInvestment = investmentService.updateInvestment(id, investment, user);
-            return ResponseEntity.ok(updatedInvestment);
+            Investment updatedInvestment = investmentService.updateInvestment(id, investmentDTO, user);
+            InvestmentDTO responseDTO = investmentService.convertToResponseDTO(updatedInvestment);
+            return ResponseEntity.ok(responseDTO);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
@@ -150,11 +272,18 @@ public class InvestmentController {
             @ApiResponse(responseCode = "204", description = "Investment deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Investment not found")
     })
-    public ResponseEntity<Void> deleteInvestment(
-            @Parameter(description = "Investment ID") @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
-
-        log.debug("Deleting investment: {} for user: {}", id, user.getId());
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        log.debug("Deleting investment: {} for current user", id);
+        
+        // Get current user from context
+        Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
+        if (currentUserId == null) {
+            log.error("User context not available");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        User user = new User();
+        user.setId(currentUserId);
 
         try {
             investmentService.deleteInvestment(id, user);
@@ -164,57 +293,8 @@ public class InvestmentController {
         }
     }
 
-    /**
-     * Get investments by type
-     */
-    @GetMapping("/type/{type}")
-    @Operation(summary = "Get investments by type", description = "Retrieve investments filtered by investment type")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Investments retrieved successfully")
-    })
-    public ResponseEntity<List<Investment>> getInvestmentsByType(
-            @Parameter(description = "Investment type") @PathVariable Investment.InvestmentType type,
-            @AuthenticationPrincipal User user) {
 
-        log.debug("Getting investments by type: {} for user: {}", type, user.getId());
-        List<Investment> investments = investmentService.getInvestmentsByType(user, type);
-        return ResponseEntity.ok(investments);
-    }
 
-    /**
-     * Get investments by type and subtype
-     */
-    @GetMapping("/type/{type}/subtype/{subtype}")
-    @Operation(summary = "Get investments by type and subtype", description = "Retrieve investments filtered by investment type and subtype")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Investments retrieved successfully")
-    })
-    public ResponseEntity<List<Investment>> getInvestmentsByTypeAndSubtype(
-            @Parameter(description = "Investment type") @PathVariable Investment.InvestmentType type,
-            @Parameter(description = "Investment subtype") @PathVariable Investment.InvestmentSubtype subtype,
-            @AuthenticationPrincipal User user) {
-
-        log.debug("Getting investments by type: {} and subtype: {} for user: {}", type, subtype, user.getId());
-        List<Investment> investments = investmentService.getInvestmentsByTypeAndSubtype(user, type, subtype);
-        return ResponseEntity.ok(investments);
-    }
-
-    /**
-     * Search investments
-     */
-    @GetMapping("/search")
-    @Operation(summary = "Search investments", description = "Search investments by name or ticker")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
-    })
-    public ResponseEntity<List<Investment>> searchInvestments(
-            @Parameter(description = "Search term") @RequestParam String q,
-            @AuthenticationPrincipal User user) {
-
-        log.debug("Searching investments with term: {} for user: {}", q, user.getId());
-        List<Investment> investments = investmentService.searchInvestments(user, q);
-        return ResponseEntity.ok(investments);
-    }
 
     /**
      * Update market data for a specific investment
@@ -225,10 +305,11 @@ public class InvestmentController {
             @ApiResponse(responseCode = "200", description = "Market data updated successfully"),
             @ApiResponse(responseCode = "404", description = "Investment not found")
     })
-    public ResponseEntity<Investment> updateMarketData(
+    public ResponseEntity<InvestmentDTO> updateMarketData(
             @Parameter(description = "Investment ID") @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
+        User user = userDetails.getUser();
         log.debug("Updating market data for investment: {} for user: {}", id, user.getId());
 
         Optional<Investment> investmentOpt = investmentService.getInvestmentById(id, user);
@@ -237,7 +318,8 @@ public class InvestmentController {
         }
 
         Investment updatedInvestment = investmentService.updateMarketData(investmentOpt.get());
-        return ResponseEntity.ok(updatedInvestment);
+        InvestmentDTO responseDTO = investmentService.convertToResponseDTO(updatedInvestment);
+        return ResponseEntity.ok(responseDTO);
     }
 
     /**
@@ -248,7 +330,8 @@ public class InvestmentController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Market data update initiated")
     })
-    public ResponseEntity<Map<String, String>> updateAllMarketData(@AuthenticationPrincipal User user) {
+    public ResponseEntity<Map<String, String>> updateAllMarketData(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        User user = userDetails.getUser();
         log.debug("Updating all market data for user: {}", user.getId());
 
         // Run in background to avoid timeout
@@ -257,96 +340,9 @@ public class InvestmentController {
         return ResponseEntity.ok(Map.of("message", "Market data update initiated"));
     }
 
-    /**
-     * Get investment metadata (sectors, industries, types, etc.)
-     */
-    @GetMapping("/metadata")
-    @Operation(summary = "Get investment metadata", description = "Get available sectors, industries, types, and other metadata")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Metadata retrieved successfully")
-    })
-    public ResponseEntity<Map<String, Object>> getMetadata(@AuthenticationPrincipal User user) {
-        log.debug("Getting investment metadata for user: {}", user.getId());
 
-        Map<String, Object> metadata = Map.of(
-                "sectors", investmentService.getSectors(user),
-                "industries", investmentService.getIndustries(user),
-                "investmentTypes", investmentService.getInvestmentTypes(user),
-                "supportedExchanges", externalMarketDataService.getSupportedExchanges(),
-                "supportedCurrencies", externalMarketDataService.getSupportedCurrencies()
-        );
 
-        return ResponseEntity.ok(metadata);
-    }
 
-    /**
-     * Get top performing investments
-     */
-    @GetMapping("/top-performers")
-    @Operation(summary = "Get top performing investments", description = "Get investments with highest day change")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Top performers retrieved successfully")
-    })
-    public ResponseEntity<List<Investment>> getTopPerformers(
-            @AuthenticationPrincipal User user,
-            Pageable pageable) {
 
-        log.debug("Getting top performing investments for user: {}", user.getId());
-        List<Investment> investments = investmentService.getTopPerformers(user, pageable);
-        return ResponseEntity.ok(investments);
-    }
 
-    /**
-     * Get worst performing investments
-     */
-    @GetMapping("/worst-performers")
-    @Operation(summary = "Get worst performing investments", description = "Get investments with lowest day change")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Worst performers retrieved successfully")
-    })
-    public ResponseEntity<List<Investment>> getWorstPerformers(
-            @AuthenticationPrincipal User user,
-            Pageable pageable) {
-
-        log.debug("Getting worst performing investments for user: {}", user.getId());
-        List<Investment> investments = investmentService.getWorstPerformers(user, pageable);
-        return ResponseEntity.ok(investments);
-    }
-
-    /**
-     * Get investments with highest dividend yield
-     */
-    @GetMapping("/top-dividend-yield")
-    @Operation(summary = "Get top dividend yield investments", description = "Get investments with highest dividend yield")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Top dividend yield investments retrieved successfully")
-    })
-    public ResponseEntity<List<Investment>> getTopDividendYield(
-            @AuthenticationPrincipal User user,
-            Pageable pageable) {
-
-        log.debug("Getting top dividend yield investments for user: {}", user.getId());
-        List<Investment> investments = investmentService.getTopDividendYield(user, pageable);
-        return ResponseEntity.ok(investments);
-    }
-
-    /**
-     * Get portfolio summary
-     */
-    @GetMapping("/portfolio-summary")
-    @Operation(summary = "Get portfolio summary", description = "Get portfolio summary with total market value and breakdown by type")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Portfolio summary retrieved successfully")
-    })
-    public ResponseEntity<Map<String, Object>> getPortfolioSummary(@AuthenticationPrincipal User user) {
-        log.debug("Getting portfolio summary for user: {}", user.getId());
-
-        Map<String, Object> summary = Map.of(
-                "totalMarketValue", investmentService.getTotalMarketValue(user).orElse(0.0),
-                "marketValueByType", investmentService.getMarketValueByType(user),
-                "totalInvestments", investmentService.getAllInvestments(user).size()
-        );
-
-        return ResponseEntity.ok(summary);
-    }
 }

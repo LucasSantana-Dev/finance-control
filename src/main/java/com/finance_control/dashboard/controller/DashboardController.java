@@ -94,4 +94,47 @@ public class DashboardController {
         FinancialMetricsDTO metrics = dashboardService.getFinancialMetrics(startOfYear, endOfYear);
         return ResponseEntity.ok(metrics);
     }
+
+    @GetMapping
+    @Operation(summary = "Get dashboard data with filtering",
+               description = "Retrieve dashboard data with flexible filtering and date range options")
+    public ResponseEntity<Object> getDashboardData(
+            @Parameter(description = "Type of dashboard data to retrieve (summary, metrics, spending-categories, monthly-trends, current-month-metrics, year-to-date-metrics)")
+            @RequestParam String data,
+            @Parameter(description = "Start date (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @Parameter(description = "End date (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @Parameter(description = "Number of items to return (for lists)")
+            @RequestParam(required = false, defaultValue = "10") int limit,
+            @Parameter(description = "Number of months for trends")
+            @RequestParam(required = false, defaultValue = "12") int months) {
+
+        log.debug("GET request to retrieve dashboard data: {}", data);
+
+        return switch (data) {
+            case "summary" -> ResponseEntity.ok(dashboardService.getDashboardSummary());
+            case "metrics" -> {
+                if (startDate == null || endDate == null) {
+                    throw new IllegalArgumentException("Start date and end date are required for metrics data");
+                }
+                yield ResponseEntity.ok(dashboardService.getFinancialMetrics(startDate, endDate));
+            }
+            case "spending-categories" -> ResponseEntity.ok(dashboardService.getTopSpendingCategories(
+                    com.finance_control.shared.context.UserContext.getCurrentUserId(), limit));
+            case "monthly-trends" -> ResponseEntity.ok(dashboardService.getMonthlyTrends(
+                    com.finance_control.shared.context.UserContext.getCurrentUserId(), months));
+            case "current-month-metrics" -> {
+                LocalDate startOfMonth = java.time.YearMonth.now().atDay(1);
+                LocalDate endOfMonth = java.time.YearMonth.now().atEndOfMonth();
+                yield ResponseEntity.ok(dashboardService.getFinancialMetrics(startOfMonth, endOfMonth));
+            }
+            case "year-to-date-metrics" -> {
+                LocalDate startOfYear = java.time.YearMonth.now().atDay(1).withDayOfYear(1);
+                LocalDate endOfYear = java.time.YearMonth.now().atEndOfMonth().withDayOfYear(365);
+                yield ResponseEntity.ok(dashboardService.getFinancialMetrics(startOfYear, endOfYear));
+            }
+            default -> throw new IllegalArgumentException("Invalid data type: " + data);
+        };
+    }
 }

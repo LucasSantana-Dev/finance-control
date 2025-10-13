@@ -1,7 +1,9 @@
 package com.finance_control.brazilian_market.service;
 
+import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.repository.InvestmentRepository;
+import com.finance_control.shared.service.BaseService;
 import com.finance_control.users.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,26 +21,87 @@ import java.util.Optional;
  * Handles CRUD operations and market data updates for the unified investments table.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 @Transactional
-public class InvestmentService {
+public class InvestmentService extends BaseService<Investment, Long, InvestmentDTO> {
 
     private final InvestmentRepository investmentRepository;
     private final ExternalMarketDataService externalMarketDataService;
 
+    public InvestmentService(InvestmentRepository investmentRepository, ExternalMarketDataService externalMarketDataService) {
+        super(investmentRepository);
+        this.investmentRepository = investmentRepository;
+        this.externalMarketDataService = externalMarketDataService;
+    }
+
+    @Override
+    protected boolean isUserAware() {
+        return true;
+    }
+
+    @Override
+    protected Investment mapToEntity(InvestmentDTO dto) {
+        return Investment.builder()
+                .ticker(dto.getTicker())
+                .name(dto.getName())
+                .description(dto.getDescription())
+                .investmentType(dto.getInvestmentType())
+                .investmentSubtype(dto.getInvestmentSubtype())
+                .currentPrice(dto.getCurrentPrice())
+                .dayChangePercent(dto.getDayChangePercent())
+                .dividendYield(dto.getDividendYield())
+                .sector(dto.getSector())
+                .industry(dto.getIndustry())
+                .exchange(dto.getExchange())
+                .isActive(dto.getIsActive())
+                .build();
+    }
+
+    @Override
+    protected void updateEntityFromDTO(Investment entity, InvestmentDTO dto) {
+        entity.setName(dto.getName());
+        entity.setDescription(dto.getDescription());
+        entity.setInvestmentType(dto.getInvestmentType());
+        entity.setInvestmentSubtype(dto.getInvestmentSubtype());
+        entity.setSector(dto.getSector());
+        entity.setIndustry(dto.getIndustry());
+        entity.setExchange(dto.getExchange());
+        entity.setIsActive(dto.getIsActive());
+    }
+
+    @Override
+    protected InvestmentDTO mapToResponseDTO(Investment entity) {
+        InvestmentDTO dto = new InvestmentDTO();
+        dto.setId(entity.getId());
+        dto.setTicker(entity.getTicker());
+        dto.setName(entity.getName());
+        dto.setDescription(entity.getDescription());
+        dto.setInvestmentType(entity.getInvestmentType());
+        dto.setInvestmentSubtype(entity.getInvestmentSubtype());
+        dto.setCurrentPrice(entity.getCurrentPrice());
+        dto.setDayChangePercent(entity.getDayChangePercent());
+        dto.setDividendYield(entity.getDividendYield());
+        dto.setSector(entity.getSector());
+        dto.setIndustry(entity.getIndustry());
+        dto.setExchange(entity.getExchange());
+        dto.setIsActive(entity.getIsActive());
+        dto.setCreatedAt(entity.getCreatedAt());
+        dto.setUpdatedAt(entity.getUpdatedAt());
+        return dto;
+    }
+
+    public InvestmentDTO convertToResponseDTO(Investment entity) {
+        return mapToResponseDTO(entity);
+    }
+
     /**
      * Create a new investment
      */
-    public Investment createInvestment(Investment investment, User user) {
-        log.debug("Creating investment: {} for user: {}", investment.getTicker(), user.getId());
+    public Investment createInvestment(InvestmentDTO investmentDTO, User user) {
+        log.debug("Creating investment: {} for user: {}", investmentDTO.getTicker(), user.getId());
 
-        // Set user
+        Investment investment = mapToEntity(investmentDTO);
         investment.setUser(user);
-
-        // Set timestamps
-        investment.setCreatedAt(LocalDateTime.now());
-        investment.setUpdatedAt(LocalDateTime.now());
 
         // Fetch initial market data
         updateMarketData(investment);
@@ -52,7 +115,7 @@ public class InvestmentService {
     /**
      * Update an existing investment
      */
-    public Investment updateInvestment(Long investmentId, Investment updatedInvestment, User user) {
+    public Investment updateInvestment(Long investmentId, InvestmentDTO updatedInvestmentDTO, User user) {
         log.debug("Updating investment: {} for user: {}", investmentId, user.getId());
 
         Investment existingInvestment = investmentRepository.findById(investmentId)
@@ -63,17 +126,8 @@ public class InvestmentService {
             throw new IllegalArgumentException("Investment does not belong to user: " + user.getId());
         }
 
-        // Update fields
-        existingInvestment.setName(updatedInvestment.getName());
-        existingInvestment.setDescription(updatedInvestment.getDescription());
-        existingInvestment.setInvestmentType(updatedInvestment.getInvestmentType());
-        existingInvestment.setInvestmentSubtype(updatedInvestment.getInvestmentSubtype());
-        existingInvestment.setMarketSegment(updatedInvestment.getMarketSegment());
-        existingInvestment.setSector(updatedInvestment.getSector());
-        existingInvestment.setIndustry(updatedInvestment.getIndustry());
-        existingInvestment.setExchange(updatedInvestment.getExchange());
-        existingInvestment.setCurrency(updatedInvestment.getCurrency());
-        existingInvestment.setUpdatedAt(LocalDateTime.now());
+        // Update fields using the base service method
+        updateEntityFromDTO(existingInvestment, updatedInvestmentDTO);
 
         Investment savedInvestment = investmentRepository.save(existingInvestment);
         log.info("Updated investment: {} for user: {}", savedInvestment.getTicker(), user.getId());

@@ -1,9 +1,9 @@
 package com.finance_control.brazilian_market.repository;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.shared.repository.BaseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,10 +17,15 @@ import java.util.Optional;
  * Provides methods for querying investments by various criteria.
  */
 @Repository
-public interface InvestmentRepository extends JpaRepository<Investment, Long> {
+public interface InvestmentRepository extends BaseRepository<Investment, Long> {
 
     /**
-     * Find all investments for a specific user
+     * Find all investments for a specific user (both active and inactive)
+     */
+    List<Investment> findByUser_Id(Long userId);
+
+    /**
+     * Find all active investments for a specific user
      */
     List<Investment> findByUser_IdAndIsActiveTrue(Long userId);
 

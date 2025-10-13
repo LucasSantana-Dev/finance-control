@@ -233,7 +233,6 @@ class AlertingServiceTest {
     @Test
     @DisplayName("Should map severity levels correctly")
     void mapSeverityToSentryLevel_ShouldMapCorrectly() {
-        // This tests the private method indirectly through alert triggering
         // When
         alertingService.alertFailedAuthentication("test", "reason");
 

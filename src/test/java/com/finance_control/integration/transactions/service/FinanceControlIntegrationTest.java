@@ -62,7 +62,6 @@ class FinanceControlIntegrationTest extends BaseIntegrationTest {
         otherUser.setIsActive(true);
         otherUser = userRepository.save(otherUser);
 
-        // Configure UserContext for this test
         UserContext.setCurrentUserId(testUser.getId());
 
         // Create TransactionSourceEntity with expected names for testUser
