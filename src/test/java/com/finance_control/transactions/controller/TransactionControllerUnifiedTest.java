@@ -1,20 +1,24 @@
 package com.finance_control.transactions.controller;
 
 import com.finance_control.shared.enums.TransactionType;
+import com.finance_control.shared.exception.GlobalExceptionHandler;
 import com.finance_control.transactions.dto.TransactionDTO;
 import com.finance_control.transactions.service.TransactionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,16 +31,17 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(TransactionController.class)
+@ExtendWith(MockitoExtension.class)
 class TransactionControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Mock
     private TransactionService transactionService;
 
-    @Autowired
+    @InjectMocks
+    private TransactionController transactionController;
+
     private ObjectMapper objectMapper;
 
     private TransactionDTO sampleTransaction;
@@ -44,6 +49,14 @@ class TransactionControllerTest {
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
+        
+        // Set up MockMvc with standalone setup, PageableHandlerMethodArgumentResolver, and GlobalExceptionHandler
+        mockMvc = MockMvcBuilders.standaloneSetup(transactionController)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
         sampleTransaction = new TransactionDTO();
         sampleTransaction.setId(1L);
         sampleTransaction.setType(TransactionType.EXPENSE);
@@ -58,10 +71,10 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithValidParameters_ShouldReturnOk() throws Exception {
-        when(transactionService.findAll(anyString(), anyString(), anyString(), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("type", "EXPENSE")
                 .param("sortBy", "createdAt")
@@ -81,10 +94,10 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithSearchParameter_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(anyString(), anyString(), anyString(), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("search", "grocery")
                 .param("page", "0")
@@ -96,10 +109,10 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithDateRange_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(anyString(), anyString(), anyString(), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("startDate", "2024-01-01")
                 .param("endDate", "2024-12-31")
@@ -112,10 +125,10 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithAmountRange_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(anyString(), anyString(), anyString(), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("minAmount", "50.00")
                 .param("maxAmount", "200.00")
@@ -128,10 +141,10 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithDefaultParameters_ShouldReturnOk() throws Exception {
-        when(transactionService.findAll(anyString(), anyString(), anyString(), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -143,7 +156,7 @@ class TransactionControllerTest {
         when(transactionService.getCategoriesByUserId(anyLong()))
                 .thenReturn(Arrays.asList());
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("data", "categories"))
                 .andExpect(status().isOk())
@@ -155,7 +168,7 @@ class TransactionControllerTest {
         when(transactionService.getSubcategoriesByCategoryId(anyLong()))
                 .thenReturn(Arrays.asList());
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("data", "subcategories")
                 .param("categoryId", "1"))
@@ -165,7 +178,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithSubcategoriesDataWithoutCategoryId_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("data", "subcategories"))
                 .andExpect(status().isBadRequest());
@@ -176,7 +189,7 @@ class TransactionControllerTest {
         when(transactionService.getTransactionTypes())
                 .thenReturn(Arrays.asList("INCOME", "EXPENSE"));
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("data", "types"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -190,7 +203,7 @@ class TransactionControllerTest {
         when(transactionService.getTotalAmountByUserId(anyLong()))
                 .thenReturn(new BigDecimal("1000.00"));
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("data", "total-amount"))
                 .andExpect(status().isOk())
@@ -203,7 +216,7 @@ class TransactionControllerTest {
         when(transactionService.getMonthlySummary(anyLong(), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(java.util.Map.of("2024-01", java.util.Map.of("income", 1000, "expense", 500)));
 
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("data", "monthly-summary")
                 .param("startDate", "2024-01-01")
@@ -214,7 +227,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithMonthlySummaryDataWithoutDates_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("data", "monthly-summary"))
                 .andExpect(status().isBadRequest());
@@ -222,7 +235,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithInvalidData_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transactions")
+        mockMvc.perform(get("/transactions/unified")
                 .param("userId", "1")
                 .param("data", "invalid-type"))
                 .andExpect(status().isBadRequest());
