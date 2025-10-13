@@ -6,11 +6,13 @@ import com.finance_control.dashboard.dto.CategorySpendingDTO;
 import com.finance_control.dashboard.dto.MonthlyTrendDTO;
 import com.finance_control.dashboard.service.DashboardService;
 import com.finance_control.goals.repository.FinancialGoalRepository;
+import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.security.CustomUserDetails;
 import com.finance_control.transactions.repository.TransactionRepository;
 import com.finance_control.users.model.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +65,9 @@ class DashboardControllerTest {
 
     @BeforeEach
     void setUp() {
+        // Set up UserContext for the test thread
+        UserContext.setCurrentUserId(1L);
+        
         // Create a test user for authentication
         User testUser = new User();
         testUser.setId(1L);
@@ -88,6 +93,12 @@ class DashboardControllerTest {
                 .monthlySavings(new BigDecimal("2000.00"))
                 .savingsRate(new BigDecimal("40.0"))
                 .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        // Clear UserContext after each test
+        UserContext.clear();
     }
 
     @Test

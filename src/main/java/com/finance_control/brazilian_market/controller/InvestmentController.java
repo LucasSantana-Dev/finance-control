@@ -58,14 +58,14 @@ public class InvestmentController {
     })
     public ResponseEntity<InvestmentDTO> create(@Valid @RequestBody InvestmentDTO investmentDTO) {
         log.debug("Creating investment: {} for current user", investmentDTO.getTicker());
-        
+
         // Get current user from context
         Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
         if (currentUserId == null) {
             log.error("User context not available");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        
+
         User user = new User();
         user.setId(currentUserId);
 
@@ -219,17 +219,17 @@ public class InvestmentController {
     })
     public ResponseEntity<InvestmentDTO> findById(@PathVariable Long id) {
         log.debug("Getting investment: {} for current user", id);
-        
+
         // Get current user from context
         Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
         if (currentUserId == null) {
             log.error("User context not available");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        
+
         User user = new User();
         user.setId(currentUserId);
-        
+
         Optional<Investment> investment = investmentService.getInvestmentById(id, user);
         return investment.map(inv -> ResponseEntity.ok(investmentService.convertToResponseDTO(inv)))
                 .orElse(ResponseEntity.notFound().build());
@@ -274,14 +274,14 @@ public class InvestmentController {
     })
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.debug("Deleting investment: {} for current user", id);
-        
+
         // Get current user from context
         Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
         if (currentUserId == null) {
             log.error("User context not available");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        
+
         User user = new User();
         user.setId(currentUserId);
 

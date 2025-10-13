@@ -3,12 +3,25 @@ package com.finance_control.goals.controller;
 import com.finance_control.shared.enums.GoalType;
 import com.finance_control.goals.dto.FinancialGoalDTO;
 import com.finance_control.goals.service.FinancialGoalService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finance_control.goals.controller.FinancialGoalController;
+import com.finance_control.goals.repository.FinancialGoalRepository;
+import com.finance_control.transactions.repository.source.TransactionSourceRepository;
+import com.finance_control.users.model.User;
+import com.finance_control.users.repository.UserRepository;
+import com.finance_control.shared.security.CustomUserDetails;
+import com.finance_control.shared.context.UserContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.mockStatic;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -27,8 +40,11 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
-@WebMvcTest(FinancialGoalController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
 class FinancialGoalControllerTest {
 
     @Autowired
@@ -37,14 +53,34 @@ class FinancialGoalControllerTest {
     @MockBean
     private FinancialGoalService financialGoalService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @MockBean
+    private FinancialGoalRepository financialGoalRepository;
+
+    @MockBean
+    private UserRepository userRepository;
+
+    @MockBean
+    private TransactionSourceRepository transactionSourceRepository;
 
     private FinancialGoalDTO sampleGoal;
     private Page<FinancialGoalDTO> samplePage;
+    private CustomUserDetails testUserDetails;
 
     @BeforeEach
     void setUp() {
+        // Set up UserContext for the test thread
+        UserContext.setCurrentUserId(1L);
+        System.out.println("UserContext set to: " + UserContext.getCurrentUserId());
+
+        // Create a test user for authentication
+        User testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setPassword("password");
+        testUser.setIsActive(true);
+
+        testUserDetails = new CustomUserDetails(testUser);
+
         sampleGoal = new FinancialGoalDTO();
         sampleGoal.setId(1L);
         sampleGoal.setName("Test Goal");
@@ -60,19 +96,41 @@ class FinancialGoalControllerTest {
         samplePage = new PageImpl<>(goals, PageRequest.of(0, 20), 1);
     }
 
+    @AfterEach
+    void tearDown() {
+        // Clear UserContext after each test
+        UserContext.clear();
+    }
+
+    private com.finance_control.goals.model.FinancialGoal createTestGoal() {
+        com.finance_control.goals.model.FinancialGoal goal = new com.finance_control.goals.model.FinancialGoal();
+        goal.setId(1L);
+        goal.setName("Test Goal");
+        goal.setDescription("Test Description");
+        goal.setGoalType(GoalType.SAVINGS);
+        goal.setTargetAmount(new BigDecimal("10000.00"));
+        goal.setCurrentAmount(new BigDecimal("5000.00"));
+        goal.setDeadline(LocalDate.now().plusMonths(6));
+        goal.setIsActive(true);
+        goal.setCreatedAt(LocalDateTime.now());
+        return goal;
+    }
+
     @Test
     void getFinancialGoals_WithValidParameters_ShouldReturnOk() throws Exception {
+        // Mock the service to return our sample data
         when(financialGoalService.findAll(anyString(), any(Map.class), anyString(), anyString(), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
                 .param("goalType", "SAVINGS")
                 .param("status", "active")
                 .param("sortBy", "deadline")
                 .param("sortDirection", "asc")
                 .param("page", "0")
-                .param("size", "20"))
+                .param("size", "20")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content").isArray())
@@ -90,11 +148,12 @@ class FinancialGoalControllerTest {
         when(financialGoalService.findAll(anyString(), any(Map.class), anyString(), anyString(), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
                 .param("search", "vacation")
                 .param("page", "0")
-                .param("size", "20"))
+                .param("size", "20")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content").isArray());
@@ -105,12 +164,13 @@ class FinancialGoalControllerTest {
         when(financialGoalService.findAll(anyString(), any(Map.class), anyString(), anyString(), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
                 .param("minTargetAmount", "1000.00")
                 .param("maxTargetAmount", "50000.00")
                 .param("page", "0")
-                .param("size", "20"))
+                .param("size", "20")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content").isArray());
@@ -121,12 +181,13 @@ class FinancialGoalControllerTest {
         when(financialGoalService.findAll(anyString(), any(Map.class), anyString(), anyString(), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
                 .param("deadlineStart", "2024-01-01")
                 .param("deadlineEnd", "2024-12-31")
                 .param("page", "0")
-                .param("size", "20"))
+                .param("size", "20")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content").isArray());
@@ -137,8 +198,9 @@ class FinancialGoalControllerTest {
         when(financialGoalService.findAll(anyString(), any(Map.class), anyString(), anyString(), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/financial-goals")
-                .param("userId", "1"))
+        mockMvc.perform(get("/api/financial-goals/unified")
+                .param("userId", "1")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content").isArray());
@@ -149,8 +211,9 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getGoalTypes())
                 .thenReturn(Arrays.asList("SAVINGS", "INVESTMENT", "DEBT_PAYOFF"));
 
-        mockMvc.perform(get("/financial-goals")
-                .param("data", "types"))
+        mockMvc.perform(get("/api/financial-goals/unified")
+                .param("data", "types")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
@@ -169,9 +232,10 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getStatusSummary(anyLong()))
                 .thenReturn(statusSummary);
 
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
-                .param("data", "status-summary"))
+                .param("data", "status-summary")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.active").value(5))
@@ -189,9 +253,10 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getProgressSummary(anyLong()))
                 .thenReturn(progressSummary);
 
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
-                .param("data", "progress-summary"))
+                .param("data", "progress-summary")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.onTrack").value(3))
@@ -208,9 +273,10 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getDeadlineAlerts(anyLong()))
                 .thenReturn(deadlineAlerts);
 
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
-                .param("data", "deadline-alerts"))
+                .param("data", "deadline-alerts")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
@@ -225,9 +291,10 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getCompletionRate(anyLong()))
                 .thenReturn(completionRate);
 
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
-                .param("data", "completion-rate"))
+                .param("data", "completion-rate")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.completionRate").value(75.5))
@@ -241,9 +308,10 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getAverageCompletionTime(anyLong()))
                 .thenReturn(avgCompletionTime);
 
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
-                .param("data", "average-completion-time"))
+                .param("data", "average-completion-time")
+                .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.averageDays").value(120.5))
@@ -252,9 +320,10 @@ class FinancialGoalControllerTest {
 
     @Test
     void getFinancialGoalsMetadata_WithInvalidData_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/financial-goals")
+        mockMvc.perform(get("/api/financial-goals/unified")
                 .param("userId", "1")
-                .param("data", "invalid-type"))
+                .param("data", "invalid-type")
+                .with(user(testUserDetails)))
                 .andExpect(status().isBadRequest());
     }
 }

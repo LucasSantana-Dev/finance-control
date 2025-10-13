@@ -150,6 +150,22 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
             filters.put("isActive", false);
         }
 
+        // Handle amount range filters
+        if (minTargetAmount != null) {
+            filters.put("minTargetAmount", minTargetAmount);
+        }
+        if (maxTargetAmount != null) {
+            filters.put("maxTargetAmount", maxTargetAmount);
+        }
+
+        // Handle deadline range filters
+        if (deadlineStart != null) {
+            filters.put("deadlineStart", deadlineStart);
+        }
+        if (deadlineEnd != null) {
+            filters.put("deadlineEnd", deadlineEnd);
+        }
+
         // Create pageable with sorting
         Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);

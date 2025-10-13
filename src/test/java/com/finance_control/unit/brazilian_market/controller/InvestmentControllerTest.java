@@ -1,12 +1,10 @@
 package com.finance_control.unit.brazilian_market.controller;
 
-import com.finance_control.unit.brazilian_market.controller.TestInvestmentController;
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.users.model.User;
-import com.finance_control.shared.security.CustomUserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -64,6 +63,7 @@ class InvestmentControllerTest {
         objectMapper.findAndRegisterModules(); // For LocalDateTime support
 
         mockMvc = MockMvcBuilders.standaloneSetup(investmentController)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
 
         // Create test user
@@ -102,7 +102,8 @@ class InvestmentControllerTest {
                 .thenReturn(testInvestment);
 
         // When & Then
-        mockMvc.perform(post("/api/investments")
+        mockMvc.perform(post("/investments")
+                        .param("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testInvestmentDTO)))
                 .andExpect(status().isCreated())
@@ -116,64 +117,65 @@ class InvestmentControllerTest {
     @Test
     void createInvestment_ShouldReturnConflictWhenInvestmentExists() throws Exception {
         // Given
-        when(investmentService.investmentExists("PETR4", any(User.class))).thenReturn(true);
+        when(investmentService.investmentExists(eq("PETR4"), any(User.class))).thenReturn(true);
 
         // When & Then
-        mockMvc.perform(post("/api/investments")
+        mockMvc.perform(post("/investments")
+                        .param("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testInvestmentDTO)))
                 .andExpect(status().isConflict());
 
-        verify(investmentService).investmentExists("PETR4", any(User.class));
+        verify(investmentService).investmentExists(eq("PETR4"), any(User.class));
         verify(investmentService, never()).createInvestment(any(InvestmentDTO.class), any(User.class));
     }
 
     @Test
     void getAllInvestments_ShouldReturnInvestmentsWithPagination() throws Exception {
         // Given
-        Page<Investment> investmentPage = new PageImpl<>(List.of(testInvestment));
-        when(investmentService.getAllInvestments(any(User.class), any(Pageable.class)))
-                .thenReturn(investmentPage);
+        when(investmentService.getAllInvestments(any(User.class)))
+                .thenReturn(List.of(testInvestment));
 
         // When & Then
-        mockMvc.perform(get("/api/investments")
+        mockMvc.perform(get("/investments")
+                        .param("userId", "1")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.content[0].ticker").value("PETR4"))
-                .andExpect(jsonPath("$.totalElements").value(1));
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].ticker").value("PETR4"));
 
-        verify(investmentService).getAllInvestments(any(User.class), any(Pageable.class));
+        verify(investmentService).getAllInvestments(any(User.class));
     }
 
     @Test
     void getInvestmentById_ShouldReturnInvestmentWhenFound() throws Exception {
         // Given
-        when(investmentService.getInvestmentById(1L, any(User.class)))
+        when(investmentService.getInvestmentById(eq(1L), any(User.class)))
                 .thenReturn(Optional.of(testInvestment));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/1")
+        mockMvc.perform(get("/investments/1")
                         .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ticker").value("PETR4"))
                 .andExpect(jsonPath("$.name").value("Petrobras"));
 
-        verify(investmentService).getInvestmentById(1L, any(User.class));
+        verify(investmentService).getInvestmentById(eq(1L), any(User.class));
     }
 
     @Test
     void getInvestmentById_ShouldReturnNotFoundWhenInvestmentNotFound() throws Exception {
         // Given
-        when(investmentService.getInvestmentById(999L, any(User.class)))
+        when(investmentService.getInvestmentById(eq(999L), any(User.class)))
                 .thenReturn(Optional.empty());
 
         // When & Then
-        mockMvc.perform(get("/api/investments/999"))
+        mockMvc.perform(get("/investments/999")
+                        .param("userId", "1"))
                 .andExpect(status().isNotFound());
 
-        verify(investmentService).getInvestmentById(999L, any(User.class));
+        verify(investmentService).getInvestmentById(eq(999L), any(User.class));
     }
 
     @Test
@@ -184,7 +186,8 @@ class InvestmentControllerTest {
                 .thenReturn(testInvestment);
 
         // When & Then
-        mockMvc.perform(put("/api/investments/1")
+        mockMvc.perform(put("/investments/1")
+                        .param("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testInvestmentDTO)))
                 .andExpect(status().isOk())
@@ -197,14 +200,14 @@ class InvestmentControllerTest {
     @Test
     void deleteInvestment_ShouldDeleteInvestmentSuccessfully() throws Exception {
         // Given
-        doNothing().when(investmentService).deleteInvestment(1L, any(User.class));
+        doNothing().when(investmentService).deleteInvestment(eq(1L), any(User.class));
 
         // When & Then
-        mockMvc.perform(delete("/api/investments/1")
-)
+        mockMvc.perform(delete("/investments/1")
+                        .param("userId", "1"))
                 .andExpect(status().isNoContent());
 
-        verify(investmentService).deleteInvestment(1L, any(User.class));
+        verify(investmentService).deleteInvestment(eq(1L), any(User.class));
     }
 
     @Test
@@ -214,7 +217,8 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/type/STOCK"))
+        mockMvc.perform(get("/investments/type/STOCK")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].ticker").value("PETR4"))
@@ -230,7 +234,8 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/type/STOCK/subtype/ORDINARY"))
+        mockMvc.perform(get("/investments/type/STOCK/subtype/ORDINARY")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].ticker").value("PETR4"))
@@ -247,8 +252,9 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/search")
-                        .param("q", "Petrobras"))
+        mockMvc.perform(get("/investments/search")
+                        .param("q", "Petrobras")
+                        .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].ticker").value("PETR4"))
@@ -264,7 +270,7 @@ class InvestmentControllerTest {
                 .thenReturn(List.of("Energy", "Technology"));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/sectors")
+        mockMvc.perform(get("/investments/sectors")
                         .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -281,7 +287,7 @@ class InvestmentControllerTest {
                 .thenReturn(List.of("Oil & Gas", "Software"));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/industries")
+        mockMvc.perform(get("/investments/industries")
                         .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -298,7 +304,7 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(Investment.InvestmentType.STOCK, Investment.InvestmentType.FII));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/types")
+        mockMvc.perform(get("/investments/types")
                         .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -315,7 +321,7 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(Investment.InvestmentSubtype.ORDINARY, Investment.InvestmentSubtype.PREFERRED));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/types/STOCK/subtypes")
+        mockMvc.perform(get("/investments/types/STOCK/subtypes")
                         .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -333,7 +339,10 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/performance/top")
+        mockMvc.perform(get("/investments")
+                        .param("userId", "1")
+                        .param("sort", "performance")
+                        .param("order", "top")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -351,7 +360,10 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/performance/worst")
+        mockMvc.perform(get("/investments")
+                        .param("userId", "1")
+                        .param("sort", "performance")
+                        .param("order", "worst")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -369,7 +381,9 @@ class InvestmentControllerTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/dividend-yield/top")
+        mockMvc.perform(get("/investments")
+                        .param("userId", "1")
+                        .param("sort", "dividend-yield")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -386,7 +400,7 @@ class InvestmentControllerTest {
                 .thenReturn(Optional.of(2600.0));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/total-market-value")
+        mockMvc.perform(get("/investments/total-market-value")
                         .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").value(2600.0));
@@ -401,7 +415,7 @@ class InvestmentControllerTest {
                 .thenReturn(List.<Object[]>of(new Object[]{"STOCK", 2600.0}));
 
         // When & Then
-        mockMvc.perform(get("/api/investments/market-value-by-type")
+        mockMvc.perform(get("/investments/market-value-by-type")
                         .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
