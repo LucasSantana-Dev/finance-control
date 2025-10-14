@@ -2,9 +2,10 @@ package com.finance_control.unit.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
-import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
+import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.users.model.User;
+import com.finance_control.shared.security.CustomUserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,9 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
@@ -25,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -32,10 +31,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 /**
- * Unit tests for InvestmentController.
- * Tests the REST API endpoints for investment management.
+ * Unit tests for unified InvestmentController endpoints.
+ * Tests the unified GET /investments endpoint with filtering, sorting, pagination, and metadata.
  */
 @ExtendWith(MockitoExtension.class)
 class InvestmentControllerTest {
@@ -49,20 +49,21 @@ class InvestmentControllerTest {
     private ExternalMarketDataService externalMarketDataService;
 
     @InjectMocks
-    private TestInvestmentController investmentController;
+    private TestInvestmentController testInvestmentController;
 
     private ObjectMapper objectMapper;
 
     private User testUser;
     private Investment testInvestment;
-    private Investment testInvestmentDTO;
+    private InvestmentDTO testInvestmentDTO;
+    private CustomUserDetails testUserDetails;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        objectMapper.findAndRegisterModules(); // For LocalDateTime support
+        objectMapper.findAndRegisterModules();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(investmentController)
+        mockMvc = MockMvcBuilders.standaloneSetup(testInvestmentController)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
 
@@ -73,6 +74,9 @@ class InvestmentControllerTest {
         testUser.setPassword("password");
         testUser.setIsActive(true);
 
+        // Create test user details
+        testUserDetails = new CustomUserDetails(testUser);
+
         // Create test investment
         testInvestment = new Investment();
         testInvestment.setId(1L);
@@ -81,347 +85,262 @@ class InvestmentControllerTest {
         testInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
         testInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
         testInvestment.setCurrentPrice(BigDecimal.valueOf(26.00));
+        testInvestment.setDayChangePercent(BigDecimal.valueOf(2.5));
+        testInvestment.setDividendYield(BigDecimal.valueOf(8.5));
+        testInvestment.setSector("Energy");
+        testInvestment.setIndustry("Oil & Gas");
         testInvestment.setIsActive(true);
         testInvestment.setUser(testUser);
         testInvestment.setCreatedAt(LocalDateTime.now());
         testInvestment.setUpdatedAt(LocalDateTime.now());
 
         // Create test investment DTO
-        testInvestmentDTO = new Investment();
+        testInvestmentDTO = new InvestmentDTO();
+        testInvestmentDTO.setId(1L);
         testInvestmentDTO.setTicker("PETR4");
         testInvestmentDTO.setName("Petrobras");
         testInvestmentDTO.setInvestmentType(Investment.InvestmentType.STOCK);
         testInvestmentDTO.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
         testInvestmentDTO.setCurrentPrice(BigDecimal.valueOf(26.00));
+        testInvestmentDTO.setDayChangePercent(BigDecimal.valueOf(2.5));
+        testInvestmentDTO.setDividendYield(BigDecimal.valueOf(8.5));
+        testInvestmentDTO.setSector("Energy");
+        testInvestmentDTO.setIndustry("Oil & Gas");
+        testInvestmentDTO.setIsActive(true);
+        testInvestmentDTO.setCreatedAt(LocalDateTime.now());
+        testInvestmentDTO.setUpdatedAt(LocalDateTime.now());
     }
 
     @Test
-    void createInvestment_ShouldCreateInvestmentSuccessfully() throws Exception {
-        // Given
-        when(investmentService.createInvestment(any(InvestmentDTO.class), any(User.class)))
-                .thenReturn(testInvestment);
+    void getInvestments_WithValidParameters_ShouldReturnOk() throws Exception {
+        List<Investment> investments = Arrays.asList(testInvestment);
+        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
 
-        // When & Then
-        mockMvc.perform(post("/investments")
-                        .param("userId", "1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testInvestmentDTO)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.ticker").value("PETR4"))
-                .andExpect(jsonPath("$.name").value("Petrobras"))
-                .andExpect(jsonPath("$.investmentType").value("STOCK"));
-
-        verify(investmentService).createInvestment(any(InvestmentDTO.class), any(User.class));
-    }
-
-    @Test
-    void createInvestment_ShouldReturnConflictWhenInvestmentExists() throws Exception {
-        // Given
-        when(investmentService.investmentExists(eq("PETR4"), any(User.class))).thenReturn(true);
-
-        // When & Then
-        mockMvc.perform(post("/investments")
-                        .param("userId", "1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testInvestmentDTO)))
-                .andExpect(status().isConflict());
-
-        verify(investmentService).investmentExists(eq("PETR4"), any(User.class));
-        verify(investmentService, never()).createInvestment(any(InvestmentDTO.class), any(User.class));
-    }
-
-    @Test
-    void getAllInvestments_ShouldReturnInvestmentsWithPagination() throws Exception {
-        // Given
-        when(investmentService.getAllInvestments(any(User.class)))
-                .thenReturn(List.of(testInvestment));
-
-        // When & Then
         mockMvc.perform(get("/investments")
-                        .param("userId", "1")
-                        .param("page", "0")
-                        .param("size", "10"))
+                .param("userId", "1")
+                .param("page", "0")
+                .param("size", "20"))
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"));
-
-        verify(investmentService).getAllInvestments(any(User.class));
-    }
-
-    @Test
-    void getInvestmentById_ShouldReturnInvestmentWhenFound() throws Exception {
-        // Given
-        when(investmentService.getInvestmentById(eq(1L), any(User.class)))
-                .thenReturn(Optional.of(testInvestment));
-
-        // When & Then
-        mockMvc.perform(get("/investments/1")
-                        .param("userId", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.ticker").value("PETR4"))
-                .andExpect(jsonPath("$.name").value("Petrobras"));
-
-        verify(investmentService).getInvestmentById(eq(1L), any(User.class));
-    }
-
-    @Test
-    void getInvestmentById_ShouldReturnNotFoundWhenInvestmentNotFound() throws Exception {
-        // Given
-        when(investmentService.getInvestmentById(eq(999L), any(User.class)))
-                .thenReturn(Optional.empty());
-
-        // When & Then
-        mockMvc.perform(get("/investments/999")
-                        .param("userId", "1"))
-                .andExpect(status().isNotFound());
-
-        verify(investmentService).getInvestmentById(eq(999L), any(User.class));
-    }
-
-    @Test
-    void updateInvestment_ShouldUpdateInvestmentSuccessfully() throws Exception {
-        // Given
-        testInvestment.setName("Petrobras Updated");
-        when(investmentService.updateInvestment(eq(1L), any(InvestmentDTO.class), any(User.class)))
-                .thenReturn(testInvestment);
-
-        // When & Then
-        mockMvc.perform(put("/investments/1")
-                        .param("userId", "1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testInvestmentDTO)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.ticker").value("PETR4"))
-                .andExpect(jsonPath("$.name").value("Petrobras Updated"));
-
-        verify(investmentService).updateInvestment(eq(1L), any(InvestmentDTO.class), any(User.class));
-    }
-
-    @Test
-    void deleteInvestment_ShouldDeleteInvestmentSuccessfully() throws Exception {
-        // Given
-        doNothing().when(investmentService).deleteInvestment(eq(1L), any(User.class));
-
-        // When & Then
-        mockMvc.perform(delete("/investments/1")
-                        .param("userId", "1"))
-                .andExpect(status().isNoContent());
-
-        verify(investmentService).deleteInvestment(eq(1L), any(User.class));
-    }
-
-    @Test
-    void getInvestmentsByType_ShouldReturnInvestmentsOfSpecificType() throws Exception {
-        // Given
-        when(investmentService.getInvestmentsByType(any(User.class), eq(Investment.InvestmentType.STOCK)))
-                .thenReturn(List.of(testInvestment));
-
-        // When & Then
-        mockMvc.perform(get("/investments/type/STOCK")
-                        .param("userId", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"))
-                .andExpect(jsonPath("$[0].investmentType").value("STOCK"));
-
-        verify(investmentService).getInvestmentsByType(any(User.class), eq(Investment.InvestmentType.STOCK));
-    }
-
-    @Test
-    void getInvestmentsByTypeAndSubtype_ShouldReturnFilteredInvestments() throws Exception {
-        // Given
-        when(investmentService.getInvestmentsByTypeAndSubtype(any(User.class), eq(Investment.InvestmentType.STOCK), eq(Investment.InvestmentSubtype.ORDINARY)))
-                .thenReturn(List.of(testInvestment));
-
-        // When & Then
-        mockMvc.perform(get("/investments/type/STOCK/subtype/ORDINARY")
-                        .param("userId", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"))
-                .andExpect(jsonPath("$[0].investmentType").value("STOCK"))
-                .andExpect(jsonPath("$[0].investmentSubtype").value("ORDINARY"));
-
-        verify(investmentService).getInvestmentsByTypeAndSubtype(any(User.class), eq(Investment.InvestmentType.STOCK), eq(Investment.InvestmentSubtype.ORDINARY));
-    }
-
-    @Test
-    void searchInvestments_ShouldReturnMatchingInvestments() throws Exception {
-        // Given
-        when(investmentService.searchInvestments(any(User.class), eq("Petrobras")))
-                .thenReturn(List.of(testInvestment));
-
-        // When & Then
-        mockMvc.perform(get("/investments/search")
-                        .param("q", "Petrobras")
-                        .param("userId", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].ticker").value("PETR4"))
                 .andExpect(jsonPath("$[0].name").value("Petrobras"));
-
-        verify(investmentService).searchInvestments(any(User.class), eq("Petrobras"));
     }
 
     @Test
-    void getSectors_ShouldReturnUniqueSectors() throws Exception {
-        // Given
-        when(investmentService.getSectors(any(User.class)))
-                .thenReturn(List.of("Energy", "Technology"));
+    void getInvestments_WithTypeFilter_ShouldReturnFilteredResults() throws Exception {
+        List<Investment> investments = Arrays.asList(testInvestment);
+        when(investmentService.getInvestmentsByType(any(User.class), eq(Investment.InvestmentType.STOCK)))
+                .thenReturn(investments);
 
-        // When & Then
-        mockMvc.perform(get("/investments/sectors")
-                        .param("userId", "1"))
+        mockMvc.perform(get("/investments")
+                .param("userId", "1")
+                .param("type", "STOCK"))
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].investmentType").value("STOCK"));
+    }
+
+    @Test
+    void getInvestments_WithSearchTerm_ShouldReturnSearchResults() throws Exception {
+        List<Investment> investments = Arrays.asList(testInvestment);
+        when(investmentService.searchInvestments(any(User.class), eq("PETR4"))).thenReturn(investments);
+
+        mockMvc.perform(get("/investments")
+                .param("userId", "1")
+                .param("search", "PETR4"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].ticker").value("PETR4"));
+    }
+
+    @Test
+    void getInvestments_WithPriceRangeFilter_ShouldReturnFilteredResults() throws Exception {
+        List<Investment> investments = Arrays.asList(testInvestment);
+        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+
+        mockMvc.perform(get("/investments")
+                .param("userId", "1")
+                .param("minPrice", "20.00")
+                .param("maxPrice", "30.00"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].currentPrice").value(26.00));
+    }
+
+    @Test
+    void getInvestments_WithDividendYieldFilter_ShouldReturnFilteredResults() throws Exception {
+        List<Investment> investments = Arrays.asList(testInvestment);
+        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+
+        mockMvc.perform(get("/investments")
+                .param("userId", "1")
+                .param("minDividendYield", "5.0")
+                .param("maxDividendYield", "10.0"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].dividendYield").value(8.5));
+    }
+
+    @Test
+    void getInvestments_WithSectorsMetadata_ShouldReturnSectors() throws Exception {
+        List<String> sectors = Arrays.asList("Energy", "Technology", "Finance");
+        when(investmentService.getSectors(any(User.class))).thenReturn(sectors);
+
+        mockMvc.perform(get("/investments/metadata")
+                .param("userId", "1")
+                .param("data", "sectors"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0]").value("Energy"))
-                .andExpect(jsonPath("$[1]").value("Technology"));
-
-        verify(investmentService).getSectors(any(User.class));
+                .andExpect(jsonPath("$[1]").value("Technology"))
+                .andExpect(jsonPath("$[2]").value("Finance"));
     }
 
     @Test
-    void getIndustries_ShouldReturnUniqueIndustries() throws Exception {
-        // Given
-        when(investmentService.getIndustries(any(User.class)))
-                .thenReturn(List.of("Oil & Gas", "Software"));
+    void getInvestments_WithIndustriesMetadata_ShouldReturnIndustries() throws Exception {
+        List<String> industries = Arrays.asList("Oil & Gas", "Software", "Banking");
+        when(investmentService.getIndustries(any(User.class))).thenReturn(industries);
 
-        // When & Then
-        mockMvc.perform(get("/investments/industries")
-                        .param("userId", "1"))
+        mockMvc.perform(get("/investments/metadata")
+                .param("userId", "1")
+                .param("data", "industries"))
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0]").value("Oil & Gas"))
-                .andExpect(jsonPath("$[1]").value("Software"));
-
-        verify(investmentService).getIndustries(any(User.class));
+                .andExpect(jsonPath("$[1]").value("Software"))
+                .andExpect(jsonPath("$[2]").value("Banking"));
     }
 
     @Test
-    void getInvestmentTypes_ShouldReturnUniqueInvestmentTypes() throws Exception {
-        // Given
-        when(investmentService.getInvestmentTypes(any(User.class)))
-                .thenReturn(List.of(Investment.InvestmentType.STOCK, Investment.InvestmentType.FII));
+    void getInvestments_WithTypesMetadata_ShouldReturnTypes() throws Exception {
+        List<Investment.InvestmentType> types = Arrays.asList(
+                Investment.InvestmentType.STOCK,
+                Investment.InvestmentType.FII,
+                Investment.InvestmentType.BOND
+        );
+        when(investmentService.getInvestmentTypes(any(User.class))).thenReturn(types);
 
-        // When & Then
-        mockMvc.perform(get("/investments/types")
-                        .param("userId", "1"))
+        mockMvc.perform(get("/investments/metadata")
+                .param("userId", "1")
+                .param("data", "types"))
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0]").value("STOCK"))
-                .andExpect(jsonPath("$[1]").value("FII"));
-
-        verify(investmentService).getInvestmentTypes(any(User.class));
+                .andExpect(jsonPath("$[1]").value("FII"))
+                .andExpect(jsonPath("$[2]").value("BOND"));
     }
 
     @Test
-    void getInvestmentSubtypes_ShouldReturnUniqueInvestmentSubtypes() throws Exception {
-        // Given
+    void getInvestments_WithSubtypesMetadata_ShouldReturnSubtypes() throws Exception {
+        List<Investment.InvestmentSubtype> subtypes = Arrays.asList(
+                Investment.InvestmentSubtype.ORDINARY,
+                Investment.InvestmentSubtype.PREFERRED
+        );
         when(investmentService.getInvestmentSubtypes(any(User.class), eq(Investment.InvestmentType.STOCK)))
-                .thenReturn(List.of(Investment.InvestmentSubtype.ORDINARY, Investment.InvestmentSubtype.PREFERRED));
+                .thenReturn(subtypes);
 
-        // When & Then
-        mockMvc.perform(get("/investments/types/STOCK/subtypes")
-                        .param("userId", "1"))
+        mockMvc.perform(get("/investments/metadata")
+                .param("userId", "1")
+                .param("data", "subtypes")
+                .param("type", "STOCK"))
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0]").value("ORDINARY"))
                 .andExpect(jsonPath("$[1]").value("PREFERRED"));
-
-        verify(investmentService).getInvestmentSubtypes(any(User.class), eq(Investment.InvestmentType.STOCK));
     }
 
     @Test
-    void getTopPerformers_ShouldReturnTopPerformingInvestments() throws Exception {
-        // Given
-        Pageable pageable = PageRequest.of(0, 10);
-        when(investmentService.getTopPerformers(any(User.class), any(Pageable.class)))
-                .thenReturn(List.of(testInvestment));
-
-        // When & Then
-        mockMvc.perform(get("/investments")
-                        .param("userId", "1")
-                        .param("sort", "performance")
-                        .param("order", "top")
-                        .param("page", "0")
-                        .param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"));
-
-        verify(investmentService).getTopPerformers(any(User.class), any(Pageable.class));
+    void getInvestments_WithSubtypesMetadataWithoutType_ShouldReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/investments/metadata")
+                .param("userId", "1")
+                .param("data", "subtypes"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    void getWorstPerformers_ShouldReturnWorstPerformingInvestments() throws Exception {
-        // Given
-        Pageable pageable = PageRequest.of(0, 10);
-        when(investmentService.getWorstPerformers(any(User.class), any(Pageable.class)))
-                .thenReturn(List.of(testInvestment));
+    void getInvestments_WithMarketValueByTypeMetadata_ShouldReturnMarketValueByType() throws Exception {
+        List<Object[]> marketValueList = new java.util.ArrayList<>();
+        marketValueList.add(new Object[]{"STOCK", 5000.0});
+        marketValueList.add(new Object[]{"FII", 3000.0});
+        when(investmentService.getMarketValueByType(any(User.class))).thenReturn(marketValueList);
 
-        // When & Then
-        mockMvc.perform(get("/investments")
-                        .param("userId", "1")
-                        .param("sort", "performance")
-                        .param("order", "worst")
-                        .param("page", "0")
-                        .param("size", "10"))
+        mockMvc.perform(get("/investments/metadata")
+                .param("userId", "1")
+                .param("data", "market-value-by-type"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"));
-
-        verify(investmentService).getWorstPerformers(any(User.class), any(Pageable.class));
-    }
-
-    @Test
-    void getTopDividendYield_ShouldReturnTopDividendYieldInvestments() throws Exception {
-        // Given
-        Pageable pageable = PageRequest.of(0, 10);
-        when(investmentService.getTopDividendYield(any(User.class), any(Pageable.class)))
-                .thenReturn(List.of(testInvestment));
-
-        // When & Then
-        mockMvc.perform(get("/investments")
-                        .param("userId", "1")
-                        .param("sort", "dividend-yield")
-                        .param("page", "0")
-                        .param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"));
-
-        verify(investmentService).getTopDividendYield(any(User.class), any(Pageable.class));
-    }
-
-    @Test
-    void getTotalMarketValue_ShouldReturnTotalMarketValue() throws Exception {
-        // Given
-        when(investmentService.getTotalMarketValue(any(User.class)))
-                .thenReturn(Optional.of(2600.0));
-
-        // When & Then
-        mockMvc.perform(get("/investments/total-market-value")
-                        .param("userId", "1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value(2600.0));
-
-        verify(investmentService).getTotalMarketValue(any(User.class));
-    }
-
-    @Test
-    void getMarketValueByType_ShouldReturnMarketValueByType() throws Exception {
-        // Given
-        when(investmentService.getMarketValueByType(any(User.class)))
-                .thenReturn(List.<Object[]>of(new Object[]{"STOCK", 2600.0}));
-
-        // When & Then
-        mockMvc.perform(get("/investments/market-value-by-type")
-                        .param("userId", "1"))
-                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0][0]").value("STOCK"))
-                .andExpect(jsonPath("$[0][1]").value(2600.0));
+                .andExpect(jsonPath("$[0][1]").value(5000.0))
+                .andExpect(jsonPath("$[1][0]").value("FII"))
+                .andExpect(jsonPath("$[1][1]").value(3000.0));
+    }
 
-        verify(investmentService).getMarketValueByType(any(User.class));
+    @Test
+    void getInvestments_WithTotalMarketValueMetadata_ShouldReturnTotalMarketValue() throws Exception {
+        when(investmentService.getTotalMarketValue(any(User.class))).thenReturn(Optional.of(10000.0));
+
+        mockMvc.perform(get("/investments/metadata")
+                .param("userId", "1")
+                .param("data", "total-market-value"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").value(10000.0));
+    }
+
+    @Test
+    void getInvestments_WithInvalidDataType_ShouldReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/investments/metadata")
+                .param("userId", "1")
+                .param("data", "invalid-type"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getInvestments_WithComplexFiltering_ShouldReturnFilteredResults() throws Exception {
+        List<Investment> investments = Arrays.asList(testInvestment);
+        when(investmentService.getInvestmentsByType(any(User.class), eq(Investment.InvestmentType.STOCK)))
+                .thenReturn(investments);
+
+        mockMvc.perform(get("/investments")
+                .param("userId", "1")
+                .param("type", "STOCK")
+                .param("sector", "Energy")
+                .param("minPrice", "20.00")
+                .param("maxPrice", "30.00")
+                .param("minDividendYield", "5.0")
+                .param("sortBy", "currentPrice")
+                .param("sortDirection", "asc")
+                .param("page", "0")
+                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].investmentType").value("STOCK"));
+    }
+
+    @Test
+    void getInvestments_WithPagination_ShouldReturnPagedResults() throws Exception {
+        List<Investment> investments = Arrays.asList(testInvestment);
+        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+
+        mockMvc.perform(get("/investments")
+                .param("userId", "1")
+                .param("page", "0")
+                .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(1));
     }
 }

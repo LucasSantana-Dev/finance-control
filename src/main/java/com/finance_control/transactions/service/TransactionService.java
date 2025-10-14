@@ -150,48 +150,9 @@ public class TransactionService
 
     @Override
     protected void updateEntityFromDTO(Transaction entity, TransactionDTO updateDTO) {
-        // Store responsibilities before mapping to avoid type conflicts
-        List<TransactionResponsiblesDTO> responsibilitiesToUpdate = updateDTO.getResponsibilities();
-
-        // Temporarily clear responsibilities to prevent EntityMapper from copying DTOs
-        updateDTO.setResponsibilities(null);
-
-        // Map common fields using reflection
-        EntityMapper.mapCommonFields(updateDTO, entity);
-
-        // Restore responsibilities to the DTO
-        updateDTO.setResponsibilities(responsibilitiesToUpdate);
-
-        // Update relationships if provided
-        if (updateDTO.getCategoryId() != null) {
-            entity.setCategory(getCategoryById(updateDTO.getCategoryId()));
-        }
-
-        if (updateDTO.getSubcategoryId() != null) {
-            entity.setSubcategory(getSubcategoryById(updateDTO.getSubcategoryId()));
-        } else {
-            entity.setSubcategory(null);
-        }
-
-        if (updateDTO.getSourceEntityId() != null) {
-            entity.setSourceEntity(getSourceEntityById(updateDTO.getSourceEntityId()));
-        } else {
-            entity.setSourceEntity(null);
-        }
-
-        // Clear existing responsibilities and add new ones
-        if (entity.getResponsibilities() == null) {
-            entity.setResponsibilities(new ArrayList<>());
-        } else {
-            entity.getResponsibilities().clear();
-        }
-
-        if (updateDTO.getResponsibilities() != null) {
-            for (TransactionResponsiblesDTO respDTO : updateDTO.getResponsibilities()) {
-                TransactionResponsibles responsible = getResponsibleById(respDTO.getResponsibleId());
-                entity.addResponsible(responsible, respDTO.getPercentage(), respDTO.getNotes());
-            }
-        }
+        updateCommonFields(entity, updateDTO);
+        updateRelationships(entity, updateDTO);
+        updateResponsibilities(entity, updateDTO);
     }
 
     @Override
@@ -511,5 +472,95 @@ public class TransactionService
     public void delete(Long id) {
         super.delete(id);
         metricsService.incrementTransactionDeleted();
+    }
+
+    // Helper methods for updateEntityFromDTO
+
+    /**
+     * Updates common fields using EntityMapper.
+     */
+    private void updateCommonFields(Transaction entity, TransactionDTO updateDTO) {
+        // Store responsibilities before mapping to avoid type conflicts
+        List<TransactionResponsiblesDTO> responsibilitiesToUpdate = updateDTO.getResponsibilities();
+
+        // Temporarily clear responsibilities to prevent EntityMapper from copying DTOs
+        updateDTO.setResponsibilities(null);
+
+        // Map common fields using reflection
+        EntityMapper.mapCommonFields(updateDTO, entity);
+
+        // Restore responsibilities to the DTO
+        updateDTO.setResponsibilities(responsibilitiesToUpdate);
+    }
+
+    /**
+     * Updates entity relationships (category, subcategory, source entity).
+     */
+    private void updateRelationships(Transaction entity, TransactionDTO updateDTO) {
+        updateCategory(entity, updateDTO);
+        updateSubcategory(entity, updateDTO);
+        updateSourceEntity(entity, updateDTO);
+    }
+
+    /**
+     * Updates the category relationship.
+     */
+    private void updateCategory(Transaction entity, TransactionDTO updateDTO) {
+        if (updateDTO.getCategoryId() != null) {
+            entity.setCategory(getCategoryById(updateDTO.getCategoryId()));
+        }
+    }
+
+    /**
+     * Updates the subcategory relationship.
+     */
+    private void updateSubcategory(Transaction entity, TransactionDTO updateDTO) {
+        if (updateDTO.getSubcategoryId() != null) {
+            entity.setSubcategory(getSubcategoryById(updateDTO.getSubcategoryId()));
+        } else {
+            entity.setSubcategory(null);
+        }
+    }
+
+    /**
+     * Updates the source entity relationship.
+     */
+    private void updateSourceEntity(Transaction entity, TransactionDTO updateDTO) {
+        if (updateDTO.getSourceEntityId() != null) {
+            entity.setSourceEntity(getSourceEntityById(updateDTO.getSourceEntityId()));
+        } else {
+            entity.setSourceEntity(null);
+        }
+    }
+
+    /**
+     * Updates the responsibilities list.
+     */
+    private void updateResponsibilities(Transaction entity, TransactionDTO updateDTO) {
+        clearExistingResponsibilities(entity);
+        addNewResponsibilities(entity, updateDTO);
+    }
+
+    /**
+     * Clears existing responsibilities.
+     */
+    private void clearExistingResponsibilities(Transaction entity) {
+        if (entity.getResponsibilities() == null) {
+            entity.setResponsibilities(new ArrayList<>());
+        } else {
+            entity.getResponsibilities().clear();
+        }
+    }
+
+    /**
+     * Adds new responsibilities from DTO.
+     */
+    private void addNewResponsibilities(Transaction entity, TransactionDTO updateDTO) {
+        if (updateDTO.getResponsibilities() != null) {
+            for (TransactionResponsiblesDTO respDTO : updateDTO.getResponsibilities()) {
+                TransactionResponsibles responsible = getResponsibleById(respDTO.getResponsibleId());
+                entity.addResponsible(responsible, respDTO.getPercentage(), respDTO.getNotes());
+            }
+        }
     }
 }

@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 
 @RestController
@@ -52,72 +53,38 @@ public class TransactionSubcategoryController
         return ResponseEntity.ok(count);
     }
 
-    @GetMapping("/unified")
-    @Operation(summary = "Get transaction subcategories with filtering",
-               description = "Retrieve transaction subcategories with flexible filtering, sorting, and pagination options, or metadata")
-    public ResponseEntity<Object> getTransactionSubcategories(
-            @Parameter(description = "Category ID filter")
-            @RequestParam(required = false) Long categoryId,
-            @Parameter(description = "Search term for name")
-            @RequestParam(required = false) String search,
-            @Parameter(description = "Sort field")
-            @RequestParam(required = false, defaultValue = "name") String sortBy,
-            @Parameter(description = "Sort direction")
-            @RequestParam(required = false, defaultValue = "asc") String sortDirection,
-            @Parameter(description = "Page number (0-based)")
-            @RequestParam(required = false, defaultValue = "0") int page,
-            @Parameter(description = "Page size")
-            @RequestParam(required = false, defaultValue = "20") int size,
-            @Parameter(description = "Sort by usage (true/false)")
-            @RequestParam(required = false, defaultValue = "false") boolean sortByUsage,
-            @Parameter(description = "Type of data to retrieve (metadata types: all, by-category, by-category-usage, count, count-by-category)")
-            @RequestParam(required = false) String data) {
+    @GetMapping("/metadata")
+    @Operation(summary = "Get transaction subcategories metadata",
+               description = "Retrieve transaction subcategories metadata (all, by-category, by-category-usage, count, count-by-category)")
+    public ResponseEntity<Object> getMetadata(
+            @RequestParam String data,
+            @RequestParam(required = false) Long categoryId) {
 
-        log.debug("GET request to retrieve transaction subcategories with filtering");
+        log.debug("GET request to retrieve transaction subcategories metadata: {}", data);
 
-        // If data parameter is provided, return metadata
-        if (data != null && !data.trim().isEmpty()) {
-            return switch (data) {
-                case "all" -> ResponseEntity.ok(transactionSubcategoryService.findAllActive());
-                case "by-category" -> {
-                    if (categoryId == null) {
-                        throw new IllegalArgumentException("Category ID is required for by-category data");
-                    }
-                    yield ResponseEntity.ok(transactionSubcategoryService.findByCategoryId(categoryId));
+        return switch (data) {
+            case "all" -> ResponseEntity.ok(transactionSubcategoryService.findAllActive());
+            case "by-category" -> {
+                if (categoryId == null) {
+                    throw new IllegalArgumentException("Category ID is required for by-category data");
                 }
-                case "by-category-usage" -> {
-                    if (categoryId == null) {
-                        throw new IllegalArgumentException("Category ID is required for by-category-usage data");
-                    }
-                    yield ResponseEntity.ok(transactionSubcategoryService.findByCategoryIdOrderByUsage(categoryId));
-                }
-                case "count" -> ResponseEntity.ok(transactionSubcategoryService.getTotalCount());
-                case "count-by-category" -> {
-                    if (categoryId == null) {
-                        throw new IllegalArgumentException("Category ID is required for count-by-category data");
-                    }
-                    yield ResponseEntity.ok(transactionSubcategoryService.countByCategoryId(categoryId));
-                }
-                default -> throw new IllegalArgumentException("Invalid data type: " + data);
-            };
-        }
-
-        // Create pageable with sorting
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        Page<TransactionSubcategoryDTO> subcategories;
-        if (categoryId != null) {
-            if (sortByUsage) {
-                subcategories = transactionSubcategoryService.findByCategoryIdOrderByUsage(categoryId, pageable);
-            } else {
-                subcategories = transactionSubcategoryService.findByCategoryId(categoryId, pageable);
+                yield ResponseEntity.ok(transactionSubcategoryService.findByCategoryId(categoryId));
             }
-        } else {
-            subcategories = transactionSubcategoryService.findAll(search, null, sortBy, sortDirection, pageable);
-        }
-
-        return ResponseEntity.ok(subcategories);
+            case "by-category-usage" -> {
+                if (categoryId == null) {
+                    throw new IllegalArgumentException("Category ID is required for by-category-usage data");
+                }
+                yield ResponseEntity.ok(transactionSubcategoryService.findByCategoryIdOrderByUsage(categoryId));
+            }
+            case "count" -> ResponseEntity.ok(transactionSubcategoryService.getTotalCount());
+            case "count-by-category" -> {
+                if (categoryId == null) {
+                    throw new IllegalArgumentException("Category ID is required for count-by-category data");
+                }
+                yield ResponseEntity.ok(transactionSubcategoryService.countByCategoryId(categoryId));
+            }
+            default -> throw new IllegalArgumentException("Invalid data type: " + data);
+        };
     }
 
 }

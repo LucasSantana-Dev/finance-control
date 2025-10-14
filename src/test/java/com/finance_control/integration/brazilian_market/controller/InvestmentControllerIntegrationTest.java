@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Propagation;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -320,13 +321,18 @@ class InvestmentControllerIntegrationTest {
         // When & Then
         HttpHeaders headers = getAuthenticatedHeaders();
         HttpEntity<Void> request = new HttpEntity<>(headers);
-        ResponseEntity<InvestmentDTO[]> response = restTemplate.exchange(
-                "/api/investments/type/STOCK", HttpMethod.GET, request, InvestmentDTO[].class);
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/investments?type=STOCK", HttpMethod.GET, request, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody()[0].getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
+
+        // Parse the JSON response
+        Map<String, Object> responseMap = objectMapper.readValue(response.getBody(), Map.class);
+        List<Map<String, Object>> content = (List<Map<String, Object>>) responseMap.get("content");
+
+        assertThat(content).hasSize(1);
+        assertThat(content.get(0).get("investmentType")).isEqualTo("STOCK");
     }
 
     @Test
@@ -359,14 +365,19 @@ class InvestmentControllerIntegrationTest {
         // When & Then
         HttpHeaders headers = getAuthenticatedHeaders();
         HttpEntity<Void> request = new HttpEntity<>(headers);
-        ResponseEntity<InvestmentDTO[]> response = restTemplate.exchange(
-                "/api/investments/type/STOCK/subtype/ORDINARY", HttpMethod.GET, request, InvestmentDTO[].class);
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/investments?type=STOCK&subtype=ORDINARY", HttpMethod.GET, request, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody()[0].getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
-        assertThat(response.getBody()[0].getInvestmentSubtype()).isEqualTo(Investment.InvestmentSubtype.ORDINARY);
+
+        // Parse the JSON response
+        Map<String, Object> responseMap = objectMapper.readValue(response.getBody(), Map.class);
+        List<Map<String, Object>> content = (List<Map<String, Object>>) responseMap.get("content");
+
+        assertThat(content).hasSize(1);
+        assertThat(content.get(0).get("investmentType")).isEqualTo("STOCK");
+        assertThat(content.get(0).get("investmentSubtype")).isEqualTo("ORDINARY");
     }
 
     @Test

@@ -665,14 +665,35 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
             List<Predicate> predicates,
             String key, Object value) {
         switch (key) {
-            case USER_ID_FIELD -> predicates.add(criteriaBuilder.equal(root.get("user").get("id"), value));
-            case "name" -> predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("name")),
-                    "%" + value.toString().toLowerCase() + "%"));
-            case IS_ACTIVE_FIELD -> predicates.add(Boolean.TRUE.equals(value) ?
-                    criteriaBuilder.isTrue(root.get(IS_ACTIVE_FIELD))
-                    : criteriaBuilder.isFalse(root.get(IS_ACTIVE_FIELD)));
+            case USER_ID_FIELD -> predicates.add(createUserIdPredicate(root, criteriaBuilder, value));
+            case "name" -> predicates.add(createNamePredicate(root, criteriaBuilder, value));
+            case IS_ACTIVE_FIELD -> predicates.add(createIsActivePredicate(root, criteriaBuilder, value));
             default -> log.debug("Ignoring unknown filter key: {}", key);
         }
+    }
+
+    /**
+     * Creates a predicate for user ID filtering.
+     */
+    private Predicate createUserIdPredicate(Root<T> root, CriteriaBuilder criteriaBuilder, Object value) {
+        return criteriaBuilder.equal(root.get("user").get("id"), value);
+    }
+
+    /**
+     * Creates a predicate for name filtering with case-insensitive search.
+     */
+    private Predicate createNamePredicate(Root<T> root, CriteriaBuilder criteriaBuilder, Object value) {
+        return criteriaBuilder.like(criteriaBuilder.lower(root.get("name")),
+                "%" + value.toString().toLowerCase() + "%");
+    }
+
+    /**
+     * Creates a predicate for isActive filtering.
+     */
+    private Predicate createIsActivePredicate(Root<T> root, CriteriaBuilder criteriaBuilder, Object value) {
+        return Boolean.TRUE.equals(value) ?
+                criteriaBuilder.isTrue(root.get(IS_ACTIVE_FIELD))
+                : criteriaBuilder.isFalse(root.get(IS_ACTIVE_FIELD));
     }
 
     /**

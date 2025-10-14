@@ -15,6 +15,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @RestController
 @RequestMapping("/transaction-categories")
 @Slf4j
@@ -28,41 +30,20 @@ public class TransactionCategoryController extends BaseController<TransactionCat
         this.transactionCategoryService = transactionCategoryService;
     }
 
-    @GetMapping("/unified")
-    @Operation(summary = "Get transaction categories with filtering",
-               description = "Retrieve transaction categories with flexible filtering, sorting, and pagination options, or metadata")
-    public ResponseEntity<Object> getTransactionCategories(
-            @Parameter(description = "Search term for name")
-            @RequestParam(required = false) String search,
-            @Parameter(description = "Sort field")
-            @RequestParam(required = false, defaultValue = "name") String sortBy,
-            @Parameter(description = "Sort direction")
-            @RequestParam(required = false, defaultValue = "asc") String sortDirection,
-            @Parameter(description = "Page number (0-based)")
-            @RequestParam(required = false, defaultValue = "0") int page,
-            @Parameter(description = "Page size")
-            @RequestParam(required = false, defaultValue = "20") int size,
-            @Parameter(description = "Type of data to retrieve (metadata types: all, count, usage-stats)")
-            @RequestParam(required = false) String data) {
+    @GetMapping("/metadata")
+    @Operation(summary = "Get transaction categories metadata",
+               description = "Retrieve transaction categories metadata (all, count, usage-stats)")
+    public ResponseEntity<Object> getMetadata(
+            @RequestParam String data) {
 
-        log.debug("GET request to retrieve transaction categories with filtering");
+        log.debug("GET request to retrieve transaction categories metadata: {}", data);
 
-        // If data parameter is provided, return metadata
-        if (data != null && !data.trim().isEmpty()) {
-            return switch (data) {
-                case "all" -> ResponseEntity.ok(transactionCategoryService.findAllActive());
-                case "count" -> ResponseEntity.ok(transactionCategoryService.getTotalCount());
-                case "usage-stats" -> ResponseEntity.ok(transactionCategoryService.getUsageStats());
-                default -> throw new IllegalArgumentException("Invalid data type: " + data);
-            };
-        }
-
-        // Create pageable with sorting
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        Page<TransactionCategoryDTO> categories = transactionCategoryService.findAll(search, null, sortBy, sortDirection, pageable);
-        return ResponseEntity.ok(categories);
+        return switch (data) {
+            case "all" -> ResponseEntity.ok(transactionCategoryService.findAllActive());
+            case "count" -> ResponseEntity.ok(transactionCategoryService.getTotalCount());
+            case "usage-stats" -> ResponseEntity.ok(transactionCategoryService.getUsageStats());
+            default -> throw new IllegalArgumentException("Invalid data type: " + data);
+        };
     }
 
 }

@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * for InvestmentController with query parameters for sorting and filtering.
  */
 @ExtendWith(MockitoExtension.class)
-class UnifiedInvestmentControllerExampleTest {
+class InvestmentControllerExampleTest {
 
     private MockMvc mockMvc;
 

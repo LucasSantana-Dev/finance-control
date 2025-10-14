@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import com.finance_control.shared.util.RangeUtils;
 
 /**
  * REST controller for managing investments.
@@ -165,31 +166,10 @@ public class InvestmentController {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         // Apply filters based on parameters
-        List<Investment> investments;
-
-        if (search != null && !search.trim().isEmpty()) {
-            investments = investmentService.searchInvestments(user, search);
-        } else if (type != null && subtype != null) {
-            investments = investmentService.getInvestmentsByTypeAndSubtype(user, type, subtype);
-        } else if (type != null) {
-            investments = investmentService.getInvestmentsByType(user, type);
-        } else if (sector != null && !sector.trim().isEmpty()) {
-            investments = investmentService.getInvestmentsBySector(user, sector);
-        } else if (industry != null && !industry.trim().isEmpty()) {
-            investments = investmentService.getInvestmentsByIndustry(user, industry);
-        } else {
-            investments = investmentService.getAllInvestments(user);
-        }
+        List<Investment> investments = getInvestmentsByFilters(user, search, type, subtype, sector, industry);
 
         // Apply additional filters
-        if (minPrice != null || maxPrice != null || minDividendYield != null || maxDividendYield != null) {
-            investments = investments.stream()
-                    .filter(inv -> minPrice == null || (inv.getCurrentPrice() != null && inv.getCurrentPrice().compareTo(minPrice) >= 0))
-                    .filter(inv -> maxPrice == null || (inv.getCurrentPrice() != null && inv.getCurrentPrice().compareTo(maxPrice) <= 0))
-                    .filter(inv -> minDividendYield == null || (inv.getDividendYield() != null && inv.getDividendYield().compareTo(minDividendYield) >= 0))
-                    .filter(inv -> maxDividendYield == null || (inv.getDividendYield() != null && inv.getDividendYield().compareTo(maxDividendYield) <= 0))
-                    .toList();
-        }
+        investments = applyPriceAndDividendFilters(investments, minPrice, maxPrice, minDividendYield, maxDividendYield);
 
         // Convert to DTOs and create pagination manually
         List<InvestmentDTO> investmentDTOs = investments.stream()
@@ -235,6 +215,33 @@ public class InvestmentController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /**
+     * Get investment by ticker
+     */
+    @GetMapping("/ticker/{ticker}")
+    @Operation(summary = "Get investment by ticker", description = "Retrieve a specific investment by its ticker symbol")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Investment retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Investment not found")
+    })
+    public ResponseEntity<InvestmentDTO> findByTicker(@PathVariable String ticker) {
+        log.debug("Getting investment by ticker: {} for current user", ticker);
+
+        // Get current user from context
+        Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
+        if (currentUserId == null) {
+            log.error("User context not available");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        // Create a User object with just the ID for the service call
+        User user = new User();
+        user.setId(currentUserId);
+
+        Optional<Investment> investment = investmentService.getInvestmentByTicker(ticker, user);
+        return investment.map(inv -> ResponseEntity.ok(investmentService.convertToResponseDTO(inv)))
+                .orElse(ResponseEntity.notFound().build());
+    }
 
     /**
      * Update an investment
@@ -340,9 +347,78 @@ public class InvestmentController {
         return ResponseEntity.ok(Map.of("message", "Market data update initiated"));
     }
 
+    /**
+     * Gets investments based on the provided filters.
+     *
+     * @param user the user
+     * @param search search term
+     * @param type investment type
+     * @param subtype investment subtype
+     * @param sector sector filter
+     * @param industry industry filter
+     * @return list of investments matching the filters
+     */
+    private List<Investment> getInvestmentsByFilters(User user, String search, Investment.InvestmentType type,
+                                                   Investment.InvestmentSubtype subtype, String sector, String industry) {
+        if (search != null && !search.trim().isEmpty()) {
+            return investmentService.searchInvestments(user, search);
+        }
 
+        if (type != null && subtype != null) {
+            return investmentService.getInvestmentsByTypeAndSubtype(user, type, subtype);
+        }
 
+        if (type != null) {
+            return investmentService.getInvestmentsByType(user, type);
+        }
 
+        if (sector != null && !sector.trim().isEmpty()) {
+            return investmentService.getInvestmentsBySector(user, sector);
+        }
 
+        if (industry != null && !industry.trim().isEmpty()) {
+            return investmentService.getInvestmentsByIndustry(user, industry);
+        }
 
+        return investmentService.getAllInvestments(user);
+    }
+
+    /**
+     * Applies price and dividend yield filters to the investment list.
+     *
+     * @param investments the list of investments to filter
+     * @param minPrice minimum price filter
+     * @param maxPrice maximum price filter
+     * @param minDividendYield minimum dividend yield filter
+     * @param maxDividendYield maximum dividend yield filter
+     * @return filtered list of investments
+     */
+    private List<Investment> applyPriceAndDividendFilters(List<Investment> investments,
+                                                         BigDecimal minPrice,
+                                                         BigDecimal maxPrice,
+                                                         BigDecimal minDividendYield,
+                                                         BigDecimal maxDividendYield) {
+        if (minPrice == null && maxPrice == null && minDividendYield == null && maxDividendYield == null) {
+            return investments;
+        }
+
+        return investments.stream()
+                .filter(inv -> isPriceInRange(inv.getCurrentPrice(), minPrice, maxPrice))
+                .filter(inv -> isDividendYieldInRange(inv.getDividendYield(), minDividendYield, maxDividendYield))
+                .toList();
+    }
+
+    /**
+     * Checks if the investment price is within the specified range.
+     */
+    private boolean isPriceInRange(BigDecimal currentPrice, BigDecimal minPrice, BigDecimal maxPrice) {
+        return RangeUtils.isInRange(currentPrice, minPrice, maxPrice);
+    }
+
+    /**
+     * Checks if the investment dividend yield is within the specified range.
+     */
+    private boolean isDividendYieldInRange(BigDecimal dividendYield, BigDecimal minDividendYield, BigDecimal maxDividendYield) {
+        return RangeUtils.isInRange(dividendYield, minDividendYield, maxDividendYield);
+    }
 }

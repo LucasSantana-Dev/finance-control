@@ -6,6 +6,8 @@ import com.finance_control.goals.repository.FinancialGoalRepository;
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.enums.TransactionType;
 import com.finance_control.shared.monitoring.MetricsService;
+import com.finance_control.shared.util.StreamUtils;
+import com.finance_control.shared.util.DateUtils;
 import com.finance_control.transactions.model.Transaction;
 import com.finance_control.transactions.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -102,20 +105,14 @@ public class DashboardService {
         BigDecimal savingsRate = calculateSavingsRate(totalIncome, totalExpenses);
 
         List<Transaction> transactions = transactionRepository.findByUserIdWithResponsibilities(userId);
-        List<Transaction> periodTransactions = transactions.stream()
-                .filter(t -> !t.getDate().isBefore(startDateTime) && !t.getDate().isAfter(endDateTime))
-                .collect(Collectors.toList());
+        List<Transaction> periodTransactions = filterTransactionsByDateRange(transactions, startDateTime, endDateTime);
 
         BigDecimal averageTransactionAmount = calculateAverageTransactionAmount(periodTransactions);
         BigDecimal largestTransaction = getLargestTransaction(periodTransactions);
         BigDecimal smallestTransaction = getSmallestTransaction(periodTransactions);
 
-        int incomeTransactions = (int) periodTransactions.stream()
-                .filter(t -> t.getType() == TransactionType.INCOME)
-                .count();
-        int expenseTransactions = (int) periodTransactions.stream()
-                .filter(t -> t.getType() == TransactionType.EXPENSE)
-                .count();
+        int incomeTransactions = countTransactionsByType(periodTransactions, TransactionType.INCOME);
+        int expenseTransactions = countTransactionsByType(periodTransactions, TransactionType.EXPENSE);
 
         return FinancialMetricsDTO.builder()
                 .totalAssets(calculateTotalAssets(userId))
@@ -146,20 +143,9 @@ public class DashboardService {
         LocalDate startOfMonth = YearMonth.now().atDay(1);
         LocalDate endOfMonth = YearMonth.now().atEndOfMonth();
 
-        List<Transaction> expenseTransactions = transactionRepository.findByUserIdWithResponsibilities(userId)
-                .stream()
-                .filter(t -> t.getType() == TransactionType.EXPENSE)
-                .filter(t -> !t.getDate().toLocalDate().isBefore(startOfMonth) && !t.getDate().toLocalDate().isAfter(endOfMonth))
-                .collect(Collectors.toList());
-
-        Map<String, BigDecimal> categoryTotals = expenseTransactions.stream()
-                .collect(Collectors.groupingBy(
-                        t -> t.getCategory().getName(),
-                        Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)
-                ));
-
-        BigDecimal totalExpenses = categoryTotals.values().stream()
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<Transaction> expenseTransactions = getExpenseTransactionsInDateRange(userId, startOfMonth, endOfMonth);
+        Map<String, BigDecimal> categoryTotals = calculateCategoryTotals(expenseTransactions);
+        BigDecimal totalExpenses = calculateTotalFromCategoryTotals(categoryTotals);
 
         List<CategorySpendingDTO> categories = new ArrayList<>();
         String[] colors = {"#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"};
@@ -176,9 +162,7 @@ public class DashboardService {
                 percentage = BigDecimal.ZERO;
             }
 
-            int transactionCount = (int) expenseTransactions.stream()
-                    .filter(t -> t.getCategory().getName().equals(entry.getKey()))
-                    .count();
+            int transactionCount = countTransactionsByCategory(expenseTransactions, entry.getKey());
 
             categories.add(CategorySpendingDTO.builder()
                     .categoryName(entry.getKey())
@@ -191,9 +175,7 @@ public class DashboardService {
             colorIndex++;
         }
 
-        return categories.stream()
-                .sorted((a, b) -> b.getAmount().compareTo(a.getAmount()))
-                .collect(Collectors.toList());
+        return sortCategoriesByAmount(categories);
     }
 
     /**
@@ -261,9 +243,8 @@ public class DashboardService {
     }
 
     private int getPendingReconciliationsCount(Long userId) {
-        return (int) transactionRepository.findByUserIdWithResponsibilities(userId).stream()
-                .filter(t -> !Boolean.TRUE.equals(t.getReconciled()))
-                .count();
+        List<Transaction> transactions = transactionRepository.findByUserIdWithResponsibilities(userId);
+        return countUnreconciledTransactions(transactions);
     }
 
     private BigDecimal calculateNetWorth(Long userId) {
@@ -291,30 +272,21 @@ public class DashboardService {
         if (transactions.isEmpty()) {
             return BigDecimal.ZERO;
         }
-        BigDecimal total = transactions.stream()
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = StreamUtils.sum(transactions, Transaction::getAmount);
         return total.divide(BigDecimal.valueOf(transactions.size()), 2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal getLargestTransaction(List<Transaction> transactions) {
-        return transactions.stream()
-                .map(Transaction::getAmount)
-                .max(BigDecimal::compareTo)
-                .orElse(BigDecimal.ZERO);
+        return StreamUtils.max(transactions, Transaction::getAmount);
     }
 
     private BigDecimal getSmallestTransaction(List<Transaction> transactions) {
-        return transactions.stream()
-                .map(Transaction::getAmount)
-                .min(BigDecimal::compareTo)
-                .orElse(BigDecimal.ZERO);
+        return StreamUtils.min(transactions, Transaction::getAmount);
     }
 
     private int getTransactionCountForPeriod(Long userId, LocalDate startDate, LocalDate endDate) {
-        return (int) transactionRepository.findByUserIdWithResponsibilities(userId).stream()
-                .filter(t -> !t.getDate().toLocalDate().isBefore(startDate) && !t.getDate().toLocalDate().isAfter(endDate))
-                .count();
+        List<Transaction> transactions = transactionRepository.findByUserIdWithResponsibilities(userId);
+        return countTransactionsInDateRange(transactions, startDate, endDate);
     }
 
     private List<GoalProgressDTO> mapGoalProgress(List<FinancialGoal> goals) {
@@ -330,5 +302,75 @@ public class DashboardService {
                         .goalType(goal.getGoalType().name())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    // Helper methods for stream operations
+
+    /**
+     * Filters transactions by date range.
+     */
+    private List<Transaction> filterTransactionsByDateRange(List<Transaction> transactions, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return StreamUtils.filterByDateRange(transactions, Transaction::getDate, startDateTime, endDateTime);
+    }
+
+    /**
+     * Counts transactions by type.
+     */
+    private int countTransactionsByType(List<Transaction> transactions, TransactionType type) {
+        return (int) StreamUtils.count(transactions, t -> t.getType() == type);
+    }
+
+    /**
+     * Gets expense transactions within a date range.
+     */
+    private List<Transaction> getExpenseTransactionsInDateRange(Long userId, LocalDate startDate, LocalDate endDate) {
+        List<Transaction> allTransactions = transactionRepository.findByUserIdWithResponsibilities(userId);
+        List<Transaction> expenseTransactions = StreamUtils.filter(allTransactions, t -> t.getType() == TransactionType.EXPENSE);
+        return StreamUtils.filterByLocalDateRange(expenseTransactions, t -> t.getDate().toLocalDate(), startDate, endDate);
+    }
+
+    /**
+     * Calculates category totals from transactions.
+     */
+    private Map<String, BigDecimal> calculateCategoryTotals(List<Transaction> transactions) {
+        return StreamUtils.groupAndSum(transactions, t -> t.getCategory().getName(), Transaction::getAmount);
+    }
+
+    /**
+     * Calculates total from category totals map.
+     */
+    private BigDecimal calculateTotalFromCategoryTotals(Map<String, BigDecimal> categoryTotals) {
+        return categoryTotals.values().stream()
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Counts transactions by category name.
+     */
+    private int countTransactionsByCategory(List<Transaction> transactions, String categoryName) {
+        return (int) StreamUtils.count(transactions, t -> t.getCategory().getName().equals(categoryName));
+    }
+
+    /**
+     * Sorts categories by amount in descending order.
+     */
+    private List<CategorySpendingDTO> sortCategoriesByAmount(List<CategorySpendingDTO> categories) {
+        return categories.stream()
+                .sorted((a, b) -> b.getAmount().compareTo(a.getAmount()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Counts unreconciled transactions.
+     */
+    private int countUnreconciledTransactions(List<Transaction> transactions) {
+        return (int) StreamUtils.count(transactions, t -> !Boolean.TRUE.equals(t.getReconciled()));
+    }
+
+    /**
+     * Counts transactions within a date range.
+     */
+    private int countTransactionsInDateRange(List<Transaction> transactions, LocalDate startDate, LocalDate endDate) {
+        return (int) StreamUtils.countByLocalDateRange(transactions, t -> t.getDate().toLocalDate(), startDate, endDate);
     }
 }

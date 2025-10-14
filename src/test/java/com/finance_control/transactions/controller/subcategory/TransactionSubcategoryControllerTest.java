@@ -1,19 +1,23 @@
 package com.finance_control.transactions.controller.subcategory;
 
+import com.finance_control.shared.exception.GlobalExceptionHandler;
 import com.finance_control.transactions.dto.subcategory.TransactionSubcategoryDTO;
 import com.finance_control.transactions.service.subcategory.TransactionSubcategoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -25,16 +29,16 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(TransactionSubcategoryController.class)
+@ExtendWith(MockitoExtension.class)
 class TransactionSubcategoryControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
+    @Mock
     private TransactionSubcategoryService transactionSubcategoryService;
 
-    @Autowired
+    @InjectMocks
+    private TransactionSubcategoryController transactionSubcategoryController;
+
+    private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
     private TransactionSubcategoryDTO sampleSubcategory;
@@ -42,6 +46,13 @@ class TransactionSubcategoryControllerTest {
 
     @BeforeEach
     void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(transactionSubcategoryController)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+        objectMapper = new ObjectMapper();
+        objectMapper.findAndRegisterModules();
+
         sampleSubcategory = new TransactionSubcategoryDTO();
         sampleSubcategory.setId(1L);
         sampleSubcategory.setName("Restaurants");
@@ -56,45 +67,37 @@ class TransactionSubcategoryControllerTest {
 
     @Test
     void getTransactionSubcategories_WithValidParameters_ShouldReturnOk() throws Exception {
-        when(transactionSubcategoryService.findAll(anyString(), any(Map.class), anyString(), anyString(), any(Pageable.class)))
-                .thenReturn(samplePage);
+        List<TransactionSubcategoryDTO> subcategories = Arrays.asList(sampleSubcategory);
+        when(transactionSubcategoryService.findByCategoryId(anyLong()))
+                .thenReturn(subcategories);
 
-        mockMvc.perform(get("/transaction-subcategories")
-                .param("categoryId", "1")
-                .param("search", "restaurant")
-                .param("sortBy", "name")
-                .param("sortDirection", "asc")
-                .param("page", "0")
-                .param("size", "20"))
+        mockMvc.perform(get("/transaction-subcategories/category/1"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.content[0].id").value(1))
-                .andExpect(jsonPath("$.content[0].name").value("Restaurants"))
-                .andExpect(jsonPath("$.content[0].description").value("Restaurant expenses"))
-                .andExpect(jsonPath("$.content[0].categoryId").value(1))
-                .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.totalPages").value(1));
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].name").value("Restaurants"))
+                .andExpect(jsonPath("$[0].description").value("Restaurant expenses"))
+                .andExpect(jsonPath("$[0].categoryId").value(1));
     }
 
     @Test
     void getTransactionSubcategories_WithCategoryIdAndSortByUsage_ShouldReturnOk() throws Exception {
-        when(transactionSubcategoryService.findByCategoryIdOrderByUsage(anyLong(), any(Pageable.class)))
-                .thenReturn(samplePage);
+        List<TransactionSubcategoryDTO> subcategories = Arrays.asList(sampleSubcategory);
+        when(transactionSubcategoryService.findByCategoryIdOrderByUsage(anyLong()))
+                .thenReturn(subcategories);
 
-        mockMvc.perform(get("/transaction-subcategories")
-                .param("categoryId", "1")
-                .param("sortByUsage", "true")
-                .param("page", "0")
-                .param("size", "20"))
+        mockMvc.perform(get("/transaction-subcategories/category/1/usage"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.content").isArray());
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].name").value("Restaurants"));
     }
 
     @Test
     void getTransactionSubcategories_WithDefaultParameters_ShouldReturnOk() throws Exception {
-        when(transactionSubcategoryService.findAll(anyString(), any(Map.class), anyString(), anyString(), any(Pageable.class)))
+        when(transactionSubcategoryService.findAll(any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transaction-subcategories"))
@@ -109,7 +112,7 @@ class TransactionSubcategoryControllerTest {
         when(transactionSubcategoryService.findAllActive())
                 .thenReturn(allSubcategories);
 
-        mockMvc.perform(get("/transaction-subcategories")
+        mockMvc.perform(get("/transaction-subcategories/metadata")
                 .param("data", "all"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -124,7 +127,7 @@ class TransactionSubcategoryControllerTest {
         when(transactionSubcategoryService.findByCategoryId(anyLong()))
                 .thenReturn(subcategories);
 
-        mockMvc.perform(get("/transaction-subcategories")
+        mockMvc.perform(get("/transaction-subcategories/metadata")
                 .param("data", "by-category")
                 .param("categoryId", "1"))
                 .andExpect(status().isOk())
@@ -136,7 +139,7 @@ class TransactionSubcategoryControllerTest {
 
     @Test
     void getTransactionSubcategories_WithByCategoryDataWithoutCategoryId_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transaction-subcategories")
+        mockMvc.perform(get("/transaction-subcategories/metadata")
                 .param("data", "by-category"))
                 .andExpect(status().isBadRequest());
     }
@@ -147,7 +150,7 @@ class TransactionSubcategoryControllerTest {
         when(transactionSubcategoryService.findByCategoryIdOrderByUsage(anyLong()))
                 .thenReturn(subcategories);
 
-        mockMvc.perform(get("/transaction-subcategories")
+        mockMvc.perform(get("/transaction-subcategories/metadata")
                 .param("data", "by-category-usage")
                 .param("categoryId", "1"))
                 .andExpect(status().isOk())
@@ -162,7 +165,7 @@ class TransactionSubcategoryControllerTest {
         when(transactionSubcategoryService.getTotalCount())
                 .thenReturn(15L);
 
-        mockMvc.perform(get("/transaction-subcategories")
+        mockMvc.perform(get("/transaction-subcategories/metadata")
                 .param("data", "count"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -174,7 +177,7 @@ class TransactionSubcategoryControllerTest {
         when(transactionSubcategoryService.countByCategoryId(anyLong()))
                 .thenReturn(3L);
 
-        mockMvc.perform(get("/transaction-subcategories")
+        mockMvc.perform(get("/transaction-subcategories/metadata")
                 .param("data", "count-by-category")
                 .param("categoryId", "1"))
                 .andExpect(status().isOk())
@@ -184,14 +187,14 @@ class TransactionSubcategoryControllerTest {
 
     @Test
     void getTransactionSubcategories_WithCountByCategoryDataWithoutCategoryId_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transaction-subcategories")
+        mockMvc.perform(get("/transaction-subcategories/metadata")
                 .param("data", "count-by-category"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void getTransactionSubcategories_WithInvalidData_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transaction-subcategories")
+        mockMvc.perform(get("/transaction-subcategories/metadata")
                 .param("data", "invalid-type"))
                 .andExpect(status().isBadRequest());
     }

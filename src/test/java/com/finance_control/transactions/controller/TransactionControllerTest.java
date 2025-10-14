@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -50,7 +51,7 @@ class TransactionControllerTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        
+
         // Set up MockMvc with standalone setup, PageableHandlerMethodArgumentResolver, and GlobalExceptionHandler
         mockMvc = MockMvcBuilders.standaloneSetup(transactionController)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
@@ -71,11 +72,10 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithValidParameters_ShouldReturnOk() throws Exception {
-        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
+        mockMvc.perform(get("/transactions/filtered")
                 .param("type", "EXPENSE")
                 .param("sortBy", "createdAt")
                 .param("sortDirection", "desc")
@@ -94,11 +94,10 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithSearchParameter_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
+        mockMvc.perform(get("/transactions/filtered")
                 .param("search", "grocery")
                 .param("page", "0")
                 .param("size", "20"))
@@ -109,11 +108,10 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithDateRange_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
+        mockMvc.perform(get("/transactions/filtered")
                 .param("startDate", "2024-01-01")
                 .param("endDate", "2024-12-31")
                 .param("page", "0")
@@ -125,11 +123,10 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithAmountRange_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
+        mockMvc.perform(get("/transactions/filtered")
                 .param("minAmount", "50.00")
                 .param("maxAmount", "200.00")
                 .param("page", "0")
@@ -141,103 +138,82 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithDefaultParameters_ShouldReturnOk() throws Exception {
-        when(transactionService.findAll(nullable(String.class), nullable(String.class), nullable(String.class), any(Pageable.class), any(TransactionDTO.class)))
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1"))
+        mockMvc.perform(get("/transactions/filtered"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
-    void getTransactions_WithCategoriesData_ShouldReturnOk() throws Exception {
-        when(transactionService.getCategoriesByUserId(anyLong()))
-                .thenReturn(Arrays.asList());
+    void getTransactions_WithCategoryFilter_ShouldReturnFilteredResults() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
-                .param("data", "categories"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
-    }
-
-    @Test
-    void getTransactions_WithSubcategoriesData_ShouldReturnOk() throws Exception {
-        when(transactionService.getSubcategoriesByCategoryId(anyLong()))
-                .thenReturn(Arrays.asList());
-
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
-                .param("data", "subcategories")
-                .param("categoryId", "1"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
-    }
-
-    @Test
-    void getTransactions_WithSubcategoriesDataWithoutCategoryId_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
-                .param("data", "subcategories"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void getTransactions_WithTypesData_ShouldReturnOk() throws Exception {
-        when(transactionService.getTransactionTypes())
-                .thenReturn(Arrays.asList("INCOME", "EXPENSE"));
-
-        mockMvc.perform(get("/transactions/unified")
-                .param("data", "types"))
+        mockMvc.perform(get("/transactions/filtered")
+                .param("category", "Food")
+                .param("page", "0")
+                .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0]").value("INCOME"))
-                .andExpect(jsonPath("$[1]").value("EXPENSE"));
+                .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
-    void getTransactions_WithTotalAmountData_ShouldReturnOk() throws Exception {
-        when(transactionService.getTotalAmountByUserId(anyLong()))
-                .thenReturn(new BigDecimal("1000.00"));
+    void getTransactions_WithSubcategoryFilter_ShouldReturnFilteredResults() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
-                .param("data", "total-amount"))
+        mockMvc.perform(get("/transactions/filtered")
+                .param("subcategory", "Groceries")
+                .param("page", "0")
+                .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").value(1000.00));
+                .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
-    void getTransactions_WithMonthlySummaryData_ShouldReturnOk() throws Exception {
-        when(transactionService.getMonthlySummary(anyLong(), any(LocalDate.class), any(LocalDate.class)))
-                .thenReturn(java.util.Map.of("2024-01", java.util.Map.of("income", 1000, "expense", 500)));
+    void getTransactions_WithSourceFilter_ShouldReturnFilteredResults() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
 
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
-                .param("data", "monthly-summary")
-                .param("startDate", "2024-01-01")
-                .param("endDate", "2024-12-31"))
+        mockMvc.perform(get("/transactions/filtered")
+                .param("source", "Credit Card")
+                .param("page", "0")
+                .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
-    void getTransactions_WithMonthlySummaryDataWithoutDates_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
-                .param("data", "monthly-summary"))
-                .andExpect(status().isBadRequest());
+    void getTransactions_WithTypeFilter_ShouldReturnFilteredResults() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("type", "INCOME")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
-    void getTransactions_WithInvalidData_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transactions/unified")
-                .param("userId", "1")
-                .param("data", "invalid-type"))
-                .andExpect(status().isBadRequest());
+    void getTransactions_WithIsActiveFilter_ShouldReturnFilteredResults() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("isActive", "true")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
     }
 }

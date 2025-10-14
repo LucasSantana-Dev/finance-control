@@ -1,19 +1,23 @@
 package com.finance_control.transactions.controller.category;
 
+import com.finance_control.shared.exception.GlobalExceptionHandler;
 import com.finance_control.transactions.dto.category.TransactionCategoryDTO;
 import com.finance_control.transactions.service.category.TransactionCategoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -25,16 +29,16 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(TransactionCategoryController.class)
+@ExtendWith(MockitoExtension.class)
 class TransactionCategoryControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
+    @Mock
     private TransactionCategoryService transactionCategoryService;
 
-    @Autowired
+    @InjectMocks
+    private TransactionCategoryController transactionCategoryController;
+
+    private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
     private TransactionCategoryDTO sampleCategory;
@@ -42,6 +46,13 @@ class TransactionCategoryControllerTest {
 
     @BeforeEach
     void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(transactionCategoryController)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+        objectMapper = new ObjectMapper();
+        objectMapper.findAndRegisterModules();
+
         sampleCategory = new TransactionCategoryDTO();
         sampleCategory.setId(1L);
         sampleCategory.setName("Food & Dining");
@@ -52,7 +63,7 @@ class TransactionCategoryControllerTest {
 
     @Test
     void getTransactionCategories_WithValidParameters_ShouldReturnOk() throws Exception {
-        when(transactionCategoryService.findAll(anyString(), any(Map.class), anyString(), anyString(), any(Pageable.class)))
+        when(transactionCategoryService.findAll(any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transaction-categories")
@@ -72,7 +83,7 @@ class TransactionCategoryControllerTest {
 
     @Test
     void getTransactionCategories_WithDefaultParameters_ShouldReturnOk() throws Exception {
-        when(transactionCategoryService.findAll(anyString(), any(Map.class), anyString(), anyString(), any(Pageable.class)))
+        when(transactionCategoryService.findAll(any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transaction-categories"))
@@ -87,7 +98,7 @@ class TransactionCategoryControllerTest {
         when(transactionCategoryService.findAllActive())
                 .thenReturn(allCategories);
 
-        mockMvc.perform(get("/transaction-categories")
+        mockMvc.perform(get("/transaction-categories/metadata")
                 .param("data", "all"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -101,7 +112,7 @@ class TransactionCategoryControllerTest {
         when(transactionCategoryService.getTotalCount())
                 .thenReturn(5L);
 
-        mockMvc.perform(get("/transaction-categories")
+        mockMvc.perform(get("/transaction-categories/metadata")
                 .param("data", "count"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -117,7 +128,7 @@ class TransactionCategoryControllerTest {
         when(transactionCategoryService.getUsageStats())
                 .thenReturn(usageStats);
 
-        mockMvc.perform(get("/transaction-categories")
+        mockMvc.perform(get("/transaction-categories/metadata")
                 .param("data", "usage-stats"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -127,7 +138,7 @@ class TransactionCategoryControllerTest {
 
     @Test
     void getTransactionCategories_WithInvalidData_ShouldReturnBadRequest() throws Exception {
-        mockMvc.perform(get("/transaction-categories")
+        mockMvc.perform(get("/transaction-categories/metadata")
                 .param("data", "invalid-type"))
                 .andExpect(status().isBadRequest());
     }
