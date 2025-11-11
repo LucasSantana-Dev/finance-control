@@ -3,6 +3,7 @@ package com.finance_control.unit.brazilian_market.client;
 import com.finance_control.brazilian_market.client.BrazilianMarketDataProvider;
 import com.finance_control.brazilian_market.client.MarketQuote;
 import com.finance_control.brazilian_market.client.UsMarketDataProvider;
+import com.finance_control.brazilian_market.model.Investment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,18 +39,9 @@ class MarketDataProviderTest {
     @InjectMocks
     private UsMarketDataProvider usMarketDataProvider;
 
-    private MarketQuote testQuote;
-
     @BeforeEach
     void setUp() {
-        testQuote = MarketQuote.builder()
-                .symbol("PETR4")
-                .currentPrice(BigDecimal.valueOf(26.00))
-                .dayChange(BigDecimal.valueOf(0.50))
-                .dayChangePercent(BigDecimal.valueOf(1.96))
-                .volume(1000000L)
-                .lastUpdated(LocalDateTime.now())
-                .build();
+        // Setup method - no shared test data needed
     }
 
     @Test
@@ -158,49 +152,269 @@ class MarketDataProviderTest {
         assertThat(result).isEmpty();
     }
 
-    private Object createMockBrapiResponse() {
-        // Mock Brapi API response structure
-        return new Object() {
-            public Object[] results = new Object[]{
-                new Object() {
-                    public String symbol = "PETR4";
-                    public double regularMarketPrice = 26.00;
-                    public double regularMarketChange = 0.50;
-                    public double regularMarketChangePercent = 1.96;
-                    public long regularMarketVolume = 1000000L;
-                }
-            };
-        };
+    private BrazilianMarketDataProvider.ApiResponse createMockBrapiResponse() {
+        // Mock Brazilian Market API response structure
+        BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
+        List<BrazilianMarketDataProvider.QuoteResponse> results = new ArrayList<>();
+
+        BrazilianMarketDataProvider.QuoteResponse quote = new BrazilianMarketDataProvider.QuoteResponse();
+        quote.setSymbol("PETR4");
+        quote.setShortName("Petrobras PN");
+        quote.setRegularMarketPrice(26.00);
+        quote.setPreviousClose(25.50);
+        quote.setRegularMarketVolume(1000000L);
+
+        results.add(quote);
+        response.setResults(results);
+
+        return response;
     }
 
-    private Object createEmptyBrapiResponse() {
-        return new Object() {
-            public Object[] results = new Object[0];
-        };
+    private BrazilianMarketDataProvider.ApiResponse createEmptyBrapiResponse() {
+        BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
+        response.setResults(new ArrayList<>());
+        return response;
     }
 
-    private Object createMockYahooResponse() {
-        // Mock Yahoo Finance API response structure
-        return new Object() {
-            public Object quoteResponse = new Object() {
-                public Object[] result = new Object[]{
-                    new Object() {
-                        public String symbol = "AAPL";
-                        public double regularMarketPrice = 150.00;
-                        public double regularMarketChange = 2.50;
-                        public double regularMarketChangePercent = 1.69;
-                        public long regularMarketVolume = 50000000L;
-                    }
-                };
-            };
-        };
+    private UsMarketDataProvider.ApiResponse createMockYahooResponse() {
+        // Mock US Market API response structure
+        UsMarketDataProvider.ApiResponse response = new UsMarketDataProvider.ApiResponse();
+        UsMarketDataProvider.QuoteResponseWrapper wrapper = new UsMarketDataProvider.QuoteResponseWrapper();
+        List<UsMarketDataProvider.QuoteResponse> resultList = new ArrayList<>();
+
+        UsMarketDataProvider.QuoteResponse quote = new UsMarketDataProvider.QuoteResponse();
+        quote.setSymbol("AAPL");
+        quote.setShortName("Apple Inc.");
+        quote.setRegularMarketPrice(150.00);
+        quote.setPreviousClose(147.50);
+        quote.setRegularMarketVolume(50000000L);
+
+        resultList.add(quote);
+        wrapper.setResult(resultList);
+        response.setQuoteResponse(wrapper);
+
+        return response;
     }
 
-    private Object createEmptyYahooResponse() {
-        return new Object() {
-            public Object quoteResponse = new Object() {
-                public Object[] result = new Object[0];
-            };
-        };
+    private UsMarketDataProvider.ApiResponse createEmptyYahooResponse() {
+        UsMarketDataProvider.ApiResponse response = new UsMarketDataProvider.ApiResponse();
+        UsMarketDataProvider.QuoteResponseWrapper wrapper = new UsMarketDataProvider.QuoteResponseWrapper();
+        wrapper.setResult(new ArrayList<>());
+        response.setQuoteResponse(wrapper);
+        return response;
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuotes_ShouldReturnMultipleQuotes() {
+        when(restTemplate.getForObject(anyString(), any(Class.class)))
+                .thenReturn(createMockBrapiMultiResponse());
+
+        List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4", "VALE3"));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getSymbol()).isEqualTo("PETR4");
+        assertThat(result.get(1).getSymbol()).isEqualTo("VALE3");
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuotes_WithNullResponse_ShouldReturnEmptyList() {
+        when(restTemplate.getForObject(anyString(), any(Class.class)))
+                .thenReturn(null);
+
+        List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4"));
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuotes_WithNullResults_ShouldReturnEmptyList() {
+        BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
+        response.setResults(null);
+        when(restTemplate.getForObject(anyString(), any(Class.class)))
+                .thenReturn(response);
+
+        List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4"));
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuotes_WithEmptyResults_ShouldReturnEmptyList() {
+        when(restTemplate.getForObject(anyString(), any(Class.class)))
+                .thenReturn(createEmptyBrapiResponse());
+
+        List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4"));
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuotes_WithException_ShouldReturnEmptyList() {
+        when(restTemplate.getForObject(anyString(), any(Class.class)))
+                .thenThrow(new RuntimeException("API Error"));
+
+        List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4"));
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuotes_WithEmptyTickerList_ShouldReturnEmptyList() {
+        List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetHistoricalData_ShouldReturnEmpty() {
+        Optional<com.finance_control.brazilian_market.client.HistoricalData> result =
+                brazilianMarketDataProvider.getHistoricalData("PETR4", "1mo", "1d");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_SupportsInvestmentType_Stock_ShouldReturnTrue() {
+        boolean result = brazilianMarketDataProvider.supportsInvestmentType(Investment.InvestmentType.STOCK);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_SupportsInvestmentType_FII_ShouldReturnTrue() {
+        boolean result = brazilianMarketDataProvider.supportsInvestmentType(Investment.InvestmentType.FII);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_SupportsInvestmentType_Other_ShouldReturnFalse() {
+        boolean result = brazilianMarketDataProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetProviderName_ShouldReturnCorrectName() {
+        String result = brazilianMarketDataProvider.getProviderName();
+
+        assertThat(result).isEqualTo("Brazilian Market API");
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuote_WithNullPriceInResponse_ShouldReturnEmpty() {
+        BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
+        List<BrazilianMarketDataProvider.QuoteResponse> results = new ArrayList<>();
+        BrazilianMarketDataProvider.QuoteResponse quote = new BrazilianMarketDataProvider.QuoteResponse();
+        quote.setSymbol("PETR4");
+        quote.setRegularMarketPrice(null);
+        results.add(quote);
+        response.setResults(results);
+
+        when(restTemplate.getForObject(anyString(), any(Class.class)))
+                .thenReturn(response);
+
+        Optional<MarketQuote> result = brazilianMarketDataProvider.getQuote("PETR4");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuote_WithNullPreviousClose_ShouldUseCurrentPrice() {
+        BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
+        List<BrazilianMarketDataProvider.QuoteResponse> results = new ArrayList<>();
+        BrazilianMarketDataProvider.QuoteResponse quote = new BrazilianMarketDataProvider.QuoteResponse();
+        quote.setSymbol("PETR4");
+        quote.setRegularMarketPrice(26.00);
+        quote.setPreviousClose(null);
+        results.add(quote);
+        response.setResults(results);
+
+        when(restTemplate.getForObject(anyString(), any(Class.class)))
+                .thenReturn(response);
+
+        Optional<MarketQuote> result = brazilianMarketDataProvider.getQuote("PETR4");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getPreviousClose()).isEqualByComparingTo(BigDecimal.valueOf(26.00));
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuote_WithZeroPreviousClose_ShouldReturnZeroPercentChange() {
+        BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
+        List<BrazilianMarketDataProvider.QuoteResponse> results = new ArrayList<>();
+        BrazilianMarketDataProvider.QuoteResponse quote = new BrazilianMarketDataProvider.QuoteResponse();
+        quote.setSymbol("PETR4");
+        quote.setRegularMarketPrice(26.00);
+        quote.setPreviousClose(0.0);
+        results.add(quote);
+        response.setResults(results);
+
+        when(restTemplate.getForObject(anyString(), any(Class.class)))
+                .thenReturn(response);
+
+        Optional<MarketQuote> result = brazilianMarketDataProvider.getQuote("PETR4");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getDayChangePercent()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void brazilianMarketDataProvider_ConvertToMarketData_WithNullQuote_ShouldReturnEmpty() {
+        Investment.InvestmentType type = Investment.InvestmentType.STOCK;
+
+        Optional<BrazilianMarketDataProvider.MarketData> result =
+                brazilianMarketDataProvider.convertToMarketData(null, type);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_ConvertToMarketData_WithNullPrice_ShouldReturnEmpty() {
+        BrazilianMarketDataProvider.QuoteResponse quote = new BrazilianMarketDataProvider.QuoteResponse();
+        quote.setSymbol("PETR4");
+        quote.setRegularMarketPrice(null);
+        Investment.InvestmentType type = Investment.InvestmentType.STOCK;
+
+        Optional<BrazilianMarketDataProvider.MarketData> result =
+                brazilianMarketDataProvider.convertToMarketData(quote, type);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void brazilianMarketDataProvider_GetQuote_WithNullResults_ShouldReturnEmpty() {
+        BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
+        response.setResults(null);
+        when(restTemplate.getForObject(anyString(), any(Class.class)))
+                .thenReturn(response);
+
+        Optional<MarketQuote> result = brazilianMarketDataProvider.getQuote("PETR4");
+
+        assertThat(result).isEmpty();
+    }
+
+
+    private BrazilianMarketDataProvider.ApiResponse createMockBrapiMultiResponse() {
+        BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
+        List<BrazilianMarketDataProvider.QuoteResponse> results = new ArrayList<>();
+
+        BrazilianMarketDataProvider.QuoteResponse quote1 = new BrazilianMarketDataProvider.QuoteResponse();
+        quote1.setSymbol("PETR4");
+        quote1.setShortName("Petrobras PN");
+        quote1.setRegularMarketPrice(26.00);
+        quote1.setPreviousClose(25.50);
+
+        BrazilianMarketDataProvider.QuoteResponse quote2 = new BrazilianMarketDataProvider.QuoteResponse();
+        quote2.setSymbol("VALE3");
+        quote2.setShortName("Vale ON");
+        quote2.setRegularMarketPrice(68.50);
+        quote2.setPreviousClose(68.00);
+
+        results.add(quote1);
+        results.add(quote2);
+        response.setResults(results);
+
+        return response;
     }
 }

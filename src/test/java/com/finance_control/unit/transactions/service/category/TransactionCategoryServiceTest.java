@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -34,7 +35,6 @@ class TransactionCategoryServiceTest {
     private TransactionCategoryService transactionCategoryService;
 
     private TransactionCategory testCategory;
-    private TransactionCategoryDTO testCategoryDTO;
 
     @BeforeEach
     void setUp() {
@@ -43,12 +43,6 @@ class TransactionCategoryServiceTest {
         testCategory.setName("Test Category");
         testCategory.setCreatedAt(LocalDateTime.now());
         testCategory.setUpdatedAt(LocalDateTime.now());
-
-        testCategoryDTO = new TransactionCategoryDTO();
-        testCategoryDTO.setId(1L);
-        testCategoryDTO.setName("Test Category");
-        testCategoryDTO.setCreatedAt(LocalDateTime.now());
-        testCategoryDTO.setUpdatedAt(LocalDateTime.now());
     }
 
     @Test
@@ -267,5 +261,124 @@ class TransactionCategoryServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
 
         verify(transactionCategoryRepository, never()).save(any(TransactionCategory.class));
+    }
+
+    @Test
+    void findAll_WithFilters_ShouldUseSpecifications() {
+        // Given - Using filters should trigger findAllWithSpecifications path
+        List<TransactionCategory> categories = List.of(testCategory);
+        Page<TransactionCategory> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
+        Map<String, Object> filters = Map.of("isActive", true);
+
+        when(transactionCategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        // When
+        Page<TransactionCategoryDTO> result = transactionCategoryService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionCategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void findAll_WithEmptyFilters_ShouldUseSearchOnly() {
+        // Given - Empty filters map should use search-only path
+        List<TransactionCategory> categories = List.of(testCategory);
+        Page<TransactionCategory> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
+
+        when(transactionCategoryRepository.findAll(anyString(), any(Pageable.class)))
+                .thenReturn(page);
+
+        // When
+        Page<TransactionCategoryDTO> result = transactionCategoryService.findAll("test", Map.of(), null, null, PageRequest.of(0, 10));
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionCategoryRepository).findAll(anyString(), any(Pageable.class));
+    }
+
+    @Test
+    void findAllActive_ShouldReturnActiveCategories() {
+        // Given - findAllActive uses null search and null filters, so it uses findAllWithSearchOnly with null search
+        List<TransactionCategory> categories = List.of(testCategory);
+        Page<TransactionCategory> page = new PageImpl<>(categories, PageRequest.of(0, Integer.MAX_VALUE), 1);
+
+        when(transactionCategoryRepository.findAll(eq((String) null), any(Pageable.class)))
+                .thenReturn(page);
+
+        // When
+        List<TransactionCategoryDTO> result = transactionCategoryService.findAllActive();
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getTotalCount_ShouldReturnCount() {
+        // Given
+        when(transactionCategoryRepository.count()).thenReturn(5L);
+
+        // When
+        Long result = transactionCategoryService.getTotalCount();
+
+        // Then
+        assertThat(result).isEqualTo(5L);
+        verify(transactionCategoryRepository).count();
+    }
+
+    @Test
+    void getUsageStats_ShouldReturnStats() {
+        // Given
+        Map<String, Object> stats = Map.of("total", 10L, "active", 8L);
+        when(transactionCategoryRepository.getUsageStats()).thenReturn(stats);
+
+        // When
+        Map<String, Object> result = transactionCategoryService.getUsageStats();
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.get("total")).isEqualTo(10L);
+        verify(transactionCategoryRepository).getUsageStats();
+    }
+
+    @Test
+    void findAll_WithSearchAndFilters_ShouldUseSpecifications() {
+        // Given - Both search and filters should use specifications
+        List<TransactionCategory> categories = List.of(testCategory);
+        Page<TransactionCategory> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
+        Map<String, Object> filters = Map.of("name", "test");
+
+        when(transactionCategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        // When
+        Page<TransactionCategoryDTO> result = transactionCategoryService.findAll("test", filters, null, null, PageRequest.of(0, 10));
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionCategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void findAll_WithSorting_ShouldApplySort() {
+        // Given
+        List<TransactionCategory> categories = List.of(testCategory);
+        Page<TransactionCategory> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
+
+        when(transactionCategoryRepository.findAll(eq((String) null), any(Pageable.class)))
+                .thenReturn(page);
+
+        // When
+        Page<TransactionCategoryDTO> result = transactionCategoryService.findAll(null, null, "name", "desc", PageRequest.of(0, 10));
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionCategoryRepository).findAll(eq((String) null), any(Pageable.class));
     }
 }

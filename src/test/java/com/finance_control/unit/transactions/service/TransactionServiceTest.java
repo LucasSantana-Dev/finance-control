@@ -47,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
@@ -995,6 +996,509 @@ class TransactionServiceTest {
 
         verify(transactionRepository).findById(999L);
         verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void create_WithNullDate_ShouldSetDefaultDate() {
+        TransactionDTO createDTO = new TransactionDTO();
+        createDTO.setDescription("Transaction without date");
+        createDTO.setAmount(BigDecimal.valueOf(50.00));
+        createDTO.setType(TransactionType.INCOME);
+        createDTO.setSubtype(TransactionSubtype.FIXED);
+        createDTO.setSource(TransactionSource.CASH);
+        createDTO.setCategoryId(1L);
+        createDTO.setUserId(1L);
+        createDTO.setDate(null);
+
+        List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>();
+        TransactionResponsiblesDTO responsible = new TransactionResponsiblesDTO();
+        responsible.setResponsibleId(1L);
+        responsible.setPercentage(new BigDecimal("100.00"));
+        responsibilities.add(responsible);
+        createDTO.setResponsibilities(responsibilities);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(responsibleRepository.findById(1L)).thenReturn(Optional.of(testResponsible));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction t = invocation.getArgument(0);
+            t.setId(1L);
+            return t;
+        });
+
+        TransactionDTO result = transactionService.create(createDTO);
+
+        assertThat(result).isNotNull();
+        verify(transactionRepository).save(argThat(transaction ->
+                transaction.getDate() != null));
+    }
+
+    @Test
+    void create_WithNullSubcategoryId_ShouldCreateSuccessfully() {
+        TransactionDTO createDTO = new TransactionDTO();
+        createDTO.setDescription("Transaction without subcategory");
+        createDTO.setAmount(BigDecimal.valueOf(50.00));
+        createDTO.setType(TransactionType.INCOME);
+        createDTO.setSubtype(TransactionSubtype.FIXED);
+        createDTO.setSource(TransactionSource.CASH);
+        createDTO.setCategoryId(1L);
+        createDTO.setUserId(1L);
+        createDTO.setSubcategoryId(null);
+
+        List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>();
+        TransactionResponsiblesDTO responsible = new TransactionResponsiblesDTO();
+        responsible.setResponsibleId(1L);
+        responsible.setPercentage(new BigDecimal("100.00"));
+        responsibilities.add(responsible);
+        createDTO.setResponsibilities(responsibilities);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(responsibleRepository.findById(1L)).thenReturn(Optional.of(testResponsible));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction t = invocation.getArgument(0);
+            t.setId(1L);
+            return t;
+        });
+
+        TransactionDTO result = transactionService.create(createDTO);
+
+        assertThat(result).isNotNull();
+        verify(subcategoryRepository, never()).findById(anyLong());
+    }
+
+    @Test
+    void create_WithNullSourceEntityId_ShouldCreateSuccessfully() {
+        TransactionDTO createDTO = new TransactionDTO();
+        createDTO.setDescription("Transaction without source entity");
+        createDTO.setAmount(BigDecimal.valueOf(50.00));
+        createDTO.setType(TransactionType.INCOME);
+        createDTO.setSubtype(TransactionSubtype.FIXED);
+        createDTO.setSource(TransactionSource.CASH);
+        createDTO.setCategoryId(1L);
+        createDTO.setUserId(1L);
+        createDTO.setSourceEntityId(null);
+
+        List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>();
+        TransactionResponsiblesDTO responsible = new TransactionResponsiblesDTO();
+        responsible.setResponsibleId(1L);
+        responsible.setPercentage(new BigDecimal("100.00"));
+        responsibilities.add(responsible);
+        createDTO.setResponsibilities(responsibilities);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(responsibleRepository.findById(1L)).thenReturn(Optional.of(testResponsible));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction t = invocation.getArgument(0);
+            t.setId(1L);
+            return t;
+        });
+
+        TransactionDTO result = transactionService.create(createDTO);
+
+        assertThat(result).isNotNull();
+        verify(sourceRepository, never()).findById(anyLong());
+    }
+
+    @Test
+    void create_WithNullResponsibilities_ShouldThrowException() {
+        TransactionDTO createDTO = new TransactionDTO();
+        createDTO.setDescription("Transaction without responsibilities");
+        createDTO.setAmount(BigDecimal.valueOf(50.00));
+        createDTO.setType(TransactionType.INCOME);
+        createDTO.setSubtype(TransactionSubtype.FIXED);
+        createDTO.setSource(TransactionSource.CASH);
+        createDTO.setCategoryId(1L);
+        createDTO.setUserId(1L);
+        createDTO.setResponsibilities(null);
+
+        assertThatThrownBy(() -> transactionService.create(createDTO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Responsibilities cannot be null or empty");
+
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void create_WithEmptyResponsibilities_ShouldThrowException() {
+        TransactionDTO createDTO = new TransactionDTO();
+        createDTO.setDescription("Transaction with empty responsibilities");
+        createDTO.setAmount(BigDecimal.valueOf(50.00));
+        createDTO.setType(TransactionType.INCOME);
+        createDTO.setSubtype(TransactionSubtype.FIXED);
+        createDTO.setSource(TransactionSource.CASH);
+        createDTO.setCategoryId(1L);
+        createDTO.setUserId(1L);
+        createDTO.setResponsibilities(new ArrayList<>());
+
+        assertThatThrownBy(() -> transactionService.create(createDTO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Responsibilities cannot be null or empty");
+
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void findById_WithNullSubcategory_ShouldHandleGracefully() {
+        testTransaction.setSubcategory(null);
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+
+        Optional<TransactionDTO> result = transactionService.findById(1L);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getSubcategoryId()).isNull();
+    }
+
+    @Test
+    void findById_WithNullSourceEntity_ShouldHandleGracefully() {
+        testTransaction.setSourceEntity(null);
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+
+        Optional<TransactionDTO> result = transactionService.findById(1L);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getSourceEntityId()).isNull();
+    }
+
+
+    @Test
+    void findAll_WithFilterUserId_ShouldApplyFilter() {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("userId", 1L);
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void findAll_WithFilterCategoryId_ShouldApplyFilter() {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("categoryId", 1L);
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void findAll_WithFilterSubcategoryId_ShouldApplyFilter() {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("subcategoryId", 1L);
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void findAll_WithFilterSourceEntityId_ShouldApplyFilter() {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("sourceEntityId", 1L);
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void findAll_WithFilterDescription_ShouldApplyFilter() {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("description", "test");
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void findAll_WithUnknownFilterKey_ShouldIgnoreFilter() {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("unknownKey", "value");
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void update_WithNullResponsibilities_ShouldThrowException() {
+        TransactionDTO updateDTO = new TransactionDTO();
+        updateDTO.setAmount(BigDecimal.valueOf(100.00));
+        updateDTO.setDescription("Updated Description");
+        updateDTO.setResponsibilities(null);
+
+        Transaction freshTransaction = createFreshTransaction();
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(freshTransaction));
+
+        assertThatThrownBy(() -> transactionService.update(1L, updateDTO))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void update_WithEmptyResponsibilities_ShouldThrowException() {
+        TransactionDTO updateDTO = new TransactionDTO();
+        updateDTO.setAmount(BigDecimal.valueOf(100.00));
+        updateDTO.setDescription("Updated Description");
+        updateDTO.setResponsibilities(new ArrayList<>());
+
+        assertThatThrownBy(() -> transactionService.update(1L, updateDTO))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(transactionRepository, never()).findById(anyLong());
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void mapToResponseDTO_WithNullCategory_ShouldNotSetCategoryId() {
+        testTransaction.setCategory(null);
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+
+        Optional<TransactionDTO> result = transactionService.findById(1L);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getCategoryId()).isNull();
+    }
+
+    @Test
+    void mapToResponseDTO_WithNullSubcategory_ShouldNotSetSubcategoryId() {
+        testTransaction.setSubcategory(null);
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+
+        Optional<TransactionDTO> result = transactionService.findById(1L);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getSubcategoryId()).isNull();
+    }
+
+    @Test
+    void mapToResponseDTO_WithNullSourceEntity_ShouldNotSetSourceEntityId() {
+        testTransaction.setSourceEntity(null);
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+
+        Optional<TransactionDTO> result = transactionService.findById(1L);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getSourceEntityId()).isNull();
+    }
+
+    // Note: Cannot test mapToResponseDTO with null user because belongsToUser()
+    // calls entity.getUser().getId() which throws NullPointerException before mapToResponseDTO is called
+
+    @Test
+    void reconcileTransaction_WithNullReconciledAmount_ShouldSetNull() {
+        TransactionReconciliationRequest request = new TransactionReconciliationRequest();
+        request.setReconciledAmount(null);
+        request.setReconciliationDate(LocalDateTime.now());
+        request.setReconciled(true);
+
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(testTransaction);
+
+        TransactionDTO result = transactionService.reconcileTransaction(1L, request);
+
+        assertThat(result).isNotNull();
+        verify(transactionRepository).save(argThat(t -> t.getReconciledAmount() == null));
+    }
+
+    @Test
+    void reconcileTransaction_WithNullReconciliationDate_ShouldSetNull() {
+        TransactionReconciliationRequest request = new TransactionReconciliationRequest();
+        request.setReconciledAmount(BigDecimal.valueOf(100.00));
+        request.setReconciliationDate(null);
+        request.setReconciled(true);
+
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(testTransaction);
+
+        TransactionDTO result = transactionService.reconcileTransaction(1L, request);
+
+        assertThat(result).isNotNull();
+        verify(transactionRepository).save(argThat(t -> t.getReconciliationDate() == null));
+    }
+
+    @Test
+    void reconcileTransaction_WithNullReconciled_ShouldSetNull() {
+        TransactionReconciliationRequest request = new TransactionReconciliationRequest();
+        request.setReconciledAmount(BigDecimal.valueOf(100.00));
+        request.setReconciliationDate(LocalDateTime.now());
+        request.setReconciled(null);
+
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(testTransaction);
+
+        TransactionDTO result = transactionService.reconcileTransaction(1L, request);
+
+        assertThat(result).isNotNull();
+        verify(transactionRepository).save(argThat(t -> t.getReconciled() == null));
+    }
+
+    @Test
+    void reconcileTransaction_WithNullReconciliationNotes_ShouldSetNull() {
+        TransactionReconciliationRequest request = new TransactionReconciliationRequest();
+        request.setReconciledAmount(BigDecimal.valueOf(100.00));
+        request.setReconciliationDate(LocalDateTime.now());
+        request.setReconciled(true);
+        request.setReconciliationNotes(null);
+
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(testTransaction);
+
+        TransactionDTO result = transactionService.reconcileTransaction(1L, request);
+
+        assertThat(result).isNotNull();
+        verify(transactionRepository).save(argThat(t -> t.getReconciliationNotes() == null));
+    }
+
+    @Test
+    void reconcileTransaction_WithNullBankReference_ShouldSetNull() {
+        TransactionReconciliationRequest request = new TransactionReconciliationRequest();
+        request.setReconciledAmount(BigDecimal.valueOf(100.00));
+        request.setReconciliationDate(LocalDateTime.now());
+        request.setReconciled(true);
+        request.setBankReference(null);
+
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(testTransaction);
+
+        TransactionDTO result = transactionService.reconcileTransaction(1L, request);
+
+        assertThat(result).isNotNull();
+        verify(transactionRepository).save(argThat(t -> t.getBankReference() == null));
+    }
+
+    @Test
+    void reconcileTransaction_WithNullExternalReference_ShouldSetNull() {
+        TransactionReconciliationRequest request = new TransactionReconciliationRequest();
+        request.setReconciledAmount(BigDecimal.valueOf(100.00));
+        request.setReconciliationDate(LocalDateTime.now());
+        request.setReconciled(true);
+        request.setExternalReference(null);
+
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(testTransaction);
+
+        TransactionDTO result = transactionService.reconcileTransaction(1L, request);
+
+        assertThat(result).isNotNull();
+        verify(transactionRepository).save(argThat(t -> t.getExternalReference() == null));
+    }
+
+    @Test
+    void findAll_WithDTOFiltersNull_ShouldNotApplyFilters() {
+        TransactionDTO filters = null;
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(eq((String) null), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, null, null, PageRequest.of(0, 10), filters);
+
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionRepository).findAll(eq((String) null), any(Pageable.class));
+    }
+
+    @Test
+    void findAll_WithDTOFiltersAllFields_ShouldApplyAllFilters() {
+        TransactionDTO filters = new TransactionDTO();
+        filters.setUserId(1L);
+        filters.setType(TransactionType.EXPENSE);
+        filters.setCategoryId(1L);
+        filters.setSubcategoryId(1L);
+        filters.setSourceEntityId(1L);
+        filters.setDescription("test");
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, null, null, PageRequest.of(0, 10), filters);
+
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void findAll_WithDTOFiltersPartialFields_ShouldThrowNullPointerException() {
+        TransactionDTO filters = new TransactionDTO();
+        filters.setUserId(1L);
+        filters.setType(TransactionType.EXPENSE);
+        filters.setCategoryId(1L);
+        // Other fields remain null, but Map.of() will throw if we try to include them
+        // This tests the branch where null values cause NullPointerException
+
+        // This will throw NullPointerException because Map.of() doesn't allow null values
+        assertThatThrownBy(() -> transactionService.findAll(null, null, null, PageRequest.of(0, 10), filters))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void createSpecificationFromFilters_WithNullFilters_ShouldUseSearchOnly() {
+        Map<String, Object> filters = null;
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        // When filters is null, hasNoFilters returns true, so it uses findAllWithSearchOnly
+        // which calls executeFindAllWithSearch, not findAllWithSpecifications
+        when(transactionRepository.findAll(eq((String) null), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionRepository).findAll(eq((String) null), any(Pageable.class));
+    }
+
+    @Test
+    void createSpecificationFromFilters_WithNullValues_ShouldIgnoreNullValues() {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("type", TransactionType.EXPENSE);
+        filters.put("categoryId", null);
+        filters.put("subcategoryId", null);
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void createSpecificationFromFilters_WithAllFilterTypes_ShouldApplyAllFilters() {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("userId", 1L);
+        filters.put("type", TransactionType.EXPENSE);
+        filters.put("categoryId", 1L);
+        filters.put("subcategoryId", 1L);
+        filters.put("sourceEntityId", 1L);
+        filters.put("description", "test");
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+
+        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionRepository).findAll(any(Specification.class), any(Pageable.class));
     }
 
 }

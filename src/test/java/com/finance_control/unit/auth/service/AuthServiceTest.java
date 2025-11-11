@@ -51,7 +51,7 @@ class AuthServiceTest {
     void shouldAuthenticateSuccessfully() {
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
-        
+
         // Mock MetricsService methods
         when(metricsService.startAuthenticationTimer()).thenReturn(Instant.now());
         doNothing().when(metricsService).incrementUserLogin();
@@ -66,36 +66,63 @@ class AuthServiceTest {
     @Test
     void shouldChangePasswordSuccessfully() {
         // The changePassword method is not yet implemented, so it throws UnsupportedOperationException
-        assertThat(org.junit.jupiter.api.Assertions.assertThrows(UnsupportedOperationException.class, () -> {
-            authService.changePassword("oldPassword", "newPassword");
-        })).isNotNull();
+        assertThat(org.junit.jupiter.api.Assertions.assertThrows(UnsupportedOperationException.class,
+                () -> authService.changePassword("oldPassword", "newPassword"))).isNotNull();
     }
 
     @Test
     void shouldFailAuthenticationWithInvalidCredentials() {
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
-        
+
         // Mock MetricsService methods
         when(metricsService.startAuthenticationTimer()).thenReturn(Instant.now());
         doNothing().when(metricsService).recordAuthenticationTime(any(Instant.class));
 
-        assertThat(org.junit.jupiter.api.Assertions.assertThrows(AuthenticationException.class, () -> {
-            authService.authenticate("test@example.com", "wrongPassword");
-        })).isNotNull();
+        assertThat(org.junit.jupiter.api.Assertions.assertThrows(AuthenticationException.class,
+                () -> authService.authenticate("test@example.com", "wrongPassword"))).isNotNull();
     }
 
     @Test
     void shouldFailAuthenticationWithInactiveUser() {
         testUser.setIsActive(false);
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
-        
+
         // Mock MetricsService methods
         when(metricsService.startAuthenticationTimer()).thenReturn(Instant.now());
         doNothing().when(metricsService).recordAuthenticationTime(any(Instant.class));
 
-        assertThat(org.junit.jupiter.api.Assertions.assertThrows(AuthenticationException.class, () -> {
-            authService.authenticate("test@example.com", "password123");
-        })).isNotNull();
+        assertThat(org.junit.jupiter.api.Assertions.assertThrows(AuthenticationException.class,
+                () -> authService.authenticate("test@example.com", "password123"))).isNotNull();
+    }
+
+    @Test
+    void shouldFailAuthenticationWhenUserNotFound() {
+        when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
+
+        // Mock MetricsService methods
+        when(metricsService.startAuthenticationTimer()).thenReturn(Instant.now());
+        doNothing().when(metricsService).recordAuthenticationTime(any(Instant.class));
+
+        assertThat(org.junit.jupiter.api.Assertions.assertThrows(AuthenticationException.class,
+                () -> authService.authenticate("nonexistent@example.com", "password123"))).isNotNull();
+    }
+
+    @Test
+    void shouldAuthenticateWithNullIsActive() {
+        // When isActive is null, Boolean.FALSE.equals() returns false, so authentication should proceed
+        testUser.setIsActive(null);
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
+
+        // Mock MetricsService methods
+        when(metricsService.startAuthenticationTimer()).thenReturn(Instant.now());
+        doNothing().when(metricsService).incrementUserLogin();
+        doNothing().when(metricsService).recordAuthenticationTime(any(Instant.class));
+
+        Long result = authService.authenticate("test@example.com", "password123");
+
+        assertThat(result).isNotNull();
+        assertThat(result).isEqualTo(1L);
     }
 }

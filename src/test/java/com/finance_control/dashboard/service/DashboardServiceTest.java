@@ -47,20 +47,10 @@ class DashboardServiceTest {
     @InjectMocks
     private DashboardService dashboardService;
 
-    private User testUser;
-    private TransactionCategory testCategory;
     private FinancialGoal testGoal;
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(1L);
-        testUser.setEmail("test@example.com");
-
-        testCategory = new TransactionCategory();
-        testCategory.setId(1L);
-        testCategory.setName("Food & Dining");
-
         testGoal = new FinancialGoal();
         testGoal.setId(1L);
         testGoal.setName("Emergency Fund");
@@ -74,9 +64,6 @@ class DashboardServiceTest {
     void getDashboardSummary_ShouldReturnCompleteSummary() {
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
             userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
-
-            LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
-            LocalDate endOfMonth = startOfMonth.withDayOfMonth(startOfMonth.lengthOfMonth());
 
             when(transactionRepository.sumByUserAndTypeAndDateBetween(
                     eq(1L), eq(TransactionType.INCOME), any(LocalDateTime.class), any(LocalDateTime.class)))
@@ -187,6 +174,146 @@ class DashboardServiceTest {
     void calculateSavingsRate_WithValidData_ShouldReturnCorrectRate() {
         BigDecimal result = dashboardService.calculateSavingsRate(new BigDecimal("5000"), new BigDecimal("3000"));
         assertThat(result).isEqualTo(new BigDecimal("40.0000"));
+    }
+
+    @Test
+    void calculateSavingsRate_WithNegativeIncome_ShouldReturnZero() {
+        BigDecimal result = dashboardService.calculateSavingsRate(new BigDecimal("-1000"), new BigDecimal("500"));
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getDashboardSummary_WithZeroIncome_ShouldCalculateCorrectSavingsRate() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+
+            when(transactionRepository.sumByUserAndTypeAndDateBetween(
+                    eq(1L), eq(TransactionType.INCOME), any(LocalDateTime.class), any(LocalDateTime.class)))
+                    .thenReturn(BigDecimal.ZERO);
+            when(transactionRepository.sumByUserAndTypeAndDateBetween(
+                    eq(1L), eq(TransactionType.EXPENSE), any(LocalDateTime.class), any(LocalDateTime.class)))
+                    .thenReturn(new BigDecimal("1000"));
+            when(financialGoalRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(1L))
+                    .thenReturn(Arrays.asList());
+            when(financialGoalRepository.findCompletedGoals(1L))
+                    .thenReturn(Arrays.asList());
+            when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                    .thenReturn(Arrays.asList());
+
+            DashboardSummaryDTO result = dashboardService.getDashboardSummary();
+
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalIncome()).isEqualTo(BigDecimal.ZERO);
+            assertThat(result.getSavingsRate()).isEqualTo(BigDecimal.ZERO);
+        }
+    }
+
+    @Test
+    void getDashboardSummary_WithEmptyGoals_ShouldReturnZeroProgress() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+
+            when(transactionRepository.sumByUserAndTypeAndDateBetween(
+                    eq(1L), eq(TransactionType.INCOME), any(LocalDateTime.class), any(LocalDateTime.class)))
+                    .thenReturn(new BigDecimal("5000"));
+            when(transactionRepository.sumByUserAndTypeAndDateBetween(
+                    eq(1L), eq(TransactionType.EXPENSE), any(LocalDateTime.class), any(LocalDateTime.class)))
+                    .thenReturn(new BigDecimal("3000"));
+            when(financialGoalRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(1L))
+                    .thenReturn(Arrays.asList());
+            when(financialGoalRepository.findCompletedGoals(1L))
+                    .thenReturn(Arrays.asList());
+            when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                    .thenReturn(Arrays.asList());
+
+            DashboardSummaryDTO result = dashboardService.getDashboardSummary();
+
+            assertThat(result).isNotNull();
+            assertThat(result.getActiveGoals()).isEqualTo(0);
+        }
+    }
+
+    @Test
+    void getTopSpendingCategories_WithZeroTotalExpenses_ShouldReturnCategoriesWithZeroPercentage() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            // Empty transactions list means zero total expenses
+            when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                    .thenReturn(Arrays.asList());
+
+            List<CategorySpendingDTO> result = dashboardService.getTopSpendingCategories(1L, 3);
+
+            assertThat(result).isEmpty();
+        }
+    }
+
+    @Test
+    void getFinancialMetrics_WithEmptyTransactions_ShouldReturnZeroAverages() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            LocalDate startDate = LocalDate.now().minusDays(30);
+            LocalDate endDate = LocalDate.now();
+
+            when(transactionRepository.sumByUserAndTypeAndDateBetween(
+                    eq(1L), eq(TransactionType.INCOME), any(LocalDateTime.class), any(LocalDateTime.class)))
+                    .thenReturn(new BigDecimal("5000"));
+            when(transactionRepository.sumByUserAndTypeAndDateBetween(
+                    eq(1L), eq(TransactionType.EXPENSE), any(LocalDateTime.class), any(LocalDateTime.class)))
+                    .thenReturn(new BigDecimal("3000"));
+            when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                    .thenReturn(Arrays.asList());
+
+            FinancialMetricsDTO result = dashboardService.getFinancialMetrics(startDate, endDate);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getAverageTransactionAmount()).isEqualTo(BigDecimal.ZERO);
+            assertThat(result.getTotalTransactions()).isEqualTo(0);
+        }
+    }
+
+    @Test
+    void getTopSpendingCategories_ShouldLimitResults() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            // Create transactions with dates in the current month
+            LocalDate currentMonth = LocalDate.now().withDayOfMonth(1);
+            Transaction expense1 = createTestTransactionWithDate("Food", new BigDecimal("500"), currentMonth);
+            Transaction expense2 = createTestTransactionWithDate("Transportation", new BigDecimal("300"), currentMonth);
+            Transaction expense3 = createTestTransactionWithDate("Entertainment", new BigDecimal("200"), currentMonth);
+            Transaction expense4 = createTestTransactionWithDate("Shopping", new BigDecimal("100"), currentMonth);
+
+            when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                    .thenReturn(Arrays.asList(expense1, expense2, expense3, expense4));
+
+            List<CategorySpendingDTO> result = dashboardService.getTopSpendingCategories(1L, 2);
+
+            assertThat(result).hasSize(2);
+            // Results should be sorted by amount descending
+            assertThat(result.get(0).getAmount()).isGreaterThanOrEqualTo(result.get(1).getAmount());
+        }
+    }
+
+    private Transaction createTestTransactionWithDate(String categoryName, BigDecimal amount, LocalDate date) {
+        Transaction transaction = createTestTransaction(categoryName, amount);
+        transaction.setDate(date.atTime(12, 0));
+        return transaction;
+    }
+
+    @Test
+    void calculateSavingsRate_WithZeroIncomeAndZeroExpenses_ShouldReturnZero() {
+        BigDecimal result = dashboardService.calculateSavingsRate(BigDecimal.ZERO, BigDecimal.ZERO);
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void calculateSavingsRate_WithNegativeSavings_ShouldReturnNegativeRate() {
+        BigDecimal result = dashboardService.calculateSavingsRate(new BigDecimal("1000"), new BigDecimal("1500"));
+        assertThat(result).isEqualTo(new BigDecimal("-50.0000"));
     }
 
     private Transaction createTestTransaction(String categoryName, BigDecimal amount) {

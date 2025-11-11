@@ -23,12 +23,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class BaseServiceTest {
@@ -40,10 +41,18 @@ class BaseServiceTest {
 
     private TestBaseService service;
 
+    private User testUser;
+
     @BeforeEach
     void setUp() {
         service = new TestBaseService(repository);
         UserContext.setCurrentUserId(1L);
+
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@example.com");
+        testUser.setPassword(TEST_PASSWORD);
+        testUser.setIsActive(true);
     }
 
     @AfterEach
@@ -400,6 +409,370 @@ class BaseServiceTest {
         verify(repository).findAll(any(Specification.class), any(Pageable.class));
     }
 
+    @Test
+    void findAll_WithNullFilters_ShouldUseSearchOnly() {
+        String search = "test";
+        Map<String, Object> filters = null;
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        when(repository.findAll(eq(search), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = service.findAll(search, filters, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        verify(repository).findAll(eq(search), any(Pageable.class));
+    }
+
+    @Test
+    void findAll_WithNullSearchAndNullFilters_ShouldUseBasicFindAll() {
+        String search = null;
+        Map<String, Object> filters = null;
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        when(repository.findAll((String) isNull(), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = service.findAll(search, filters, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void findAll_WithSortDirectionDesc_ShouldApplyDescendingSort() {
+        String search = "test";
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        when(repository.findAll(eq(search), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = service.findAll(search, null, "email", "desc", pageable);
+
+        assertThat(result).isNotNull();
+        verify(repository).findAll(eq(search), any(Pageable.class));
+    }
+
+    @Test
+    void create_WithUserAwareService_ShouldSetUserId() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        UserDTO createDTO = new UserDTO();
+        createDTO.setEmail("test@example.com");
+        createDTO.setPassword(TEST_PASSWORD);
+        createDTO.setIsActive(true);
+
+        User savedUser = new User();
+        savedUser.setId(1L);
+        savedUser.setEmail("test@example.com");
+        savedUser.setPassword(TEST_PASSWORD);
+        savedUser.setIsActive(true);
+
+        when(repository.save(any(User.class))).thenReturn(savedUser);
+
+        UserDTO result = userAwareService.create(createDTO);
+
+        assertThat(result).isNotNull();
+        verify(repository).save(any(User.class));
+    }
+
+    @Test
+    void create_WithUserAwareServiceAndNullUserId_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.clear();
+
+        UserDTO createDTO = new UserDTO();
+        createDTO.setEmail("test@example.com");
+        createDTO.setPassword(TEST_PASSWORD);
+        createDTO.setIsActive(true);
+
+        assertThatThrownBy(() -> userAwareService.create(createDTO))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("User context not available");
+    }
+
+    @Test
+    void findAll_WithUserAwareService_ShouldAddUserFilter() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        Map<String, Object> filters = new HashMap<>();
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        when(repository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = userAwareService.findAll(null, filters, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(filters.containsKey("userId")).isTrue();
+        assertThat(filters.get("userId")).isEqualTo(1L);
+    }
+
+    @Test
+    void findAll_WithUserAwareServiceAndExistingUserIdFilter_ShouldNotOverrideFilter() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("userId", 999L);
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        when(repository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = userAwareService.findAll(null, filters, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(filters.get("userId")).isEqualTo(999L);
+    }
+
+    @Test
+    void findAll_WithUserAwareServiceAndNullUserId_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.clear();
+
+        Map<String, Object> filters = new HashMap<>();
+        Pageable pageable = PageRequest.of(0, 10);
+
+        assertThatThrownBy(() -> userAwareService.findAll(null, filters, null, null, pageable))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("User context not available");
+    }
+
+    @Test
+    void findAll_WithEmptyFiltersMap_ShouldUseSearchOnly() {
+        String search = "test";
+        Map<String, Object> filters = new HashMap<>();
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        when(repository.findAll(eq(search), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = service.findAll(search, filters, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        verify(repository).findAll(eq(search), any(Pageable.class));
+    }
+
+    @Test
+    void findAll_WithSortDirectionAsc_ShouldApplyAscendingSort() {
+        String search = "test";
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        when(repository.findAll(eq(search), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = service.findAll(search, null, "email", "asc", pageable);
+
+        assertThat(result).isNotNull();
+        verify(repository).findAll(eq(search), any(Pageable.class));
+    }
+
+    @Test
+    void executeFindAllWithSearch_WithUserAwareServiceAndNoSuchMethod_ShouldFallbackToStandardMethod() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        String search = "test";
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        // Mock repository doesn't have findAll(String, Long, Pageable), so NoSuchMethodException will be thrown
+        when(repository.findAll(eq(search), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = userAwareService.findAll(search, null, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        // Should fallback to standard findAll(String, Pageable)
+        verify(repository).findAll(eq(search), any(Pageable.class));
+    }
+
+    @Test
+    void executeFindAllWithSearch_WithUserAwareServiceAndNullUserContext_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.clear();
+
+        String search = "test";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        assertThatThrownBy(() -> userAwareService.findAll(search, null, null, null, pageable))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("User context not available");
+    }
+
+    @Test
+    void addUserFilterIfNeeded_WithNullFilters_ShouldNotAddFilter() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        Map<String, Object> filters = null;
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        // When filters is null, hasNoFilters returns true, so it uses findAllWithSearchOnly
+        // which calls executeFindAllWithSearch, which will fallback to findAll(String, Pageable)
+        when(repository.findAll(eq((String) null), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = userAwareService.findAll(null, filters, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        verify(repository).findAll(eq((String) null), any(Pageable.class));
+    }
+
+    @Test
+    void addUserFilterIfNeeded_WithFiltersContainingUserId_ShouldNotOverride() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("userId", 999L);
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        when(repository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = userAwareService.findAll(null, filters, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(filters.get("userId")).isEqualTo(999L);
+    }
+
+    @Test
+    void findById_WithUserAwareServiceAndEntityNotBelongingToUser_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        User otherUser = new User();
+        otherUser.setId(999L);
+        otherUser.setEmail("other@example.com");
+        otherUser.setPassword(TEST_PASSWORD);
+        otherUser.setIsActive(true);
+
+        when(repository.findById(999L)).thenReturn(Optional.of(otherUser));
+
+        assertThatThrownBy(() -> userAwareService.findById(999L))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("Access denied");
+    }
+
+    @Test
+    void findById_WithUserAwareServiceAndNullUserContext_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.clear();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        assertThatThrownBy(() -> userAwareService.findById(1L))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("User context not available");
+    }
+
+    @Test
+    void update_WithUserAwareServiceAndEntityNotBelongingToUser_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        User otherUser = new User();
+        otherUser.setId(999L);
+        otherUser.setEmail("other@example.com");
+        otherUser.setPassword(TEST_PASSWORD);
+        otherUser.setIsActive(true);
+
+        UserDTO updateDTO = new UserDTO();
+        updateDTO.setEmail("new@example.com");
+
+        when(repository.findById(999L)).thenReturn(Optional.of(otherUser));
+
+        assertThatThrownBy(() -> userAwareService.update(999L, updateDTO))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("Access denied");
+    }
+
+    @Test
+    void update_WithUserAwareServiceAndNullUserContext_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.clear();
+
+        UserDTO updateDTO = new UserDTO();
+        updateDTO.setEmail("new@example.com");
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        assertThatThrownBy(() -> userAwareService.update(1L, updateDTO))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("User context not available");
+    }
+
+    @Test
+    void delete_WithUserAwareServiceAndEntityNotBelongingToUser_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        User otherUser = new User();
+        otherUser.setId(999L);
+        otherUser.setEmail("other@example.com");
+        otherUser.setPassword(TEST_PASSWORD);
+        otherUser.setIsActive(true);
+
+        when(repository.findById(999L)).thenReturn(Optional.of(otherUser));
+
+        assertThatThrownBy(() -> userAwareService.delete(999L))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("Access denied");
+    }
+
+    @Test
+    void delete_WithUserAwareServiceAndNullUserContext_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.clear();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        assertThatThrownBy(() -> userAwareService.delete(1L))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("User context not available");
+    }
+
+    @Test
+    void create_WithUserAwareServiceAndNullUserContext_ShouldThrowSecurityException() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.clear();
+
+        UserDTO createDTO = new UserDTO();
+        createDTO.setEmail("test@example.com");
+        createDTO.setPassword(TEST_PASSWORD);
+        createDTO.setIsActive(true);
+
+        assertThatThrownBy(() -> userAwareService.create(createDTO))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("User context not available");
+    }
+
+    @Test
+    void findAll_WithUserAwareServiceAndEmptyFilters_ShouldAddUserFilter() {
+        UserAwareTestService userAwareService = new UserAwareTestService(repository);
+        UserContext.setCurrentUserId(1L);
+
+        Map<String, Object> filters = new HashMap<>();
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> userPage = new PageImpl<>(List.of(testUser), pageable, 1);
+
+        // When filters is empty, addUserFilterIfNeeded adds userId, making filters non-empty
+        // So hasNoFilters returns false, and it uses findAllWithSpecifications
+        when(repository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(userPage);
+
+        Page<UserDTO> result = userAwareService.findAll(null, filters, null, null, pageable);
+
+        assertThat(result).isNotNull();
+        // addUserFilterIfNeeded should have added userId to filters
+        assertThat(filters.containsKey("userId")).isTrue();
+        assertThat(filters.get("userId")).isEqualTo(1L);
+        verify(repository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
     // Test implementation of BaseService
     private static class TestBaseService extends BaseService<User, Long, UserDTO> {
 
@@ -437,6 +810,105 @@ class BaseServiceTest {
             dto.setPassword(entity.getPassword());
             dto.setIsActive(entity.getIsActive());
             return dto;
+        }
+
+        @Override
+        protected void validateCreateDTO(UserDTO createDTO) {
+        }
+
+        @Override
+        protected void validateUpdateDTO(UserDTO updateDTO) {
+        }
+
+        @Override
+        protected void validateEntity(User entity) {
+        }
+
+        @Override
+        protected String getEntityName() {
+            return "User";
+        }
+
+        @Override
+        protected Specification<User> createSpecificationFromFilters(String search, Map<String, Object> filters) {
+            return (root, query, criteriaBuilder) -> null;
+        }
+    }
+
+    // User-aware test service implementation
+    private static class UserAwareTestService extends BaseService<User, Long, UserDTO> {
+
+        public UserAwareTestService(BaseRepository<User, Long> repository) {
+            super(repository);
+        }
+
+        @Override
+        protected boolean isUserAware() {
+            return true;
+        }
+
+        @Override
+        protected void setUserId(User entity, Long userId) {
+            entity.setId(userId);
+        }
+
+        @Override
+        protected boolean belongsToUser(User entity, Long userId) {
+            return entity.getId().equals(userId);
+        }
+
+        @Override
+        protected User mapToEntity(UserDTO createDTO) {
+            User user = new User();
+            user.setEmail(createDTO.getEmail());
+            user.setPassword(createDTO.getPassword());
+            user.setIsActive(createDTO.getIsActive());
+            return user;
+        }
+
+        @Override
+        protected void updateEntityFromDTO(User entity, UserDTO updateDTO) {
+            if (updateDTO.getEmail() != null) {
+                entity.setEmail(updateDTO.getEmail());
+            }
+            if (updateDTO.getPassword() != null) {
+                entity.setPassword(updateDTO.getPassword());
+            }
+            if (updateDTO.getIsActive() != null) {
+                entity.setIsActive(updateDTO.getIsActive());
+            }
+        }
+
+        @Override
+        protected UserDTO mapToResponseDTO(User entity) {
+            UserDTO dto = new UserDTO();
+            dto.setId(entity.getId());
+            dto.setEmail(entity.getEmail());
+            dto.setPassword(entity.getPassword());
+            dto.setIsActive(entity.getIsActive());
+            return dto;
+        }
+
+        @Override
+        protected void validateCreateDTO(UserDTO createDTO) {
+        }
+
+        @Override
+        protected void validateUpdateDTO(UserDTO updateDTO) {
+        }
+
+        @Override
+        protected void validateEntity(User entity) {
+        }
+
+        @Override
+        protected String getEntityName() {
+            return "User";
+        }
+
+        @Override
+        protected Specification<User> createSpecificationFromFilters(String search, Map<String, Object> filters) {
+            return (root, query, criteriaBuilder) -> null;
         }
     }
 }

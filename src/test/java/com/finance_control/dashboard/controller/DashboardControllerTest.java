@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,7 +27,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -44,16 +43,16 @@ class DashboardControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private DashboardService dashboardService;
 
-    @MockBean
+    @MockitoBean
     private TransactionRepository transactionRepository;
 
-    @MockBean
+    @MockitoBean
     private FinancialGoalRepository financialGoalRepository;
 
-    @MockBean
+    @MockitoBean
     private MetricsService metricsService;
 
     @Autowired
@@ -67,7 +66,7 @@ class DashboardControllerTest {
     void setUp() {
         // Set up UserContext for the test thread
         UserContext.setCurrentUserId(1L);
-        
+
         // Create a test user for authentication
         User testUser = new User();
         testUser.setId(1L);
@@ -240,5 +239,97 @@ class DashboardControllerTest {
                 .param("data", "invalid-type")
                 .with(user(testUserDetails)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getDashboardSummary_ShouldReturnOk() throws Exception {
+        when(dashboardService.getDashboardSummary())
+                .thenReturn(sampleSummary);
+
+        mockMvc.perform(get("/api/dashboard/summary")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.totalIncome").value(5000.00))
+                .andExpect(jsonPath("$.totalExpenses").value(3000.00))
+                .andExpect(jsonPath("$.netWorth").value(2000.00));
+    }
+
+    @Test
+    void getFinancialMetrics_WithValidDates_ShouldReturnOk() throws Exception {
+        when(dashboardService.getFinancialMetrics(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)))
+                .thenReturn(sampleMetrics);
+
+        mockMvc.perform(get("/api/dashboard/metrics")
+                .param("startDate", "2024-01-01")
+                .param("endDate", "2024-12-31")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.monthlyIncome").value(5000.00))
+                .andExpect(jsonPath("$.monthlyExpenses").value(3000.00));
+    }
+
+    @Test
+    void getTopSpendingCategories_WithDefaultLimit_ShouldReturnOk() throws Exception {
+        List<CategorySpendingDTO> categories = Arrays.asList(
+                CategorySpendingDTO.builder()
+                        .categoryName("Food")
+                        .amount(new BigDecimal("500.00"))
+                        .percentage(new BigDecimal("50.0"))
+                        .build()
+        );
+        when(dashboardService.getTopSpendingCategories(anyLong(), eq(5)))
+                .thenReturn(categories);
+
+        mockMvc.perform(get("/api/dashboard/spending-categories")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].categoryName").value("Food"));
+    }
+
+    @Test
+    void getMonthlyTrends_WithDefaultMonths_ShouldReturnOk() throws Exception {
+        List<MonthlyTrendDTO> trends = Arrays.asList(
+                MonthlyTrendDTO.builder()
+                        .month(LocalDate.of(2024, 1, 1))
+                        .income(new BigDecimal("5000.00"))
+                        .expenses(new BigDecimal("3000.00"))
+                        .build()
+        );
+        when(dashboardService.getMonthlyTrends(anyLong(), eq(12)))
+                .thenReturn(trends);
+
+        mockMvc.perform(get("/api/dashboard/monthly-trends")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void getCurrentMonthMetrics_ShouldReturnOk() throws Exception {
+        when(dashboardService.getFinancialMetrics(any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(sampleMetrics);
+
+        mockMvc.perform(get("/api/dashboard/current-month-metrics")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.monthlyIncome").value(5000.00));
+    }
+
+    @Test
+    void getYearToDateMetrics_ShouldReturnOk() throws Exception {
+        when(dashboardService.getFinancialMetrics(any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(sampleMetrics);
+
+        mockMvc.perform(get("/api/dashboard/year-to-date-metrics")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.monthlyIncome").value(5000.00));
     }
 }

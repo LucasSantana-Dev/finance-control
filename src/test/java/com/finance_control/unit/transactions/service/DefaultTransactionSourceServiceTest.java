@@ -14,15 +14,23 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 
+import com.finance_control.shared.context.UserContext;
+import org.mockito.MockedStatic;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class DefaultTransactionSourceServiceTest extends BaseUnitTest {
 
@@ -186,5 +194,171 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
                 .hasMessage("TransactionSource not found with id: 1");
 
         verify(transactionSourceRepository).findById(1L);
+    }
+
+    @Test
+    void createTransactionSource_WithNullUserId_ShouldThrowException() {
+        createDTO.setUserId(null);
+
+        assertThatThrownBy(() -> transactionSourceService.create(createDTO))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createTransactionSource_WithNullName_ShouldThrowException() {
+        createDTO.setName(null);
+
+        assertThatThrownBy(() -> transactionSourceService.create(createDTO))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void updateTransactionSource_WithNullName_ShouldThrowException() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+            createDTO.setName(null);
+            // Validation happens before findById, so no need to mock it
+
+            assertThatThrownBy(() -> transactionSourceService.update(1L, createDTO))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
+    void updateTransactionSource_WithNullUserId_ShouldThrowException() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+            createDTO.setUserId(null);
+            // Validation happens before findById, so no need to mock it
+
+            assertThatThrownBy(() -> transactionSourceService.update(1L, createDTO))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
+    void findAll_WithIsActiveFilter_ShouldApplyFilter() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            List<TransactionSourceEntity> sources = List.of(testSourceEntity);
+            Page<TransactionSourceEntity> page = new PageImpl<>(sources, PageRequest.of(0, 10), 1);
+            Map<String, Object> filters = new java.util.HashMap<>();
+            filters.put("isActive", true);
+
+            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(page);
+
+            Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(1);
+            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+        }
+    }
+
+    @Test
+    void findAll_WithSourceTypeFilter_ShouldApplyFilter() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            List<TransactionSourceEntity> sources = List.of(testSourceEntity);
+            Page<TransactionSourceEntity> page = new PageImpl<>(sources, PageRequest.of(0, 10), 1);
+            Map<String, Object> filters = new java.util.HashMap<>();
+            filters.put("sourceType", TransactionSource.CREDIT_CARD);
+
+            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(page);
+
+            Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(1);
+            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+        }
+    }
+
+    @Test
+    void findAll_WithNameFilter_ShouldApplyFilter() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            List<TransactionSourceEntity> sources = List.of(testSourceEntity);
+            Page<TransactionSourceEntity> page = new PageImpl<>(sources, PageRequest.of(0, 10), 1);
+            Map<String, Object> filters = new java.util.HashMap<>();
+            filters.put("name", "Nubank");
+
+            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(page);
+
+            Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(1);
+            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+        }
+    }
+
+    @Test
+    void findAll_WithEmptyNameFilter_ShouldSkipNameFilter() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            List<TransactionSourceEntity> sources = List.of(testSourceEntity);
+            Page<TransactionSourceEntity> page = new PageImpl<>(sources, PageRequest.of(0, 10), 1);
+            Map<String, Object> filters = new java.util.HashMap<>();
+            filters.put("name", "");
+
+            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(page);
+
+            Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+            assertThat(result).isNotNull();
+            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+        }
+    }
+
+    @Test
+    void findAll_WithNullNameFilter_ShouldSkipNameFilter() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            List<TransactionSourceEntity> sources = List.of(testSourceEntity);
+            Page<TransactionSourceEntity> page = new PageImpl<>(sources, PageRequest.of(0, 10), 1);
+            Map<String, Object> filters = new java.util.HashMap<>();
+            filters.put("name", null);
+
+            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(page);
+
+            Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+            assertThat(result).isNotNull();
+            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+        }
+    }
+
+    @Test
+    void findAll_WithAllFilters_ShouldApplyAllFilters() {
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            List<TransactionSourceEntity> sources = List.of(testSourceEntity);
+            Page<TransactionSourceEntity> page = new PageImpl<>(sources, PageRequest.of(0, 10), 1);
+            Map<String, Object> filters = new java.util.HashMap<>();
+            filters.put("isActive", true);
+            filters.put("sourceType", TransactionSource.CREDIT_CARD);
+            filters.put("name", "Nubank");
+
+            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(page);
+
+            Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
+
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(1);
+            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+        }
     }
 }
