@@ -509,35 +509,304 @@ pipeline {
 
 ## Best Practices
 
-### 1. Code Style
+### 1. Code Organization
+
+#### File Structure
+Organize your code in a logical, consistent structure following the project's package organization:
+
+```
+src/main/java/com/finance_control/
+├── transactions/           # Transaction module
+│   ├── controller/        # REST controllers
+│   ├── service/           # Business logic
+│   ├── repository/        # Data access
+│   ├── model/             # Entity classes
+│   ├── dto/               # Data transfer objects
+│   └── mapper/            # MapStruct mappers
+├── shared/                 # Shared utilities
+│   ├── config/            # Configuration classes
+│   ├── exception/         # Exception handlers
+│   └── util/              # Utility classes
+└── goals/                  # Goals module
+    └── ...
+```
+
+#### Naming Conventions
+- **Classes**: PascalCase (e.g., `TransactionService`, `UserController`)
+- **Methods/Variables**: camelCase (e.g., `findUserById`, `isTransactionValid`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_RETRY_ATTEMPTS`, `DEFAULT_PAGE_SIZE`)
+- **Packages**: lowercase with dots (e.g., `com.finance_control.transactions.service`)
+- **Test Classes**: Same as class with `Test` suffix (e.g., `TransactionServiceTest`)
+
+#### Import Organization
+```java
+// 1. Java standard library imports
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+// 2. Third-party library imports
+import org.springframework.stereotype.Service;
+import jakarta.persistence.Entity;
+
+// 3. Spring Framework imports
+import org.springframework.beans.factory.annotation.Autowired;
+
+// 4. Project imports
+import com.finance_control.shared.config.BaseService;
+import com.finance_control.transactions.model.Transaction;
+```
+
+### 2. Type Safety and Java Best Practices
+
+#### Use Strong Typing
+```java
+// ❌ Bad - Using Object or raw types
+public void processData(Object data) {
+    String value = (String) data;
+}
+
+// ✅ Good - Proper typing
+public void processData(TransactionDTO data) {
+    String value = data.getDescription();
+}
+```
+
+#### Use Java 21 Features When Appropriate
+```java
+// Records for DTOs
+public record TransactionSummary(BigDecimal total, long count) {}
+
+// Pattern matching (Java 21)
+if (transaction instanceof ExpenseTransaction expense) {
+    expense.processExpense();
+}
+
+// Sealed classes for restricted hierarchies
+public sealed class Transaction permits Income, Expense {}
+```
+
+#### Null Safety
+```java
+// ❌ Bad - Null pointer risk
+String name = user.getName();
+return name.toUpperCase();
+
+// ✅ Good - Null safety
+String name = user.getName();
+return name != null ? name.toUpperCase() : "";
+// Or use Optional
+return Optional.ofNullable(user.getName())
+    .map(String::toUpperCase)
+    .orElse("");
+```
+
+### 3. Service Design Patterns
+
+#### Single Responsibility Principle
+```java
+// ❌ Bad - Multiple responsibilities
+@Service
+class TransactionService {
+    public void processTransaction() {
+        // Validates, saves, sends email, logs, calculates tax...
+    }
+}
+
+// ✅ Good - Single responsibility
+@Service
+class TransactionService {
+    private final TransactionValidator validator;
+    private final TransactionRepository repository;
+    private final NotificationService notificationService;
+
+    public TransactionDTO createTransaction(TransactionDTO dto) {
+        validator.validate(dto);
+        Transaction saved = repository.save(TransactionMapper.toEntity(dto));
+        notificationService.notifyTransactionCreated(saved);
+        return TransactionMapper.toDTO(saved);
+    }
+}
+```
+
+#### Dependency Injection
+```java
+// ✅ Good - Constructor injection
+@Service
+class TransactionService {
+    private final TransactionRepository repository;
+    private final CategoryService categoryService;
+
+    public TransactionService(
+            TransactionRepository repository,
+            CategoryService categoryService) {
+        this.repository = repository;
+        this.categoryService = categoryService;
+    }
+}
+```
+
+### 4. Code Style
 - Follow Checkstyle rules consistently
 - Use consistent naming conventions
 - Maintain proper code formatting
 - Write self-documenting code
+- Avoid unnecessary comments - code should explain itself
 
-### 2. Code Quality
-- Keep methods small and focused
-- Maintain low cyclomatic complexity
-- Avoid code duplication
+### 5. Code Quality
+- Keep methods small and focused (max 150 lines)
+- Maintain low cyclomatic complexity (max 10)
+- Avoid code duplication (DRY principle)
 - Follow SOLID principles
+- Use meaningful variable and method names
+- Extract magic numbers into constants
 
-### 3. Testing
+### 6. Testing
 - Write comprehensive unit tests
-- Maintain high code coverage
+- Maintain high code coverage (80% minimum)
 - Test edge cases and error conditions
-- Use meaningful test names
+- Use meaningful test names (should[ExpectedBehavior]When[StateUnderTest])
+- Test behavior, not implementation
+- Follow AAA pattern (Arrange, Act, Assert)
+- See [Testing Best Practices](testing/BEST_PRACTICES.md) for detailed guidelines
 
-### 4. Security
+### 7. Security
 - Follow security best practices
-- Validate all inputs
+- Validate all inputs (use Bean Validation)
 - Use secure coding patterns
-- Regular security audits
+- Never hardcode secrets or credentials
+- Use Spring Security for authentication/authorization
+- Sanitize user inputs
+- Use parameterized queries (JPA/Hibernate handles this)
+- Regular security audits using `scripts/modules/security-check.sh`
 
-### 5. Performance
-- Optimize critical paths
-- Avoid performance anti-patterns
-- Monitor resource usage
-- Profile when necessary
+### 8. Performance Guidelines
+
+#### Database Optimization
+```java
+// ❌ Bad - N+1 query problem
+List<Transaction> transactions = repository.findAll();
+transactions.forEach(t -> t.getCategory().getName()); // Extra queries
+
+// ✅ Good - Use fetch joins
+@Query("SELECT t FROM Transaction t JOIN FETCH t.category")
+List<Transaction> findAllWithCategory();
+```
+
+#### Caching Strategy
+```java
+// Use Spring Cache for expensive operations
+@Cacheable(value = "categories", key = "#id")
+public CategoryDTO findCategoryById(Long id) {
+    return categoryRepository.findById(id)
+        .map(CategoryMapper::toDTO)
+        .orElseThrow(() -> new CategoryNotFoundException(id));
+}
+```
+
+#### Avoid Performance Anti-patterns
+- Don't load entire collections unnecessarily
+- Use pagination for large datasets
+- Avoid excessive logging in production
+- Use lazy loading appropriately with JPA
+- Profile before optimizing
+
+### 9. Error Handling
+
+```java
+// ✅ Good - Descriptive error messages
+public TransactionDTO findById(Long id) {
+    return repository.findById(id)
+        .map(TransactionMapper::toDTO)
+        .orElseThrow(() -> new TransactionNotFoundException(
+            "Transaction with ID " + id + " not found"
+        ));
+}
+
+// ✅ Good - Centralized exception handling
+@ControllerAdvice
+class GlobalExceptionHandler {
+    @ExceptionHandler(TransactionNotFoundException.class)
+    ResponseEntity<ErrorResponse> handleNotFound(TransactionNotFoundException e) {
+        return ResponseEntity.status(404)
+            .body(new ErrorResponse(e.getMessage()));
+    }
+}
+```
+
+## Continuous Improvement
+
+### Regular Code Reviews
+1. **Focus on quality, not just functionality**
+2. **Review for**: Code style, test coverage, security, performance
+3. **Use checklists** to ensure consistency
+4. **Provide constructive feedback**
+
+### Refactoring Guidelines
+1. **Identify technical debt** during code reviews
+2. **Refactor incrementally** - small, safe changes
+3. **Maintain test coverage** during refactoring
+4. **Document complex refactoring decisions**
+
+### Team Practices
+1. **Pair programming** for knowledge sharing
+2. **Code review** for all changes
+3. **Regular retrospectives** on code quality
+4. **Share learnings** through documentation
+
+### Monitoring Quality Metrics
+- Track trends in code quality metrics over time
+- Set up alerts for quality gate failures
+- Review SonarQube reports regularly
+- Address technical debt proactively
+
+## Success Metrics and Targets
+
+### Code Quality Targets
+- **Checkstyle violations**: 0
+- **PMD violations**: 0 (Priority 1-2), < 10 (Priority 3-4)
+- **SpotBugs issues**: 0 (High/Critical), < 5 (Medium)
+- **Cyclomatic complexity**: < 10 per method
+- **Code duplication**: < 3% (SonarQube)
+
+### Test Coverage Targets
+- **Overall coverage**: > 80%
+- **Line coverage**: > 80%
+- **Branch coverage**: > 80%
+- **Critical business logic**: > 95%
+
+### Performance Targets
+- **API response time**: < 200ms (p95)
+- **Database query time**: < 100ms (p95)
+- **Test execution time**: < 5 minutes (full suite)
+
+### Maintainability Targets
+- **Maintainability Rating**: A (SonarQube)
+- **Technical Debt Ratio**: < 5%
+- **Code Smells**: < 50 per 1000 lines
+
+## Automated Quality Checks
+
+### Pre-commit Checks
+Use the provided scripts for quality checks:
+
+```bash
+# Code quality check
+./scripts/modules/code-quality.sh
+
+# Security check
+./scripts/modules/security-check.sh
+
+# Full quality analysis
+./scripts/dev.sh quality-local
+```
+
+### CI/CD Integration
+Quality gates should be enforced in CI/CD pipeline:
+1. **Checkstyle** - Fail build on violations
+2. **PMD** - Fail build on high-priority violations
+3. **SpotBugs** - Fail build on critical issues
+4. **Test Coverage** - Fail build if below threshold
+5. **Security Scan** - Block merge on critical vulnerabilities
 
 ## Maintenance
 

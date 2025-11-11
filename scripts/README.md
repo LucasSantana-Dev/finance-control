@@ -33,6 +33,8 @@ This project uses **Docker for everything** - no need to set up a local environm
 | `./scripts/dev.sh stop` | Stops all services | - |
 | `./scripts/dev.sh clean` | Cleans containers and volumes | `--no-test` |
 | `./scripts/dev.sh quality-local` | Runs complete quality analysis (local) | `--no-test` |
+| `./scripts/dev.sh code-quality` | Run code quality analysis (file size, complexity) | `--skip-tools` |
+| `./scripts/dev.sh security-check` | Run security vulnerability and pattern checks | `--skip-deps` |
 | `./scripts/dev.sh checkstyle-clean` | Clean and run Checkstyle with stacktrace | - |
 | `./scripts/dev.sh sonarqube-start` | Starts SonarQube service | - |
 | `./scripts/dev.sh sonarqube-stop` | Stops SonarQube service | - |
@@ -57,7 +59,9 @@ scripts/
     ├── services.sh          # Docker service management
     ├── build.sh             # Build, test, and quality functions
     ├── sonarqube.sh         # SonarQube management
-    └── devshell.sh          # Development shell and environment
+    ├── devshell.sh          # Development shell and environment
+    ├── code-quality.sh      # Code quality analysis (file sizes, complexity)
+    └── security-check.sh    # Security vulnerability and pattern scanning
 ```
 
 ### Module Responsibilities
@@ -67,6 +71,8 @@ scripts/
 - **`build.sh`**: Build, test, quality checks, Checkstyle operations
 - **`sonarqube.sh`**: SonarQube service management and analysis
 - **`devshell.sh`**: Development container and environment checks
+- **`code-quality.sh`**: Code quality analysis (file size limits, complexity checking)
+- **`security-check.sh`**: Security vulnerability scanning and code pattern detection
 
 ## 🔧 Development Workflow
 
@@ -113,6 +119,18 @@ curl http://localhost:8080/actuator/health
 
 # Run only local static analysis (without tests)
 ./scripts/dev.sh quality-local --no-test
+
+# Run code quality analysis (file sizes, complexity)
+./scripts/dev.sh code-quality
+
+# Run code quality analysis (skip running quality tools, use existing reports)
+./scripts/dev.sh code-quality --skip-tools
+
+# Run security checks (dependency vulnerabilities, code patterns)
+./scripts/dev.sh security-check
+
+# Run security checks (skip dependency checks, use existing reports)
+./scripts/dev.sh security-check --skip-deps
 
 # Run Checkstyle with clean and stacktrace
 ./scripts/dev.sh checkstyle-clean
@@ -278,4 +296,68 @@ chmod +x scripts/modules/*.sh
 4. **Simplicity**: One script for everything
 5. **Portability**: Works on any system with Docker
 6. **Flexibility**: `--no-test` parameter for faster development
-7. **Reliability**: Built-in retry logic and timeout handling 
+7. **Reliability**: Built-in retry logic and timeout handling
+
+## Code Quality and Security Scripts
+
+### Code Quality Analysis
+
+The `code-quality.sh` script provides detailed code quality analysis:
+
+```bash
+# Run full code quality check (runs Checkstyle and PMD, then analyzes results)
+./scripts/dev.sh code-quality
+
+# Run analysis using existing reports (skip running quality tools)
+./scripts/dev.sh code-quality --skip-tools
+```
+
+**What it checks:**
+- File size limits (max 2000 lines per Java class)
+- Cyclomatic complexity violations from Checkstyle and PMD reports
+- Generates summary report with suggestions
+
+**Output:**
+- Lists files exceeding size limits
+- Reports complexity violations with file locations
+- Provides refactoring suggestions
+- Exits with error code if violations found (for CI/CD integration)
+
+### Security Check
+
+The `security-check.sh` script provides comprehensive security analysis:
+
+```bash
+# Run full security check (dependency scanning + code pattern detection)
+./scripts/dev.sh security-check
+
+# Run only code pattern checks (skip dependency scanning)
+./scripts/dev.sh security-check --skip-deps
+```
+
+**What it checks:**
+- Dependency vulnerabilities (using OWASP Dependency Check if available)
+- Critical and high severity vulnerabilities
+- Outdated dependencies
+- License compliance
+- Security patterns in code:
+  - Hardcoded passwords, API keys, secrets
+  - SQL injection vulnerabilities
+  - Insecure random number generation
+  - Weak cryptography usage
+  - Exposed sensitive data in logs
+- Hardcoded secrets in configuration files
+
+**Output:**
+- Security issues (errors) that must be fixed
+- Security warnings that should be reviewed
+- Detailed suggestions for fixing issues
+- Exits with error code if critical issues found
+
+**Integration:**
+These scripts are designed to be integrated into:
+- Pre-commit hooks
+- CI/CD pipelines
+- Regular code review processes
+
+See `docs/CODE_QUALITY.md` for more details on quality standards and best practices.

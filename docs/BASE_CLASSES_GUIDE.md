@@ -2,6 +2,8 @@
 
 This document describes the base classes architecture for entities, DTOs, and controllers in the finance-control application.
 
+> **Rule Reference**: For concise base class usage patterns, see `.cursor/rules/base-classes-usage.mdc`
+
 ## Overview
 
 The base classes provide a consistent foundation for common patterns across the application, reducing code duplication and ensuring consistency.
@@ -29,17 +31,17 @@ The base classes provide a consistent foundation for common patterns across the 
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class User extends BaseEntity<Long> {
-    
+
     @NotBlank
     @Email
     @Column(nullable = false, unique = true)
     private String email;
-    
+
     @NotBlank
     @Size(min = 8)
     @Column(nullable = false)
     private String password;
-    
+
     // ... other fields
 }
 ```
@@ -69,15 +71,15 @@ public class User extends BaseEntity<Long> {
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class UserDTO extends BaseDTO<Long> {
-    
+
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     private String email;
-    
+
     @NotBlank(message = "Full name is required")
     @Size(max = 100, message = "Full name cannot exceed 100 characters")
     private String fullName;
-    
+
     private Boolean isActive;
 }
 ```
@@ -98,15 +100,15 @@ public class UserDTO extends BaseDTO<Long> {
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class UserCreateDTO extends BaseCreateDTO {
-    
+
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     private String email;
-    
+
     @NotBlank(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
-    
+
     @NotBlank(message = "Full name is required")
     @Size(max = 100, message = "Full name cannot exceed 100 characters")
     private String fullName;
@@ -259,18 +261,18 @@ ErrorResponse error = new ErrorResponse(
        @Id
        @GeneratedValue(strategy = GenerationType.IDENTITY)
        private Long id;
-       
+
        @CreatedDate
        @Column(name = "created_at", nullable = false, updatable = false)
        private LocalDateTime createdAt;
-       
+
        @LastModifiedDate
        @Column(name = "updated_at")
        private LocalDateTime updatedAt;
-       
+
        // ... other fields
    }
-   
+
    // After
    @Entity
    @Data
@@ -301,7 +303,7 @@ ErrorResponse error = new ErrorResponse(
        private LocalDateTime createdAt;
        private LocalDateTime updatedAt;
    }
-   
+
    // After
    @Data
    @NoArgsConstructor
@@ -323,7 +325,7 @@ ErrorResponse error = new ErrorResponse(
        private String password;
        private String fullName;
    }
-   
+
    // After
    @Data
    @NoArgsConstructor
@@ -342,11 +344,11 @@ ErrorResponse error = new ErrorResponse(
 @RestController
 @RequestMapping("/users")
 public class UserController extends AbstractBaseController<User, Long, UserCreateDTO, UserCreateDTO, UserDTO> {
-    
+
     public UserController(UserService userService) {
         super(userService);
     }
-    
+
     // Custom methods can be added here
     @GetMapping("/by-email/{email}")
     public ResponseEntity<UserDTO> findByEmail(@PathVariable String email) {
@@ -360,11 +362,11 @@ public class UserController extends AbstractBaseController<User, Long, UserCreat
 @RestController
 @RequestMapping("/users")
 public class UserController extends BaseRestController<User, Long, UserCreateDTO, UserCreateDTO, UserDTO> {
-    
+
     public UserController(UserService userService) {
         super(userService);
     }
-    
+
     // Custom methods can be added here
     @GetMapping("/by-email/{email}")
     public ResponseEntity<UserDTO> findByEmail(@PathVariable String email) {
@@ -430,7 +432,7 @@ public class UserController extends BaseRestController<User, Long, UserCreateDTO
                .map(ResponseEntity::ok)
                .orElse(ResponseEntity.notFound().build());
    }
-   
+
    // After
    @GetMapping("/{id}")
    public ResponseEntity<ApiResponse<UserDTO>> findById(@PathVariable Long id) {
@@ -449,7 +451,7 @@ public class UserController extends BaseRestController<User, Long, UserCreateDTO
        Page<UserDTO> result = service.findAll(pageable);
        return ResponseEntity.ok(result);
    }
-   
+
    // After
    @GetMapping
    public ResponseEntity<ApiResponse<Page<UserDTO>>> findAll(Pageable pageable) {
@@ -504,4 +506,4 @@ public class UserController extends BaseRestController<User, Long, UserCreateDTO
 1. **Response Caching**: Add cache headers to response wrapper
 2. **Request Tracing**: Include request ID in response for tracing
 3. **Localization**: Support for localized error messages
-4. **Rate Limiting**: Include rate limit information in response headers 
+4. **Rate Limiting**: Include rate limit information in response headers

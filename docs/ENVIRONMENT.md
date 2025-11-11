@@ -287,7 +287,7 @@ The configuration is organized into logical categories:
 | `OPENAPI_VERSION` | `1.0.0` | API version |
 | `OPENAPI_CONTACT_NAME` | `Finance Control Team` | Contact name |
 | `OPENAPI_CONTACT_EMAIL` | `support@finance-control.com` | Contact email |
-| `OPENAPI_CONTACT_URL` | `https://github.com/LucasSantana-Dev/finance-control` | Contact URL |
+| `OPENAPI_CONTACT_URL` | `https://github.com/LucasSantana/finance-control` | Contact URL |
 | `OPENAPI_LICENSE_NAME` | `MIT License` | License name |
 | `OPENAPI_LICENSE_URL` | `https://opensource.org/licenses/MIT` | License URL |
 | `OPENAPI_SERVER_URL` | `http://localhost:8080` | Server URL |

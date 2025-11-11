@@ -2,6 +2,8 @@
 
 This document provides detailed implementation guidance for the standardized API response pattern used throughout the finance-control application.
 
+> **Rule Reference**: For concise API response patterns, see `.cursor/rules/api-design.mdc`
+
 ## Overview
 
 The standardized API response pattern ensures consistency across all endpoints by wrapping responses in a predictable structure and providing detailed error information when needed.
@@ -25,7 +27,7 @@ public class ApiResponse<T> {
     private String message;
     private LocalDateTime timestamp;
     private String path;
-    
+
     // Static factory methods
     public static <T> ApiResponse<T> success(T data) { ... }
     public static <T> ApiResponse<T> success(T data, String message) { ... }
@@ -66,7 +68,7 @@ public class ErrorResponse {
     private String path;
     private LocalDateTime timestamp;
     private List<ValidationError> validationErrors;
-    
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -88,11 +90,11 @@ Controllers extending `BaseController` automatically wrap responses:
 @RestController
 @RequestMapping("/api/users")
 public class UserController extends BaseController<User, Long, UserCreateDTO, UserUpdateDTO, UserDTO> {
-    
+
     public UserController(UserService userService) {
         super(userService);
     }
-    
+
     // All CRUD operations automatically return ApiResponse<T>
     // GET /api/users returns ApiResponse<Page<UserDTO>>
     // GET /api/users/{id} returns ApiResponse<UserDTO>
@@ -135,7 +137,7 @@ public ResponseEntity<ApiResponse<UserDTO>> activateUser(@PathVariable Long id) 
 ```java
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
         ErrorResponse error = new ErrorResponse(
@@ -147,7 +149,7 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
-    
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
         List<ErrorResponse.ValidationError> validationErrors = ex.getBindingResult()
@@ -159,7 +161,7 @@ public class GlobalExceptionHandler {
                 error.getRejectedValue()
             ))
             .collect(Collectors.toList());
-        
+
         ErrorResponse error = new ErrorResponse(
             "VALIDATION_ERROR",
             "Validation failed",
@@ -169,7 +171,7 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
-    
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericError(Exception ex, HttpServletRequest request) {
         ErrorResponse error = new ErrorResponse(
@@ -336,12 +338,12 @@ void findById_ShouldReturnWrappedResponse_WhenEntityExists() {
     UserDTO userDTO = new UserDTO();
     userDTO.setId(1L);
     userDTO.setEmail("test@example.com");
-    
+
     when(userService.findById(1L)).thenReturn(Optional.of(userDTO));
-    
+
     // When
     ResponseEntity<ApiResponse<UserDTO>> response = userController.findById(1L);
-    
+
     // Then
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody().isSuccess()).isTrue();
@@ -353,10 +355,10 @@ void findById_ShouldReturnWrappedResponse_WhenEntityExists() {
 void findById_ShouldReturnErrorResponse_WhenEntityNotFound() {
     // Given
     when(userService.findById(1L)).thenReturn(Optional.empty());
-    
+
     // When
     ResponseEntity<ApiResponse<UserDTO>> response = userController.findById(1L);
-    
+
     // Then
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     assertThat(response.getBody().isSuccess()).isFalse();
@@ -373,12 +375,12 @@ void createUser_ShouldReturnWrappedResponse_WhenValidData() {
     UserCreateDTO createDTO = new UserCreateDTO();
     createDTO.setEmail("test@example.com");
     createDTO.setPassword("password123");
-    
+
     // When
     ResponseEntity<ApiResponse<UserDTO>> response = restTemplate.postForEntity(
         "/api/users", createDTO, new ParameterizedTypeReference<ApiResponse<UserDTO>>() {}
     );
-    
+
     // Then
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(response.getBody().isSuccess()).isTrue();
@@ -449,4 +451,4 @@ void createUser_ShouldReturnWrappedResponse_WhenValidData() {
 4. **Security**
    - Don't expose sensitive information in error messages
    - Sanitize error details in production
-   - Use appropriate HTTP status codes 
+   - Use appropriate HTTP status codes

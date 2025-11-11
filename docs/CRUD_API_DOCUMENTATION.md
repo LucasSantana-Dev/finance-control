@@ -4,6 +4,8 @@
 
 This document explains the approach used to provide consistent CRUD API documentation across all controllers while maintaining clean separation between documentation and implementation.
 
+> **Rule Reference**: For concise BaseController usage patterns, see `.cursor/rules/base-classes-usage.mdc`
+
 ## Architecture
 
 ### Components
@@ -104,4 +106,4 @@ The JWT filter has been configured to skip Swagger UI and API documentation endp
 - `/public/**`
 - `/actuator/**`
 
-This ensures that API documentation is accessible without authentication while maintaining security for actual API endpoints. 
+This ensures that API documentation is accessible without authentication while maintaining security for actual API endpoints.

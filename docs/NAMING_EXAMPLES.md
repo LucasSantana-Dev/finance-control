@@ -2,6 +2,8 @@
 
 This document shows examples of how to apply the naming conventions consistently across different modules.
 
+> **Rule Reference**: For concise naming patterns and conventions, see `.cursor/rules/naming-conventions.mdc`
+
 ## Transaction Module (Current)
 
 ### Service Layer
@@ -106,4 +108,4 @@ src/main/java/com/finance_control/
     │   ├── FinancialGoalService.java        (interface)
     │   └── DefaultFinancialGoalService.java (implementation)
     └── ...
-``` 
+```

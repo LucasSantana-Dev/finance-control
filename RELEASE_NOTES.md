@@ -213,7 +213,7 @@ This release represents a significant milestone in the Finance Control project. 
 
 For questions, issues, or feedback regarding this release:
 
-- **GitHub Issues**: [Report issues](https://github.com/LucasSantana-Dev/finance-control/issues)
+- **GitHub Issues**: [Report issues](https://github.com/LucasSantana/finance-control/issues)
 - **Documentation**: Check the [docs/](docs/) folder for detailed guides
 - **API Documentation**: Available at `/swagger-ui.html` when running the application
 

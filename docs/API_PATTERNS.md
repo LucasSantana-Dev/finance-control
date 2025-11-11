@@ -2,6 +2,8 @@
 
 This document outlines the REST API patterns and conventions used throughout the finance-control application.
 
+> **Rule Reference**: For concise API design patterns and conventions, see `.cursor/rules/api-design.mdc`
+
 ## REST Endpoint Patterns
 
 ### Standard CRUD Endpoints
@@ -322,4 +324,4 @@ public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundExceptio
 3. **Validation**: Clear validation error messages with field details
 4. **Debugging**: Timestamp and path information for easier debugging
 5. **Frontend Integration**: Predictable response format for frontend consumption
-6. **Documentation**: Clear API documentation with consistent examples 
+6. **Documentation**: Clear API documentation with consistent examples

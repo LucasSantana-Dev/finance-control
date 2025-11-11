@@ -11,6 +11,8 @@ source "$(dirname "$0")/modules/services.sh"
 source "$(dirname "$0")/modules/build.sh"
 source "$(dirname "$0")/modules/sonarqube.sh"
 source "$(dirname "$0")/modules/devshell.sh"
+source "$(dirname "$0")/modules/code-quality.sh"
+source "$(dirname "$0")/modules/security-check.sh"
 
 # Colors
 RED='\033[0;31m'
@@ -37,6 +39,8 @@ show_usage() {
     echo "  test [--no-test]      # Run tests"
     echo "  quality [--no-test]   # Run quality checks (Docker)"
     echo "  quality-local [--no-test] # Run quality checks (local)"
+    echo "  code-quality [--skip-tools] # Run code quality analysis (file size, complexity)"
+    echo "  security-check [--skip-deps] # Run security vulnerability and pattern checks"
     echo "  checkstyle-clean      # Clean and run Checkstyle with stacktrace"
     echo "  sonarqube-start       # Start SonarQube service"
     echo "  sonarqube-stop        # Stop SonarQube service"
@@ -927,6 +931,12 @@ main() {
             ;;
         quality-local)
             run_quality_local "$@"
+            ;;
+        code-quality)
+            run_code_quality_check "$@"
+            ;;
+        security-check)
+            run_security_check "$@"
             ;;
         checkstyle-clean)
             run_checkstyle_clean
