@@ -38,10 +38,49 @@ The project uses GitHub Actions for automated CI/CD with comprehensive quality a
   - SonarQube package caching
   - Full git history for better analysis
 
+### Qodana Code Quality Analysis (`qodana_code_quality.yml`)
+- **Triggers**: Push to main, Pull Requests, Manual trigger
+- **Jobs**: Runs JetBrains Qodana static analysis
+- **Duration**: ~2-5 minutes
+- **Features**: Code quality analysis, PR comments, GitHub annotations
+- **Configuration**: Optional workflow (`continue-on-error: true`) - runs when `QODANA_TOKEN` is available
+- **Note**: Requires `QODANA_TOKEN` secret for full functionality (PR comments, annotations)
+
 ## Required GitHub Secrets
 
 ### SONAR_TOKEN
 **Required for SonarQube analysis workflow**
+
+#### How to Create SonarQube Cloud Token
+
+### QODANA_TOKEN (Optional)
+**Optional for Qodana code quality analysis workflow**
+
+The Qodana workflow is configured to run optionally (`continue-on-error: true`). If you want to use Qodana for advanced features like PR comments and GitHub annotations:
+
+#### How to Create Qodana Token
+
+1. **Access Qodana Cloud**:
+   - Go to `https://qodana.cloud`
+   - Login with your GitHub account
+
+2. **Create Organization/Project**:
+   - Create or join an organization
+   - Add the `finance-control` project
+
+3. **Generate Token**:
+   - Go to organization settings
+   - Navigate to **Tokens**
+   - Create a new token for the project
+   - Copy the token
+
+4. **Add to GitHub Secrets**:
+   - Repository: `LucasSantana-Dev/finance-control`
+   - Settings → Secrets and variables → Actions
+   - New secret: `QODANA_TOKEN`
+   - Paste the token value
+
+**Note**: Without this token, Qodana will still run basic analysis but won't post PR comments or GitHub annotations.
 
 #### How to Create SonarQube Cloud Token
 
@@ -250,8 +289,8 @@ export SONAR_TOKEN=your-token-here
 ### Key Configuration Files
 - `.github/workflows/ci.yml` - Optimized CI pipeline with parallel jobs
 - `.github/workflows/sonarqube-cloud.yml` - Optimized SonarQube Cloud analysis
-- `.github/workflows/sonarqube.yml` - Legacy self-hosted SonarQube (optional)
-- `.github/workflows/qodana_code_quality.yml` - Qodana code quality analysis
+- `.github/workflows/sonarqube.yml.disabled` - Legacy self-hosted SonarQube (disabled)
+- `.github/workflows/qodana_code_quality.yml` - Qodana code quality analysis (optional)
 - `sonar-project.properties` - SonarQube configuration (legacy, optional)
 - `build.gradle` - Quality check and SonarQube Cloud configuration
 - `gradle.properties` - Gradle performance optimizations and build cache
@@ -261,6 +300,7 @@ export SONAR_TOKEN=your-token-here
 
 ### Environment Variables
 - `SONAR_TOKEN` - SonarQube Cloud project analysis token (GitHub secret, required)
+- `QODANA_TOKEN` - Qodana Cloud project analysis token (GitHub secret, optional)
 - `SONAR_HOST_URL` - Only needed for self-hosted SonarQube (not used with SonarQube Cloud)
 
 ## Best Practices
