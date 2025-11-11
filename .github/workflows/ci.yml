@@ -56,6 +56,8 @@ jobs:
       run: ./gradlew build --no-daemon --build-cache --stacktrace --info
 
     - name: Generate JaCoCo coverage report
+      env:
+        GRADLE_OPTS: -Dorg.gradle.unsafe.configuration-cache=false
       run: ./gradlew jacocoTestReport --no-daemon
 
     - name: Prepare artifact directories on failure
