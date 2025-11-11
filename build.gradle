@@ -216,12 +216,7 @@ test {
         junitXml.required = true
     }
 
-    // Modern Gradle test configuration
-    testLogging {
-        events "passed", "skipped", "failed"
-        exceptionFormat "full"
-        showStandardStreams = true
-    }
+    // Modern Gradle test configuration (consolidated above)
 }
 
 jacocoTestReport {
