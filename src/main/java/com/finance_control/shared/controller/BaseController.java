@@ -182,7 +182,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
     @PostMapping
     @Operation(summary = "Create entity", description = "Create a new entity.")
     public ResponseEntity<D> create(@Valid @RequestBody D createDTO) {
-        log.debug("POST request to create entity: {}", createDTO);
+        log.debug("POST request to create entity");
         D result = service.create(createDTO);
         log.info("Entity created successfully");
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
@@ -200,7 +200,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
     @Operation(summary = "Partially update entity",
                description = "Partially update an existing entity by its ID. Only provided fields will be updated.")
     public ResponseEntity<D> update(@PathVariable I id, @Valid @RequestBody D updateDTO) {
-        log.debug("PATCH request to partially update entity with ID: {} and DTO: {}", id, updateDTO);
+        log.debug("PATCH request to partially update entity with ID: {}", id);
         D result = service.update(id, updateDTO);
         log.info("Entity partially updated successfully with ID: {}", id);
         return ResponseEntity.ok(result);

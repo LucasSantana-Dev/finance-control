@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Log Sanitization**: Removed sensitive information from application logs to prevent information leakage
+  - Sanitized JWT exception messages in JwtUtils to prevent token structure exposure
+  - Removed DTO object logging in BaseController and specific controllers (ProfileController, TransactionController, GoalsController)
+  - Sanitized GlobalExceptionHandler validation error logging
+  - Ensured no sensitive authentication data is exposed in logs
+
+- **Security Headers Enhancement**: Added comprehensive security headers in Spring Security configuration
+  - Added Permissions-Policy header to restrict browser features (geolocation, microphone, camera)
+  - Verified existing security headers: CSP, X-Frame-Options, Referrer-Policy, X-Content-Type-Options, HSTS
+  - All headers properly configured for production security hardening
+
+- **Configuration Security**: Improved environment variable usage for sensitive configuration
+  - Fixed hardcoded database password in application.properties to use environment variable fallback
+  - Ensured proper environment variable configuration for JWT secrets and database credentials
+  - Maintained secure defaults while allowing environment-specific overrides
+
 ### Added
 - **NVD API Key Configuration**: Improved OWASP Dependency Check performance with optional NVD API key support
   - Added conditional NVD API key configuration in build.gradle for faster vulnerability scans

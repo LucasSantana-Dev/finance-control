@@ -60,6 +60,7 @@ public class SecurityConfig {
                 .referrerPolicy(ref -> ref.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
                 .contentTypeOptions(Customizer.withDefaults())
                 .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).preload(true))
+                .permissionsPolicy(permissions -> permissions.policy("geolocation=(), microphone=(), camera=()"))
             )
             .authorizeHttpRequests(auth -> {
                 String[] publicEndpoints = appProperties.getSecurity().getPublicEndpoints();

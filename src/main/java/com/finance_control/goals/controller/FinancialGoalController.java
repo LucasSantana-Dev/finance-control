@@ -212,7 +212,7 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
                description = "Complete a financial goal with final completion data")
     public ResponseEntity<FinancialGoalDTO> completeGoal(@PathVariable Long id,
                                                          @Valid @RequestBody GoalCompletionRequest request) {
-        log.debug("PUT request to complete goal ID: {} with data: {}", id, request);
+        log.debug("PUT request to complete goal ID: {}", id);
 
         FinancialGoalDTO completedGoal = financialGoalService.completeGoal(id, request);
         log.info("Goal completed successfully with ID: {}", id);

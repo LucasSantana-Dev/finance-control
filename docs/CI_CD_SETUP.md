@@ -244,6 +244,47 @@ export SONAR_TOKEN=your-token-here
 ./gradlew build sonar
 ```
 
+### SonarCloud Analysis Configuration
+
+**Coverage and Test Reports:**
+- JaCoCo XML report: `build/reports/jacoco/test/jacocoTestReport.xml`
+- JUnit reports: `build/test-results/test`
+- Coverage exclusions: config, dto, model, exception, enums, util, validation packages
+
+**Analysis Exclusions:**
+- Generated code: `**/generated/**`, `**/build/**`
+- Test code: `**/target/**`
+
+**Quality Gate Requirements:**
+- Overall coverage: ≥80%
+- New code coverage: ≥80%
+- No new critical/blocker issues allowed
+
+### SonarCloud Issue Triage
+
+**Retrieve Issues via API:**
+```bash
+# Get all critical and major issues
+curl -s "https://sonarcloud.io/api/issues/search?organization=lucassantana-dev&componentKeys=LucasSantana-Dev_finance_control&severities=BLOCKER,CRITICAL,MAJOR&ps=500"
+
+# Get all issues (including minor)
+curl -s "https://sonarcloud.io/api/issues/search?organization=lucassantana-dev&componentKeys=LucasSantana-Dev_finance_control&ps=500"
+
+# Filter by issue type (VULNERABILITY, BUG, CODE_SMELL)
+curl -s "https://sonarcloud.io/api/issues/search?organization=lucassantana-dev&componentKeys=LucasSantana-Dev_finance_control&types=VULNERABILITY&ps=500"
+```
+
+**Issue Prioritization:**
+1. **Security Issues (VULNERABILITY)**: Highest priority
+2. **Bugs (BUG)**: Reliability issues
+3. **Code Smells (CODE_SMELL)**: Maintainability issues
+
+**Common Resolution Actions:**
+- **Won't Fix**: For false positives with justification
+- **False Positive**: When issue doesn't apply to codebase
+- **Fix**: Address the underlying issue
+- **Review**: Requires manual review
+
 ## Quality Standards
 
 ### Code Quality Gates

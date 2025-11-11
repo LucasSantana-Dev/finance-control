@@ -97,7 +97,7 @@ public class ProfileService extends BaseService<Profile, Long, ProfileDTO> {
     @Transactional
     public ProfileDTO updateCurrentProfile(ProfileUpdateRequest request) {
         Long currentUserId = UserContext.getCurrentUserId();
-        log.debug("Updating profile for user ID: {} with request: {}", currentUserId, request);
+        log.debug("Updating profile for user ID: {}", currentUserId);
 
         // Validate request
         request.validate();

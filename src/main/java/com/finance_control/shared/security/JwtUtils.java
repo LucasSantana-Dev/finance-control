@@ -82,7 +82,7 @@ public class JwtUtils {
             
             return Long.valueOf(claims.getSubject());
         } catch (JwtException | NumberFormatException e) {
-            log.warn("Failed to extract user ID from token: {}", e.getMessage());
+            log.warn("Failed to extract user ID from token");
             return null;
         }
     }
@@ -102,7 +102,7 @@ public class JwtUtils {
                     .parseSignedClaims(token);
             return true;
         } catch (JwtException e) {
-            log.warn("Invalid JWT token: {}", e.getMessage());
+            log.warn("Invalid JWT token");
             return false;
         }
     }
@@ -124,7 +124,7 @@ public class JwtUtils {
             
             return claims.getExpiration();
         } catch (JwtException e) {
-            log.warn("Failed to extract expiration from token: {}", e.getMessage());
+            log.warn("Failed to extract expiration from token");
             return null;
         }
     }
