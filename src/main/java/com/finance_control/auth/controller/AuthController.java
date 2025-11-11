@@ -38,9 +38,10 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(summary = "User registration", description = "Register a new user account")
     public ResponseEntity<UserDTO> register(@Valid @RequestBody UserDTO userDTO) {
-        log.info("Registering new user with email: {}", userDTO.getEmail());
+        // Avoid logging email or other PII at INFO level
+        log.info("Registering new user");
         UserDTO createdUser = userService.create(userDTO);
-        log.info("User registered successfully with ID: {}", createdUser.getId());
+        log.info("User registered successfully");
         return ResponseEntity.ok(createdUser);
     }
 

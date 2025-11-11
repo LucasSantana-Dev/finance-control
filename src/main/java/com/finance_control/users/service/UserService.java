@@ -219,7 +219,8 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        log.info("Password reset for user ID: {} - Reason: {}", id, reason);
+        // Do not log free-form reasons or sensitive context to avoid PII leakage
+        log.info("Password reset performed");
     }
 
     /**
@@ -237,7 +238,8 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         user.setIsActive(active);
         userRepository.save(user);
 
-        log.info("User status updated for ID: {} - Active: {} - Reason: {}", id, active, reason);
+        // Avoid logging free-form 'reason' to prevent PII leakage
+        log.info("User status updated - Active: {}", active);
         return mapToResponseDTO(user);
     }
 
