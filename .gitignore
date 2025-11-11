@@ -96,8 +96,8 @@ Thumbs.db
 *.tar.gz
 *.rar
 
-# Gradle Wrapper
-# Note: gradle-wrapper.jar is ignored by *.jar rule above
+# Gradle Wrapper (exception - must be committed for CI/CD)
+!gradle/wrapper/gradle-wrapper.jar
 
 # Virtual machine crash logs
 hs_err_pid*
