@@ -1,6 +1,7 @@
 package com.finance_control.brazilian_market.client;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.util.MarketDataConversionUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -33,7 +34,7 @@ public class BrazilianMarketDataProvider implements MarketDataProvider {
         try {
             log.debug("Fetching quote for ticker: {} from Brazilian market API", ticker);
 
-            String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + QUOTE_ENDPOINT)
+            String url = UriComponentsBuilder.fromUriString(BASE_URL + QUOTE_ENDPOINT)
                     .queryParam("symbols", ticker)
                     .queryParam("range", "1d")
                     .queryParam("interval", "1d")
@@ -60,7 +61,7 @@ public class BrazilianMarketDataProvider implements MarketDataProvider {
             log.debug("Fetching quotes for {} tickers from Brazilian market API", tickers.size());
 
             String symbols = String.join(",", tickers);
-            String url = UriComponentsBuilder.fromHttpUrl(BASE_URL + QUOTES_ENDPOINT)
+            String url = UriComponentsBuilder.fromUriString(BASE_URL + QUOTES_ENDPOINT)
                     .queryParam("symbols", symbols)
                     .queryParam("range", "1d")
                     .queryParam("interval", "1d")
@@ -111,48 +112,45 @@ public class BrazilianMarketDataProvider implements MarketDataProvider {
                 return null;
             }
 
-            BigDecimal currentPrice = new BigDecimal(quote.getRegularMarketPrice().toString());
-            BigDecimal previousClose = quote.getPreviousClose() != null ?
-                    new BigDecimal(quote.getPreviousClose().toString()) : currentPrice;
-
-            BigDecimal dayChange = currentPrice.subtract(previousClose);
-            BigDecimal dayChangePercent = previousClose.compareTo(BigDecimal.ZERO) != 0 ?
-                    dayChange.divide(previousClose, 4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100)) :
-                    BigDecimal.ZERO;
+            MarketDataConversionUtils.PriceCalculation prices =
+                    MarketDataConversionUtils.calculatePrices(
+                            quote.getRegularMarketPrice(),
+                            quote.getPreviousClose()
+                    );
 
             return MarketQuote.builder()
                     .symbol(quote.getSymbol())
                     .shortName(quote.getShortName())
                     .longName(quote.getLongName())
                     .currency(quote.getCurrency())
-                    .currentPrice(currentPrice)
-                    .previousClose(previousClose)
-                    .dayChange(dayChange)
-                    .dayChangePercent(dayChangePercent)
+                    .currentPrice(prices.getCurrentPrice())
+                    .previousClose(prices.getPreviousClose())
+                    .dayChange(prices.getDayChange())
+                    .dayChangePercent(prices.getDayChangePercent())
                     .volume(quote.getRegularMarketVolume())
-                    .marketCap(quote.getMarketCap() != null ? new BigDecimal(quote.getMarketCap().toString()) : null)
-                    .dividendYield(quote.getDividendYield() != null ? new BigDecimal(quote.getDividendYield().toString()) : null)
-                    .pe(quote.getPe() != null ? new BigDecimal(quote.getPe().toString()) : null)
-                    .eps(quote.getEps() != null ? new BigDecimal(quote.getEps().toString()) : null)
+                    .marketCap(MarketDataConversionUtils.toBigDecimalSafe(quote.getMarketCap()))
+                    .dividendYield(MarketDataConversionUtils.toBigDecimalSafe(quote.getDividendYield()))
+                    .pe(MarketDataConversionUtils.toBigDecimalSafe(quote.getPe()))
+                    .eps(MarketDataConversionUtils.toBigDecimalSafe(quote.getEps()))
                     .exchange(quote.getExchange())
                     .timezone(quote.getTimezone())
                     .lastUpdated(LocalDateTime.now())
-                    .dayHigh(quote.getRegularMarketDayHigh() != null ? new BigDecimal(quote.getRegularMarketDayHigh().toString()) : null)
-                    .dayLow(quote.getRegularMarketDayLow() != null ? new BigDecimal(quote.getRegularMarketDayLow().toString()) : null)
-                    .open(quote.getRegularMarketOpen() != null ? new BigDecimal(quote.getRegularMarketOpen().toString()) : null)
-                    .fiftyDayAverage(quote.getFiftyDayAverage() != null ? new BigDecimal(quote.getFiftyDayAverage().toString()) : null)
-                    .twoHundredDayAverage(quote.getTwoHundredDayAverage() != null ? new BigDecimal(quote.getTwoHundredDayAverage().toString()) : null)
-                    .priceToBook(quote.getPriceToBook() != null ? new BigDecimal(quote.getPriceToBook().toString()) : null)
-                    .priceToSales(quote.getPriceToSales() != null ? new BigDecimal(quote.getPriceToSales().toString()) : null)
-                    .beta(quote.getBeta() != null ? new BigDecimal(quote.getBeta().toString()) : null)
-                    .bookValue(quote.getBookValue() != null ? new BigDecimal(quote.getBookValue().toString()) : null)
-                    .trailingEps(quote.getTrailingEps() != null ? new BigDecimal(quote.getTrailingEps().toString()) : null)
-                    .forwardEps(quote.getForwardEps() != null ? new BigDecimal(quote.getForwardEps().toString()) : null)
-                    .pegRatio(quote.getPegRatio() != null ? new BigDecimal(quote.getPegRatio().toString()) : null)
-                    .lastDividendValue(quote.getLastDividendValue() != null ? new BigDecimal(quote.getLastDividendValue().toString()) : null)
+                    .dayHigh(MarketDataConversionUtils.toBigDecimalSafe(quote.getRegularMarketDayHigh()))
+                    .dayLow(MarketDataConversionUtils.toBigDecimalSafe(quote.getRegularMarketDayLow()))
+                    .open(MarketDataConversionUtils.toBigDecimalSafe(quote.getRegularMarketOpen()))
+                    .fiftyDayAverage(MarketDataConversionUtils.toBigDecimalSafe(quote.getFiftyDayAverage()))
+                    .twoHundredDayAverage(MarketDataConversionUtils.toBigDecimalSafe(quote.getTwoHundredDayAverage()))
+                    .priceToBook(MarketDataConversionUtils.toBigDecimalSafe(quote.getPriceToBook()))
+                    .priceToSales(MarketDataConversionUtils.toBigDecimalSafe(quote.getPriceToSales()))
+                    .beta(MarketDataConversionUtils.toBigDecimalSafe(quote.getBeta()))
+                    .bookValue(MarketDataConversionUtils.toBigDecimalSafe(quote.getBookValue()))
+                    .trailingEps(MarketDataConversionUtils.toBigDecimalSafe(quote.getTrailingEps()))
+                    .forwardEps(MarketDataConversionUtils.toBigDecimalSafe(quote.getForwardEps()))
+                    .pegRatio(MarketDataConversionUtils.toBigDecimalSafe(quote.getPegRatio()))
+                    .lastDividendValue(MarketDataConversionUtils.toBigDecimalSafe(quote.getLastDividendValue()))
                     .lastDividendDate(quote.getLastDividendDate())
-                    .annualDividendRate(quote.getAnnualDividendRate() != null ? new BigDecimal(quote.getAnnualDividendRate().toString()) : null)
-                    .annualDividendYield(quote.getAnnualDividendYield() != null ? new BigDecimal(quote.getAnnualDividendYield().toString()) : null)
+                    .annualDividendRate(MarketDataConversionUtils.toBigDecimalSafe(quote.getAnnualDividendRate()))
+                    .annualDividendYield(MarketDataConversionUtils.toBigDecimalSafe(quote.getAnnualDividendYield()))
                     .build();
         } catch (Exception e) {
             log.error("Error converting API quote to MarketQuote for symbol: {}", quote.getSymbol(), e);
@@ -169,27 +167,25 @@ public class BrazilianMarketDataProvider implements MarketDataProvider {
                 return Optional.empty();
             }
 
-            BigDecimal currentPrice = new BigDecimal(quote.getRegularMarketPrice().toString());
-            BigDecimal previousClose = quote.getPreviousClose() != null ?
-                    new BigDecimal(quote.getPreviousClose().toString()) : currentPrice;
-
-            BigDecimal dayChange = currentPrice.subtract(previousClose);
-            BigDecimal dayChangePercent = previousClose.compareTo(BigDecimal.ZERO) != 0 ?
-                    dayChange.divide(previousClose, 4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100)) :
-                    BigDecimal.ZERO;
+            MarketDataConversionUtils.PriceCalculation prices =
+                    MarketDataConversionUtils.calculatePrices(
+                            quote.getRegularMarketPrice(),
+                            quote.getPreviousClose()
+                    );
 
             return Optional.of(MarketData.builder()
-                    .currentPrice(currentPrice)
-                    .previousClose(previousClose)
-                    .dayChange(dayChange)
-                    .dayChangePercent(dayChangePercent)
-                    .volume(quote.getRegularMarketVolume() != null ? quote.getRegularMarketVolume().longValue() : null)
-                    .marketCap(quote.getMarketCap() != null ? new BigDecimal(quote.getMarketCap().toString()) : null)
-                    .dividendYield(quote.getDividendYield() != null ? new BigDecimal(quote.getDividendYield().toString()) : null)
+                    .currentPrice(prices.getCurrentPrice())
+                    .previousClose(prices.getPreviousClose())
+                    .dayChange(prices.getDayChange())
+                    .dayChangePercent(prices.getDayChangePercent())
+                    .volume(quote.getRegularMarketVolume())
+                    .marketCap(MarketDataConversionUtils.toBigDecimalSafe(quote.getMarketCap()))
+                    .dividendYield(MarketDataConversionUtils.toBigDecimalSafe(quote.getDividendYield()))
                     .lastUpdated(LocalDateTime.now())
                     .build());
         } catch (Exception e) {
-            log.error("Error converting API quote to market data for symbol: {}", quote.getSymbol(), e);
+            String symbol = quote != null ? quote.getSymbol() : "unknown";
+            log.error("Error converting API quote to market data for symbol: {}", symbol, e);
             return Optional.empty();
         }
     }

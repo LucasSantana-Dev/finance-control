@@ -94,9 +94,12 @@ public class HealthCheckService {
 
     private Map<String, Object> checkRedisHealth() {
         try {
-            String pong = redisTemplate.getConnectionFactory()
-                    .getConnection()
-                    .ping();
+            var connectionFactory = redisTemplate.getConnectionFactory();
+            if (connectionFactory == null) {
+                throw new IllegalStateException("Redis connection factory is not available");
+            }
+
+            String pong = connectionFactory.getConnection().ping();
 
             Map<String, Object> details = new HashMap<>();
             details.put("status", "UP");
@@ -192,85 +195,4 @@ public class HealthCheckService {
         return status;
     }
 
-    private Map<String, Object> getDatabaseStatus() {
-        Map<String, Object> status = new HashMap<>();
-
-        try (Connection connection = dataSource.getConnection()) {
-            status.put("status", "UP");
-            status.put("url", connection.getMetaData().getURL());
-            status.put("driver", connection.getMetaData().getDriverName());
-            status.put("version", connection.getMetaData().getDriverVersion());
-            status.put("maxConnections", connection.getMetaData().getMaxConnections());
-            status.put("databaseProduct", connection.getMetaData().getDatabaseProductName());
-            status.put("databaseVersion", connection.getMetaData().getDatabaseProductVersion());
-        } catch (SQLException e) {
-            status.put("status", "DOWN");
-            status.put("error", e.getMessage());
-        }
-
-        return status;
-    }
-
-    private Map<String, Object> getRedisStatus() {
-        Map<String, Object> status = new HashMap<>();
-
-        try {
-            String pong = redisTemplate.getConnectionFactory()
-                    .getConnection()
-                    .ping();
-
-            status.put("status", "UP");
-            status.put("response", pong);
-            status.put("host", appProperties.getRedis().getHost());
-            status.put("port", appProperties.getRedis().getPort());
-            status.put("database", appProperties.getRedis().getDatabase());
-        } catch (Exception e) {
-            status.put("status", "DOWN");
-            status.put("error", e.getMessage());
-        }
-
-        return status;
-    }
-
-    private Map<String, Object> getApplicationMetrics() {
-        Map<String, Object> metrics = new HashMap<>();
-
-        try {
-            Runtime runtime = Runtime.getRuntime();
-            metrics.put("memoryUsed", runtime.totalMemory() - runtime.freeMemory());
-            metrics.put("memoryTotal", runtime.totalMemory());
-            metrics.put("memoryMax", runtime.maxMemory());
-            metrics.put("processors", runtime.availableProcessors());
-            metrics.put("uptime", System.currentTimeMillis() - getStartTime());
-        } catch (Exception e) {
-            metrics.put("error", e.getMessage());
-        }
-
-        return metrics;
-    }
-
-    private Map<String, Object> getSystemResources() {
-        Map<String, Object> resources = new HashMap<>();
-
-        try {
-            Runtime runtime = Runtime.getRuntime();
-            long totalMemory = runtime.totalMemory();
-            long freeMemory = runtime.freeMemory();
-            long usedMemory = totalMemory - freeMemory;
-
-            resources.put("memoryUsage", (double) usedMemory / totalMemory * 100);
-            resources.put("freeMemory", freeMemory);
-            resources.put("totalMemory", totalMemory);
-            resources.put("maxMemory", runtime.maxMemory());
-            resources.put("availableProcessors", runtime.availableProcessors());
-        } catch (Exception e) {
-            resources.put("error", e.getMessage());
-        }
-
-        return resources;
-    }
-
-    private long getStartTime() {
-        return System.currentTimeMillis() - 3600000;
-    }
 }
