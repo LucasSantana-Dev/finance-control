@@ -98,7 +98,19 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(allowedOrigins);
 
         configuration.setAllowedMethods(Arrays.asList(cors.getAllowedMethods()));
-        configuration.setAllowedHeaders(Arrays.asList(cors.getAllowedHeaders()));
+
+        // Avoid permissive wildcard headers; use a conservative default set when '*' is present
+        List<String> requestedHeaders = Arrays.asList(cors.getAllowedHeaders());
+        if (requestedHeaders.size() == 1 && "*".equals(requestedHeaders.get(0))) {
+            requestedHeaders = Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "X-Requested-With"
+            );
+        }
+        configuration.setAllowedHeaders(requestedHeaders);
         configuration.setAllowCredentials(cors.isAllowCredentials());
         configuration.setMaxAge(cors.getMaxAge());
 
