@@ -30,12 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CI/CD Pipeline with Quality Gates**: Comprehensive automated quality assurance system
   - Added GitHub Actions CI pipeline with build, tests, and quality checks
-  - Implemented SonarQube analysis workflow with self-hosted Docker services
+  - Migrated to SonarQube Cloud for code quality analysis (replacing self-hosted instance)
+  - Upgraded SonarQube Gradle plugin to version 7.0.1.6134
+  - Configured SonarQube Cloud with organization `lucassantana-dev` and project key `LucasSantana-Dev_finance-control`
+  - Added automated SonarQube Cloud analysis workflow for main branch and Pull Requests
   - Added OWASP Dependency-Check for security vulnerability scanning
   - Integrated Checkstyle, PMD, and SpotBugs for code quality enforcement
   - Added JaCoCo test coverage reporting with minimum 80% threshold
   - Configured automated artifact uploads for all quality reports
-  - Parameterized SonarQube configuration to support multiple environments
   - Added quality gate badges to README with CI and SonarQube status
   - Documented local quality check commands and GitHub Actions setup
   - Enhanced development workflow with automated quality gates
