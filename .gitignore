@@ -117,6 +117,8 @@ build.gradle.backup
 .descriptions.xml
 .xml
 
-# IDE inspection files
-.descriptions.xml
-.xml
+# UI/UX Documentation (generated files, not to be committed)
+docs/UI_UX_ANALYSIS.md
+docs/UI_UX_IMPLEMENTATION_CHECKLIST.md
+docs/UI_UX_INTERACTIONS_GUIDE.md
+UI_UX.txt
