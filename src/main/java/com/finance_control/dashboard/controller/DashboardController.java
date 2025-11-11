@@ -99,7 +99,9 @@ public class DashboardController {
     @Operation(summary = "Get dashboard data with filtering",
                description = "Retrieve dashboard data with flexible filtering and date range options")
     public ResponseEntity<Object> getDashboardData(
-            @Parameter(description = "Type of dashboard data to retrieve (summary, metrics, spending-categories, monthly-trends, current-month-metrics, year-to-date-metrics)")
+            @Parameter(description = "Type of dashboard data to retrieve " +
+                    "(summary, metrics, spending-categories, monthly-trends, " +
+                    "current-month-metrics, year-to-date-metrics)")
             @RequestParam String data,
             @Parameter(description = "Start date (yyyy-MM-dd)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,

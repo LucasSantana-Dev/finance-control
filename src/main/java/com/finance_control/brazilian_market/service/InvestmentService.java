@@ -5,7 +5,6 @@ import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.repository.InvestmentRepository;
 import com.finance_control.shared.service.BaseService;
 import com.finance_control.users.model.User;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -180,7 +179,9 @@ public class InvestmentService extends BaseService<Investment, Long, InvestmentD
      * Get investments by type and subtype
      */
     @Transactional(readOnly = true)
-    public List<Investment> getInvestmentsByTypeAndSubtype(User user, Investment.InvestmentType investmentType, Investment.InvestmentSubtype investmentSubtype) {
+    public List<Investment> getInvestmentsByTypeAndSubtype(User user,
+            Investment.InvestmentType investmentType,
+            Investment.InvestmentSubtype investmentSubtype) {
         return investmentRepository.findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(user.getId(), investmentType, investmentSubtype);
     }
 

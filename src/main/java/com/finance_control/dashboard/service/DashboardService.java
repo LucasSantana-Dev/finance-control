@@ -7,13 +7,11 @@ import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.enums.TransactionType;
 import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.util.StreamUtils;
-import com.finance_control.shared.util.DateUtils;
 import com.finance_control.transactions.model.Transaction;
 import com.finance_control.transactions.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +23,6 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -91,7 +88,8 @@ public class DashboardService {
     /**
      * Get detailed financial metrics for a specific period.
      */
-    @Cacheable(value = "dashboard", key = "#root.methodName + '_' + T(com.finance_control.shared.context.UserContext).getCurrentUserId() + '_' + #startDate + '_' + #endDate")
+    @Cacheable(value = "dashboard",
+                key = "#root.methodName + '_' + T(com.finance_control.shared.context.UserContext).getCurrentUserId() + '_' + #startDate + '_' + #endDate")
     public FinancialMetricsDTO getFinancialMetrics(LocalDate startDate, LocalDate endDate) {
         Long userId = UserContext.getCurrentUserId();
         log.debug("Generating financial metrics for user: {} from {} to {}", userId, startDate, endDate);
@@ -152,7 +150,9 @@ public class DashboardService {
 
         int colorIndex = 0;
         for (Map.Entry<String, BigDecimal> entry : categoryTotals.entrySet()) {
-            if (categories.size() >= limit) break;
+            if (categories.size() >= limit) {
+                break;
+            }
 
             BigDecimal amount = entry.getValue();
             BigDecimal percentage;

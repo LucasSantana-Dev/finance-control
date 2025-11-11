@@ -91,7 +91,9 @@ public interface InvestmentRepository extends BaseRepository<Investment, Long> {
     /**
      * Find all unique investment subtypes for a specific user and investment type
      */
-    @Query("SELECT DISTINCT i.investmentSubtype FROM Investment i WHERE i.user.id = :userId AND i.investmentType = :investmentType AND i.isActive = true AND i.investmentSubtype IS NOT NULL ORDER BY i.investmentSubtype")
+    @Query("SELECT DISTINCT i.investmentSubtype FROM Investment i WHERE i.user.id = :userId " +
+            "AND i.investmentType = :investmentType AND i.isActive = true AND i.investmentSubtype IS NOT NULL " +
+            "ORDER BY i.investmentSubtype")
     List<Investment.InvestmentSubtype> findDistinctInvestmentSubtypesByUserIdAndType(
             @Param("userId") Long userId,
             @Param("investmentType") Investment.InvestmentType investmentType
@@ -149,12 +151,14 @@ public interface InvestmentRepository extends BaseRepository<Investment, Long> {
     /**
      * Get total market value for a specific user
      */
-    @Query("SELECT SUM(i.currentPrice * i.volume) FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND i.currentPrice IS NOT NULL AND i.volume IS NOT NULL")
+    @Query("SELECT SUM(i.currentPrice * i.volume) FROM Investment i WHERE i.user.id = :userId " +
+            "AND i.isActive = true AND i.currentPrice IS NOT NULL AND i.volume IS NOT NULL")
     Optional<Double> getTotalMarketValue(@Param("userId") Long userId);
 
     /**
      * Get total market value by investment type for a specific user
      */
-    @Query("SELECT i.investmentType, SUM(i.currentPrice * i.volume) FROM Investment i WHERE i.user.id = :userId AND i.isActive = true AND i.currentPrice IS NOT NULL AND i.volume IS NOT NULL GROUP BY i.investmentType")
+    @Query("SELECT i.investmentType, SUM(i.currentPrice * i.volume) FROM Investment i WHERE i.user.id = :userId " +
+            "AND i.isActive = true AND i.currentPrice IS NOT NULL AND i.volume IS NOT NULL GROUP BY i.investmentType")
     List<Object[]> getTotalMarketValueByType(@Param("userId") Long userId);
 }

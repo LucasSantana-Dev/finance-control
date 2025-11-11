@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -114,7 +113,9 @@ public class InvestmentController {
             @RequestParam(required = false) BigDecimal minDividendYield,
             @Parameter(description = "Maximum dividend yield filter")
             @RequestParam(required = false) BigDecimal maxDividendYield,
-            @Parameter(description = "Type of data to retrieve (metadata types: sectors, industries, types, subtypes, exchanges, top-performers, worst-performers, top-dividend-yield, portfolio-summary)")
+            @Parameter(description = "Type of data to retrieve (metadata types: sectors, industries, " +
+                    "types, subtypes, exchanges, top-performers, worst-performers, " +
+                    "top-dividend-yield, portfolio-summary)")
             @RequestParam(required = false) String data,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 

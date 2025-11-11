@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM openjdk:21-slim AS base
+FROM openjdk:21 AS base
 
 WORKDIR /app
 
@@ -36,10 +36,16 @@ COPY src src
 
     # Build the app (for prod)
     ARG SKIP_TESTS=false
-    RUN if [ "$SKIP_TESTS" = "true" ]; then ./gradlew compileJava processResources classes bootJar --no-daemon || sh gradlew compileJava processResources classes bootJar --no-daemon; else ./gradlew build --no-daemon || sh gradlew build --no-daemon; fi
+    RUN if [ "$SKIP_TESTS" = "true" ]; then \
+            ./gradlew compileJava processResources classes bootJar --no-daemon || \
+            sh gradlew compileJava processResources classes bootJar --no-daemon; \
+        else \
+            ./gradlew build --no-daemon || \
+            sh gradlew build --no-daemon; \
+        fi
 
 # Final image
-FROM openjdk:21-slim
+FROM openjdk:21-jre
 WORKDIR /app
 COPY --from=base /app/build/libs/finance-control-0.0.1-SNAPSHOT.jar app.jar
 
