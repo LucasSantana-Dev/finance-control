@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * DTO for creating, updating, and representing transactions.
  * This class serves all operations, with ID being optional for creation.
- * 
+ *
  * <p>For creation: id should be null
  * For updates: id should be populated with the existing transaction ID
  */
@@ -30,48 +30,45 @@ import java.util.List;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class TransactionDTO extends BaseDTO<Long> {
-    
+
     @NotNull(message = "Transaction type is required")
     private TransactionType type;
-    
+
     @NotNull(message = "Transaction subtype is required")
     private TransactionSubtype subtype;
-    
+
     @NotNull(message = "Transaction source is required")
     private TransactionSource source;
-    
+
     @NotBlank(message = "Description is required")
     private String description;
-    
+
     @NotNull(message = "Amount is required")
     @Positive(message = "Amount must be positive")
     private BigDecimal amount;
-    
+
     private Integer installments;
     private LocalDateTime date;
-    
+
     @NotNull(message = "Category ID is required")
     private Long categoryId;
-    
+
     private Long subcategoryId;
-    
+
     private Long sourceEntityId;
-    
+
     @NotNull(message = "User ID is required")
     private Long userId;
-    
+
     @NotEmpty(message = "At least one responsible is required")
     @Valid
     private List<TransactionResponsiblesDTO> responsibilities;
-    
+
     /**
-     * Validates the DTO for create operations.
-     * Ensures all required fields are present and valid.
-     * 
-     * @throws IllegalArgumentException if validation fails
+     * Validates common fields for transaction DTOs.
+     * Used by both create and response validation.
      */
-    @Override
-    public void validateCreate() {
+    private void validateCommonFields() {
         TransactionValidation.validateType(type);
         TransactionValidation.validateSubtype(subtype);
         TransactionValidation.validateSource(source);
@@ -85,11 +82,22 @@ public class TransactionDTO extends BaseDTO<Long> {
         TransactionValidation.validateUserId(userId);
         TransactionValidation.validateResponsibilities(responsibilities);
     }
-    
+
+    /**
+     * Validates the DTO for create operations.
+     * Ensures all required fields are present and valid.
+     *
+     * @throws IllegalArgumentException if validation fails
+     */
+    @Override
+    public void validateCreate() {
+        validateCommonFields();
+    }
+
     /**
      * Validates the DTO for update operations.
      * Validates only the fields that are present (not null).
-     * 
+     *
      * @throws IllegalArgumentException if validation fails
      */
     @Override
@@ -107,28 +115,16 @@ public class TransactionDTO extends BaseDTO<Long> {
         TransactionValidation.validateUserIdForUpdate(userId);
         TransactionValidation.validateResponsibilitiesForUpdate(responsibilities);
     }
-    
+
     /**
      * Validates the DTO for response operations.
      * Ensures the DTO is properly populated for API responses.
-     * 
+     *
      * @throws IllegalArgumentException if validation fails
      */
     @Override
     public void validateResponse() {
         super.validateResponse(); // Validate common fields (ID)
-        
-        TransactionValidation.validateType(type);
-        TransactionValidation.validateSubtype(subtype);
-        TransactionValidation.validateSource(source);
-        TransactionValidation.validateDescription(description);
-        TransactionValidation.validateAmount(amount);
-        TransactionValidation.validateInstallments(installments);
-        TransactionValidation.validateDate(date);
-        TransactionValidation.validateCategoryId(categoryId);
-        TransactionValidation.validateSubcategoryId(subcategoryId);
-        TransactionValidation.validateSourceEntityId(sourceEntityId);
-        TransactionValidation.validateUserId(userId);
-        TransactionValidation.validateResponsibilities(responsibilities);
+        validateCommonFields();
     }
-} 
+}

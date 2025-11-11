@@ -16,6 +16,16 @@ public final class DateUtils {
     }
 
     /**
+     * Validates that the date parameter is not null.
+     *
+     * @param date the date to validate
+     * @return true if date is not null, false otherwise
+     */
+    private static boolean validateDateNotNull(Object date) {
+        return date != null;
+    }
+
+    /**
      * Checks if a LocalDateTime is within the specified range (inclusive).
      *
      * @param date the date to check
@@ -24,7 +34,7 @@ public final class DateUtils {
      * @return true if date is within range, false otherwise
      */
     public static boolean isInRange(LocalDateTime date, LocalDateTime startDate, LocalDateTime endDate) {
-        if (date == null) {
+        if (!validateDateNotNull(date)) {
             return false;
         }
 
@@ -43,7 +53,7 @@ public final class DateUtils {
      * @return true if date is within range, false otherwise
      */
     public static boolean isInRange(LocalDate date, LocalDate startDate, LocalDate endDate) {
-        if (date == null) {
+        if (!validateDateNotNull(date)) {
             return false;
         }
 

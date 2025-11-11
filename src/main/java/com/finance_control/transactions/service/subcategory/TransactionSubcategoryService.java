@@ -14,7 +14,6 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -83,15 +82,26 @@ public class TransactionSubcategoryService extends
      * @param pageable pagination parameters
      * @return a page of subcategory DTOs ordered by usage
      */
+    /**
+     * Creates a paginated page from a list of DTOs.
+     *
+     * @param items the full list of items
+     * @param pageable pagination parameters
+     * @return paginated page
+     */
+    private Page<TransactionSubcategoryDTO> createPaginatedPage(List<TransactionSubcategoryDTO> items, Pageable pageable) {
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), items.size());
+
+        List<TransactionSubcategoryDTO> pageContent = items.subList(start, end);
+        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, items.size());
+    }
+
     public Page<TransactionSubcategoryDTO> findByCategoryIdOrderByUsage(Long categoryId, Pageable pageable) {
         ValidationUtils.validateId(categoryId);
         List<TransactionSubcategoryDTO> allSubcategories = findByCategoryIdOrderByUsage(categoryId);
-        
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), allSubcategories.size());
-        
-        List<TransactionSubcategoryDTO> pageContent = allSubcategories.subList(start, end);
-        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, allSubcategories.size());
+
+        return createPaginatedPage(allSubcategories, pageable);
     }
 
     /**
@@ -104,12 +114,8 @@ public class TransactionSubcategoryService extends
     public Page<TransactionSubcategoryDTO> findByCategoryId(Long categoryId, Pageable pageable) {
         ValidationUtils.validateId(categoryId);
         List<TransactionSubcategoryDTO> allSubcategories = findByCategoryId(categoryId);
-        
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), allSubcategories.size());
-        
-        List<TransactionSubcategoryDTO> pageContent = allSubcategories.subList(start, end);
-        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, allSubcategories.size());
+
+        return createPaginatedPage(allSubcategories, pageable);
     }
 
     /**

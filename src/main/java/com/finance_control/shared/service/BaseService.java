@@ -281,19 +281,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
                 });
 
         // Check user ownership if user-aware
-        if (isUserAware()) {
-            Long currentUserId = UserContext.getCurrentUserId();
-            if (currentUserId == null) {
-                log.error(USER_CONTEXT_UNAVAILABLE);
-                throw new SecurityException("User context not available");
-            }
-
-            if (!belongsToUser(entity, currentUserId)) {
-                log.warn(ACCESS_DENIED_MSG, id, currentUserId);
-                throw new SecurityException("Access denied: entity does not belong to current user");
-            }
-            log.debug(USER_OWNERSHIP_VERIFIED_MSG, id, currentUserId);
-        }
+        validateUserOwnership(entity, id);
 
         updateEntityFromDTO(entity, updateDTO);
         validateEntity(entity);
@@ -321,19 +309,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
                 });
 
         // Check user ownership if user-aware
-        if (isUserAware()) {
-            Long currentUserId = UserContext.getCurrentUserId();
-            if (currentUserId == null) {
-                log.error(USER_CONTEXT_UNAVAILABLE);
-                throw new SecurityException("User context not available");
-            }
-
-            if (!belongsToUser(entity, currentUserId)) {
-                log.warn(ACCESS_DENIED_MSG, id, currentUserId);
-                throw new SecurityException("Access denied: entity does not belong to current user");
-            }
-            log.debug(USER_OWNERSHIP_VERIFIED_MSG, id, currentUserId);
-        }
+        validateUserOwnership(entity, id);
 
         repository.deleteById(id);
         log.info("Entity deleted successfully with ID: {}", id);
@@ -463,16 +439,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      */
     public long count(String search, Map<String, Object> filters) {
         // Add user filter if user-aware
-        if (isUserAware()) {
-            Long currentUserId = UserContext.getCurrentUserId();
-            if (currentUserId == null) {
-                throw new SecurityException("User context not available");
-            }
-
-            if (filters != null && !filters.containsKey(USER_ID_FIELD)) {
-                filters.put(USER_ID_FIELD, currentUserId);
-            }
-        }
+        ensureUserFilter(filters);
 
         if (filters == null || filters.isEmpty()) {
             // For search-only counting, we need to use specifications
@@ -632,6 +599,30 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
             if (filters != null && !filters.containsKey(USER_ID_FIELD)) {
                 filters.put(USER_ID_FIELD, currentUserId);
             }
+        }
+    }
+
+    /**
+     * Validates that the entity belongs to the current user.
+     * Only performs validation if the service is user-aware.
+     *
+     * @param entity the entity to validate
+     * @param id the entity ID for logging purposes
+     * @throws SecurityException if user context is not available or entity doesn't belong to user
+     */
+    private void validateUserOwnership(T entity, I id) {
+        if (isUserAware()) {
+            Long currentUserId = UserContext.getCurrentUserId();
+            if (currentUserId == null) {
+                log.error(USER_CONTEXT_UNAVAILABLE);
+                throw new SecurityException("User context not available");
+            }
+
+            if (!belongsToUser(entity, currentUserId)) {
+                log.warn(ACCESS_DENIED_MSG, id, currentUserId);
+                throw new SecurityException("Access denied: entity does not belong to current user");
+            }
+            log.debug(USER_OWNERSHIP_VERIFIED_MSG, id, currentUserId);
         }
     }
 

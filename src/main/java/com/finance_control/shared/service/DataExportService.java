@@ -174,12 +174,17 @@ public class DataExportService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        String fullName = user.getProfile() != null && user.getProfile().getFullName() != null
+                ? user.getProfile().getFullName() : "";
+        String createdAt = user.getCreatedAt() != null
+                ? user.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "";
+
         StringBuilder json = new StringBuilder();
         json.append("{\n");
         json.append("    \"id\": ").append(user.getId()).append(",\n");
         json.append("    \"email\": \"").append(user.getEmail()).append("\",\n");
-        json.append("    \"name\": \"").append(user.getProfile() != null && user.getProfile().getFullName() != null ? user.getProfile().getFullName() : "").append("\",\n");
-        json.append("    \"createdAt\": \"").append(user.getCreatedAt() != null ? user.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "").append("\",\n");
+        json.append("    \"name\": \"").append(fullName).append("\",\n");
+        json.append("    \"createdAt\": \"").append(createdAt).append("\",\n");
         json.append("    \"isActive\": ").append(user.getIsActive()).append("\n");
         json.append("  }");
         return json.toString();
@@ -207,6 +212,16 @@ public class DataExportService {
         writer.println();
     }
 
+    /**
+     * Formats a LocalDateTime timestamp to ISO format, handling null values.
+     *
+     * @param timestamp the timestamp to format
+     * @return formatted timestamp string or empty string if null
+     */
+    private String formatTimestamp(LocalDateTime timestamp) {
+        return timestamp != null ? timestamp.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "";
+    }
+
     private String exportTransactionsAsJson(Long userId) {
         List<Transaction> transactions = transactionRepository.findByUserIdWithResponsibilities(userId);
 
@@ -215,17 +230,27 @@ public class DataExportService {
 
         for (int i = 0; i < transactions.size(); i++) {
             Transaction transaction = transactions.get(i);
+
+            String description = transaction.getDescription() != null
+                    ? transaction.getDescription().replace("\"", "\\\"") : "";
+            String categoryName = transaction.getCategory() != null
+                    ? transaction.getCategory().getName().replace("\"", "\\\"") : "";
+            String subcategoryName = transaction.getSubcategory() != null
+                    ? transaction.getSubcategory().getName().replace("\"", "\\\"") : "";
+            String sourceEntityName = transaction.getSourceEntity() != null
+                    ? transaction.getSourceEntity().getName().replace("\"", "\\\"") : "";
+
             json.append("    {\n");
             json.append("      \"id\": ").append(transaction.getId()).append(",\n");
-            json.append("      \"description\": \"").append(transaction.getDescription() != null ? transaction.getDescription().replace("\"", "\\\"") : "").append("\",\n");
+            json.append("      \"description\": \"").append(description).append("\",\n");
             json.append("      \"amount\": ").append(transaction.getAmount()).append(",\n");
             json.append("      \"type\": \"").append(transaction.getType()).append("\",\n");
             json.append("      \"date\": \"").append(transaction.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)).append("\",\n");
-            json.append("      \"category\": \"").append(transaction.getCategory() != null ? transaction.getCategory().getName().replace("\"", "\\\"") : "").append("\",\n");
-            json.append("      \"subcategory\": \"").append(transaction.getSubcategory() != null ? transaction.getSubcategory().getName().replace("\"", "\\\"") : "").append("\",\n");
-            json.append("      \"sourceEntity\": \"").append(transaction.getSourceEntity() != null ? transaction.getSourceEntity().getName().replace("\"", "\\\"") : "").append("\",\n");
+            json.append("      \"category\": \"").append(categoryName).append("\",\n");
+            json.append("      \"subcategory\": \"").append(subcategoryName).append("\",\n");
+            json.append("      \"sourceEntity\": \"").append(sourceEntityName).append("\",\n");
             json.append("      \"reconciled\": ").append(transaction.getReconciled()).append(",\n");
-            json.append("      \"createdAt\": \"").append(transaction.getCreatedAt() != null ? transaction.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "").append("\"\n");
+            json.append("      \"createdAt\": \"").append(formatTimestamp(transaction.getCreatedAt())).append("\"\n");
             json.append("    }");
             if (i < transactions.size() - 1) {
                 json.append(",");
@@ -262,24 +287,31 @@ public class DataExportService {
 
     private String exportFinancialGoalsAsJson(Long userId) {
         Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
-        List<FinancialGoal> goals = financialGoalRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable).getContent();
+        List<FinancialGoal> goals = financialGoalRepository
+                .findByUserIdOrderByCreatedAtDesc(userId, pageable)
+                .getContent();
 
         StringBuilder json = new StringBuilder();
         json.append("[\n");
 
         for (int i = 0; i < goals.size(); i++) {
             FinancialGoal goal = goals.get(i);
+
+            String name = goal.getName() != null ? goal.getName().replace("\"", "\\\"") : "";
+            String description = goal.getDescription() != null ? goal.getDescription().replace("\"", "\\\"") : "";
+            String deadline = goal.getDeadline() != null ? goal.getDeadline().format(DateTimeFormatter.ISO_LOCAL_DATE) : "";
+
             json.append("    {\n");
             json.append("      \"id\": ").append(goal.getId()).append(",\n");
-            json.append("      \"name\": \"").append(goal.getName() != null ? goal.getName().replace("\"", "\\\"") : "").append("\",\n");
-            json.append("      \"description\": \"").append(goal.getDescription() != null ? goal.getDescription().replace("\"", "\\\"") : "").append("\",\n");
+            json.append("      \"name\": \"").append(name).append("\",\n");
+            json.append("      \"description\": \"").append(description).append("\",\n");
             json.append("      \"targetAmount\": ").append(goal.getTargetAmount()).append(",\n");
             json.append("      \"currentAmount\": ").append(goal.getCurrentAmount()).append(",\n");
             json.append("      \"progressPercentage\": ").append(goal.getProgressPercentage()).append(",\n");
             json.append("      \"goalType\": \"").append(goal.getGoalType()).append("\",\n");
-            json.append("      \"deadline\": \"").append(goal.getDeadline() != null ? goal.getDeadline().format(DateTimeFormatter.ISO_LOCAL_DATE) : "").append("\",\n");
+            json.append("      \"deadline\": \"").append(deadline).append("\",\n");
             json.append("      \"isActive\": ").append(goal.getIsActive()).append(",\n");
-            json.append("      \"createdAt\": \"").append(goal.getCreatedAt() != null ? goal.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "").append("\"\n");
+            json.append("      \"createdAt\": \"").append(formatTimestamp(goal.getCreatedAt())).append("\"\n");
             json.append("    }");
             if (i < goals.size() - 1) {
                 json.append(",");

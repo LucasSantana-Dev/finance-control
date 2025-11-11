@@ -44,19 +44,27 @@ public class TransactionSourceService extends
         return true;
     }
 
+    /**
+     * Maps common fields from DTO to entity.
+     * Used by both mapToEntity and updateEntityFromDTO methods.
+     */
+    private void mapCommonFields(TransactionSourceEntity entity, TransactionSourceDTO dto) {
+        entity.setName(dto.getName());
+        entity.setDescription(dto.getDescription());
+        entity.setSourceType(dto.getSourceType());
+        entity.setBankName(dto.getBankName());
+        entity.setAccountNumber(dto.getAccountNumber());
+        entity.setCardType(dto.getCardType());
+        entity.setCardLastFour(dto.getCardLastFour());
+        entity.setAccountBalance(dto.getAccountBalance());
+    }
+
     @Override
     protected TransactionSourceEntity mapToEntity(TransactionSourceDTO createDTO) {
         TransactionSourceEntity entity = new TransactionSourceEntity();
 
         // Set additional fields specific to TransactionSource
-        entity.setName(createDTO.getName());
-        entity.setDescription(createDTO.getDescription());
-        entity.setSourceType(createDTO.getSourceType());
-        entity.setBankName(createDTO.getBankName());
-        entity.setAccountNumber(createDTO.getAccountNumber());
-        entity.setCardType(createDTO.getCardType());
-        entity.setCardLastFour(createDTO.getCardLastFour());
-        entity.setAccountBalance(createDTO.getAccountBalance());
+        mapCommonFields(entity, createDTO);
         entity.setIsActive(true);
 
         return entity;
@@ -64,14 +72,7 @@ public class TransactionSourceService extends
 
     @Override
     protected void updateEntityFromDTO(TransactionSourceEntity entity, TransactionSourceDTO updateDTO) {
-        entity.setName(updateDTO.getName());
-        entity.setDescription(updateDTO.getDescription());
-        entity.setSourceType(updateDTO.getSourceType());
-        entity.setBankName(updateDTO.getBankName());
-        entity.setAccountNumber(updateDTO.getAccountNumber());
-        entity.setCardType(updateDTO.getCardType());
-        entity.setCardLastFour(updateDTO.getCardLastFour());
-        entity.setAccountBalance(updateDTO.getAccountBalance());
+        mapCommonFields(entity, updateDTO);
     }
 
     @Override
