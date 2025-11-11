@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -45,27 +46,27 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
 
     /**
      * Find active goals for the current user.
-     * 
+     *
      * @return list of active financial goals
      */
     public List<FinancialGoalDTO> findActiveGoals() {
-        Map<String, Object> filters = Map.of(IS_ACTIVE_FIELD, true);
+        Map<String, Object> filters = new HashMap<>(Map.of(IS_ACTIVE_FIELD, true));
         return findAll(null, filters, "deadline", "asc", Pageable.unpaged()).getContent();
     }
 
     /**
      * Find completed goals for the current user.
-     * 
+     *
      * @return list of completed financial goals
      */
     public List<FinancialGoalDTO> findCompletedGoals() {
-        Map<String, Object> filters = Map.of(IS_ACTIVE_FIELD, false);
+        Map<String, Object> filters = new HashMap<>(Map.of(IS_ACTIVE_FIELD, false));
         return findAll(null, filters, "updatedAt", "desc", Pageable.unpaged()).getContent();
     }
 
     /**
      * Update the current amount of a goal.
-     * 
+     *
      * @param id     the goal ID
      * @param amount the amount to add to current amount
      * @return the updated goal
@@ -86,7 +87,7 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
 
     /**
      * Mark a goal as completed.
-     * 
+     *
      * @param id the goal ID
      * @return the updated goal
      */
@@ -99,7 +100,7 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
 
     /**
      * Reactivate a goal.
-     * 
+     *
      * @param id the goal ID
      * @return the updated goal
      */
@@ -299,7 +300,7 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
 
     /**
      * Complete a financial goal with detailed completion data.
-     * 
+     *
      * @param id      the ID of the goal to complete
      * @param request the completion request data
      * @return the completed goal DTO

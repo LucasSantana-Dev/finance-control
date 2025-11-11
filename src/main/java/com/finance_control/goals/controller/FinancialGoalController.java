@@ -6,7 +6,6 @@ import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.goals.service.FinancialGoalService;
 import com.finance_control.shared.controller.BaseController;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -36,10 +35,81 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
         this.financialGoalService = financialGoalService;
     }
 
-    @GetMapping("/filtered")
+    @Override
+    @GetMapping
     @Operation(summary = "Get financial goals with filtering",
                description = "Retrieve financial goals with flexible filtering, sorting, and pagination options")
     public ResponseEntity<Page<FinancialGoalDTO>> findAll(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false, defaultValue = "asc") String sortDirection,
+            Pageable pageable,
+            HttpServletRequest request) {
+
+        log.debug("GET request to retrieve financial goals with filtering");
+
+        // Extract all query parameters as filters (excluding standard ones)
+        Map<String, Object> filters = extractFiltersFromRequest(request, search, sortBy, sortDirection);
+
+        // Add specific goal filters from request parameters
+        String goalType = request.getParameter("goalType");
+        String status = request.getParameter("status");
+        String minTargetAmountStr = request.getParameter("minTargetAmount");
+        String maxTargetAmountStr = request.getParameter("maxTargetAmount");
+        String deadlineStartStr = request.getParameter("deadlineStart");
+        String deadlineEndStr = request.getParameter("deadlineEnd");
+        String isActiveStr = request.getParameter("isActive");
+
+        if (goalType != null && !goalType.trim().isEmpty()) {
+            filters.put("goalType", goalType);
+        }
+        if (status != null && !status.trim().isEmpty()) {
+            if ("active".equalsIgnoreCase(status)) {
+                filters.put("isActive", true);
+            } else if ("completed".equalsIgnoreCase(status)) {
+                filters.put("isActive", false);
+            }
+        }
+        if (minTargetAmountStr != null && !minTargetAmountStr.trim().isEmpty()) {
+            try {
+                filters.put("minTargetAmount", new BigDecimal(minTargetAmountStr));
+            } catch (NumberFormatException e) {
+                log.warn("Invalid minTargetAmount parameter: {}", minTargetAmountStr);
+            }
+        }
+        if (maxTargetAmountStr != null && !maxTargetAmountStr.trim().isEmpty()) {
+            try {
+                filters.put("maxTargetAmount", new BigDecimal(maxTargetAmountStr));
+            } catch (NumberFormatException e) {
+                log.warn("Invalid maxTargetAmount parameter: {}", maxTargetAmountStr);
+            }
+        }
+        if (deadlineStartStr != null && !deadlineStartStr.trim().isEmpty()) {
+            try {
+                filters.put("deadlineStart", LocalDate.parse(deadlineStartStr));
+            } catch (Exception e) {
+                log.warn("Invalid deadlineStart parameter: {}", deadlineStartStr);
+            }
+        }
+        if (deadlineEndStr != null && !deadlineEndStr.trim().isEmpty()) {
+            try {
+                filters.put("deadlineEnd", LocalDate.parse(deadlineEndStr));
+            } catch (Exception e) {
+                log.warn("Invalid deadlineEnd parameter: {}", deadlineEndStr);
+            }
+        }
+        if (isActiveStr != null && !isActiveStr.trim().isEmpty()) {
+            filters.put("isActive", Boolean.valueOf(isActiveStr));
+        }
+
+        Page<FinancialGoalDTO> goals = financialGoalService.findAll(search, filters, sortBy, sortDirection, pageable);
+        return ResponseEntity.ok(goals);
+    }
+
+    @GetMapping("/filtered")
+    @Operation(summary = "Get financial goals with filtering",
+               description = "Retrieve financial goals with flexible filtering, sorting, and pagination options")
+    public ResponseEntity<Page<FinancialGoalDTO>> findAllFiltered(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false, defaultValue = "asc") String sortDirection,
@@ -149,5 +219,67 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
         return ResponseEntity.ok(completedGoal);
     }
 
+    @GetMapping("/metadata/types")
+    @Operation(summary = "Get goal types",
+               description = "Retrieve all available goal types")
+    public ResponseEntity<List<String>> getGoalTypes() {
+        List<String> types = financialGoalService.getGoalTypes();
+        return ResponseEntity.ok(types);
+    }
+
+    @GetMapping("/metadata/status-summary")
+    @Operation(summary = "Get status summary",
+               description = "Retrieve summary of goal statuses for the current user")
+    public ResponseEntity<Map<String, Object>> getStatusSummary() {
+        Long userId = getCurrentUserId();
+        Map<String, Object> statusSummary = financialGoalService.getStatusSummary(userId);
+        return ResponseEntity.ok(statusSummary);
+    }
+
+    @GetMapping("/metadata/progress-summary")
+    @Operation(summary = "Get progress summary",
+               description = "Retrieve summary of goal progress for the current user")
+    public ResponseEntity<Map<String, Object>> getProgressSummary() {
+        Long userId = getCurrentUserId();
+        Map<String, Object> progressSummary = financialGoalService.getProgressSummary(userId);
+        return ResponseEntity.ok(progressSummary);
+    }
+
+    @GetMapping("/metadata/deadline-alerts")
+    @Operation(summary = "Get deadline alerts",
+               description = "Retrieve goals with upcoming deadlines for the current user")
+    public ResponseEntity<List<Map<String, Object>>> getDeadlineAlerts() {
+        Long userId = getCurrentUserId();
+        List<Map<String, Object>> deadlineAlerts = financialGoalService.getDeadlineAlerts(userId);
+        return ResponseEntity.ok(deadlineAlerts);
+    }
+
+    @GetMapping("/metadata/completion-rate")
+    @Operation(summary = "Get completion rate",
+               description = "Retrieve goal completion rate for the current user")
+    public ResponseEntity<Map<String, Object>> getCompletionRate() {
+        Long userId = getCurrentUserId();
+        Map<String, Object> completionRate = financialGoalService.getCompletionRate(userId);
+        return ResponseEntity.ok(completionRate);
+    }
+
+    @GetMapping("/metadata/average-completion-time")
+    @Operation(summary = "Get average completion time",
+               description = "Retrieve average completion time for goals of the current user")
+    public ResponseEntity<Map<String, Object>> getAverageCompletionTime() {
+        Long userId = getCurrentUserId();
+        Map<String, Object> avgCompletionTime = financialGoalService.getAverageCompletionTime(userId);
+        return ResponseEntity.ok(avgCompletionTime);
+    }
+
+
+    /**
+     * Gets the current user ID from the security context
+     */
+    private Long getCurrentUserId() {
+        // This should be implemented based on your security setup
+        // For now, returning a default user ID for testing
+        return 1L;
+    }
 
 }

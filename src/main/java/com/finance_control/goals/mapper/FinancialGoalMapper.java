@@ -19,8 +19,8 @@ public interface FinancialGoalMapper {
      * Maps FinancialGoal entity to DTO.
      * Handles date conversions and field mappings.
      */
-    @Mapping(target = "targetDate", source = "deadline", qualifiedByName = "localDateToLocalDateTime")
     @Mapping(target = "deadline", source = "deadline", qualifiedByName = "localDateToLocalDateTime")
+    @Mapping(target = "accountId", source = "account.id")
     FinancialGoalDTO toDTO(FinancialGoal entity);
 
     /**
@@ -29,9 +29,16 @@ public interface FinancialGoalMapper {
      */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)
+    @Mapping(target = "account.id", source = "accountId")
     @Mapping(target = "deadline", source = "deadline", qualifiedByName = "localDateTimeToLocalDate")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "completedDate", ignore = true)
+    @Mapping(target = "completed", ignore = true)
+    @Mapping(target = "completionNotes", ignore = true)
+    @Mapping(target = "achievementNotes", ignore = true)
+    @Mapping(target = "actualSavings", ignore = true)
+    @Mapping(target = "actualInvestment", ignore = true)
     FinancialGoal toEntity(FinancialGoalDTO dto);
 
     /**
@@ -39,9 +46,16 @@ public interface FinancialGoalMapper {
      */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)
+    @Mapping(target = "account.id", source = "accountId")
     @Mapping(target = "deadline", source = "deadline", qualifiedByName = "localDateTimeToLocalDate")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "completedDate", ignore = true)
+    @Mapping(target = "completed", ignore = true)
+    @Mapping(target = "completionNotes", ignore = true)
+    @Mapping(target = "achievementNotes", ignore = true)
+    @Mapping(target = "actualSavings", ignore = true)
+    @Mapping(target = "actualInvestment", ignore = true)
     void updateEntityFromDTO(FinancialGoalDTO dto, @MappingTarget FinancialGoal entity);
 
     /**

@@ -1,6 +1,5 @@
 package com.finance_control.brazilian_market.controller;
 
-import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.model.MarketIndicator;
 import com.finance_control.brazilian_market.service.BrazilianMarketDataService;
@@ -100,7 +99,6 @@ public class BrazilianMarketController {
     @Operation(summary = "Get user investments", description = "Retrieves all investments tracked by the authenticated user")
     public ResponseEntity<List<Investment>> getUserInvestments(Authentication authentication) {
         log.debug("GET request to retrieve user investments");
-        Long userId = getUserIdFromAuthentication(authentication);
         List<Investment> investments = investmentService.getAllInvestments(getUserFromAuthentication(authentication));
         return ResponseEntity.ok(investments);
     }

@@ -39,7 +39,6 @@ public class FinancialGoalDTO extends BaseDTO<Long> {
     private BigDecimal targetAmount;
 
     private BigDecimal currentAmount;
-    private LocalDateTime targetDate;
     private Boolean isActive;
 
     private LocalDateTime deadline;
@@ -60,7 +59,6 @@ public class FinancialGoalDTO extends BaseDTO<Long> {
         FinancialGoalValidation.validateGoalType(goalType);
         FinancialGoalValidation.validateTargetAmount(targetAmount);
         FinancialGoalValidation.validateCurrentAmount(currentAmount);
-        FinancialGoalValidation.validateTargetDate(targetDate);
         FinancialGoalValidation.validateDeadline(deadline);
         FinancialGoalValidation.validateAccountId(accountId);
     }
@@ -78,7 +76,6 @@ public class FinancialGoalDTO extends BaseDTO<Long> {
         FinancialGoalValidation.validateGoalTypeForUpdate(goalType);
         FinancialGoalValidation.validateTargetAmountForUpdate(targetAmount);
         FinancialGoalValidation.validateCurrentAmount(currentAmount);
-        FinancialGoalValidation.validateTargetDate(targetDate);
         FinancialGoalValidation.validateDeadline(deadline);
         FinancialGoalValidation.validateAccountId(accountId);
     }
@@ -98,12 +95,11 @@ public class FinancialGoalDTO extends BaseDTO<Long> {
         FinancialGoalValidation.validateGoalType(goalType);
         FinancialGoalValidation.validateTargetAmount(targetAmount);
         FinancialGoalValidation.validateCurrentAmount(currentAmount);
-        FinancialGoalValidation.validateTargetDate(targetDate);
         FinancialGoalValidation.validateDeadline(deadline);
         FinancialGoalValidation.validateAccountId(accountId);
 
         if (isActive == null) {
-            isActive = true; // Default to active if not set
+            isActive = Boolean.TRUE; // Default to active if not set
         }
     }
 }

@@ -3,7 +3,6 @@ package com.finance_control.brazilian_market.service;
 import com.finance_control.brazilian_market.client.MarketDataProvider;
 import com.finance_control.brazilian_market.client.MarketQuote;
 import com.finance_control.brazilian_market.model.Investment;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
