@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import java.util.Map;
  * @param <D> The DTO type used for all operations (create, update, response)
  */
 @Slf4j
+@Validated
 public abstract class BaseController<T extends BaseModel<I>, I, D> implements CrudApi<I, D> {
 
     /** The service for business logic operations */
