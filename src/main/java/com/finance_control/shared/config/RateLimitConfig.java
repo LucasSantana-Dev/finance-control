@@ -2,7 +2,6 @@ package com.finance_control.shared.config;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -34,10 +33,10 @@ public class RateLimitConfig {
         log.info("Configuring rate limiting - Requests per minute: {}, Burst capacity: {}, Refresh period: {}s",
                 rateLimit.getRequestsPerMinute(), rateLimit.getBurstCapacity(), rateLimit.getRefreshPeriod());
 
-        Bandwidth limit = Bandwidth.classic(
-                rateLimit.getBurstCapacity(),
-                Refill.intervally(rateLimit.getRequestsPerMinute(), Duration.ofSeconds(rateLimit.getRefreshPeriod()))
-        );
+        Bandwidth limit = Bandwidth.builder()
+                .capacity(rateLimit.getBurstCapacity())
+                .refillIntervally(rateLimit.getRequestsPerMinute(), Duration.ofSeconds(rateLimit.getRefreshPeriod()))
+                .build();
 
         return Bucket.builder()
                 .addLimit(limit)

@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -43,15 +44,17 @@ public class RedisConfig {
         log.info("Configuring Redis connection - Host: {}, Port: {}, Database: {}",
                 redis.getHost(), redis.getPort(), redis.getDatabase());
 
-        LettuceConnectionFactory factory = new LettuceConnectionFactory();
-        factory.setHostName(redis.getHost());
-        factory.setPort(redis.getPort());
-        factory.setDatabase(redis.getDatabase());
-        factory.setTimeout(redis.getTimeout());
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        config.setHostName(redis.getHost());
+        config.setPort(redis.getPort());
+        config.setDatabase(redis.getDatabase());
 
         if (redis.getPassword() != null && !redis.getPassword().isEmpty()) {
-            factory.setPassword(redis.getPassword());
+            config.setPassword(redis.getPassword());
         }
+
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
+        factory.setTimeout(redis.getTimeout());
 
         return factory;
     }
