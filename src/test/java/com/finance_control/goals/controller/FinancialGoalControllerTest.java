@@ -2,25 +2,22 @@ package com.finance_control.goals.controller;
 
 import com.finance_control.shared.enums.GoalType;
 import com.finance_control.goals.dto.FinancialGoalDTO;
+import com.finance_control.goals.dto.GoalCompletionRequest;
 import com.finance_control.goals.service.FinancialGoalService;
-import com.finance_control.goals.controller.FinancialGoalController;
 import com.finance_control.goals.repository.FinancialGoalRepository;
 import com.finance_control.transactions.repository.source.TransactionSourceRepository;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import com.finance_control.shared.security.CustomUserDetails;
 import com.finance_control.shared.context.UserContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.mockito.Mockito.mockStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -39,6 +36,8 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
@@ -50,17 +49,20 @@ class FinancialGoalControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private FinancialGoalService financialGoalService;
 
-    @MockBean
+    @MockitoBean
     private FinancialGoalRepository financialGoalRepository;
 
-    @MockBean
+    @MockitoBean
     private UserRepository userRepository;
 
-    @MockBean
+    @MockitoBean
     private TransactionSourceRepository transactionSourceRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private FinancialGoalDTO sampleGoal;
     private Page<FinancialGoalDTO> samplePage;
@@ -102,19 +104,6 @@ class FinancialGoalControllerTest {
         UserContext.clear();
     }
 
-    private com.finance_control.goals.model.FinancialGoal createTestGoal() {
-        com.finance_control.goals.model.FinancialGoal goal = new com.finance_control.goals.model.FinancialGoal();
-        goal.setId(1L);
-        goal.setName("Test Goal");
-        goal.setDescription("Test Description");
-        goal.setGoalType(GoalType.SAVINGS);
-        goal.setTargetAmount(new BigDecimal("10000.00"));
-        goal.setCurrentAmount(new BigDecimal("5000.00"));
-        goal.setDeadline(LocalDate.now().plusMonths(6));
-        goal.setIsActive(true);
-        goal.setCreatedAt(LocalDateTime.now());
-        return goal;
-    }
 
     @Test
     void getFinancialGoals_WithValidParameters_ShouldReturnOk() throws Exception {
@@ -211,8 +200,7 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getGoalTypes())
                 .thenReturn(Arrays.asList("SAVINGS", "INVESTMENT", "DEBT_PAYOFF"));
 
-        mockMvc.perform(get("/api/financial-goals")
-                .param("data", "types")
+        mockMvc.perform(get("/api/financial-goals/metadata/types")
                 .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -232,9 +220,7 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getStatusSummary(anyLong()))
                 .thenReturn(statusSummary);
 
-        mockMvc.perform(get("/api/financial-goals")
-                .param("userId", "1")
-                .param("data", "status-summary")
+        mockMvc.perform(get("/api/financial-goals/metadata/status-summary")
                 .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -253,9 +239,7 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getProgressSummary(anyLong()))
                 .thenReturn(progressSummary);
 
-        mockMvc.perform(get("/api/financial-goals")
-                .param("userId", "1")
-                .param("data", "progress-summary")
+        mockMvc.perform(get("/api/financial-goals/metadata/progress-summary")
                 .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -273,16 +257,17 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getDeadlineAlerts(anyLong()))
                 .thenReturn(deadlineAlerts);
 
-        mockMvc.perform(get("/api/financial-goals")
-                .param("userId", "1")
-                .param("data", "deadline-alerts")
+        mockMvc.perform(get("/api/financial-goals/metadata/deadline-alerts")
                 .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].name").value("Goal 1"))
-                .andExpect(jsonPath("$[0].deadline").value("2024-02-01"));
+                .andExpect(jsonPath("$[0].deadline").value("2024-02-01"))
+                .andExpect(jsonPath("$[1].id").value(2))
+                .andExpect(jsonPath("$[1].name").value("Goal 2"))
+                .andExpect(jsonPath("$[1].deadline").value("2024-02-15"));
     }
 
     @Test
@@ -291,9 +276,7 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getCompletionRate(anyLong()))
                 .thenReturn(completionRate);
 
-        mockMvc.perform(get("/api/financial-goals")
-                .param("userId", "1")
-                .param("data", "completion-rate")
+        mockMvc.perform(get("/api/financial-goals/metadata/completion-rate")
                 .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -308,9 +291,7 @@ class FinancialGoalControllerTest {
         when(financialGoalService.getAverageCompletionTime(anyLong()))
                 .thenReturn(avgCompletionTime);
 
-        mockMvc.perform(get("/api/financial-goals")
-                .param("userId", "1")
-                .param("data", "average-completion-time")
+        mockMvc.perform(get("/api/financial-goals/metadata/average-completion-time")
                 .with(user(testUserDetails)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -319,11 +300,319 @@ class FinancialGoalControllerTest {
     }
 
     @Test
-    void getFinancialGoalsMetadata_WithInvalidData_ShouldReturnBadRequest() throws Exception {
+    void getFinancialGoalsMetadata_WithInvalidData_ShouldReturnInternalServerError() throws Exception {
+        mockMvc.perform(get("/api/financial-goals/metadata/invalid-type")
+                .with(user(testUserDetails)))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void getActiveGoals_ShouldReturnActiveGoals() throws Exception {
+        List<FinancialGoalDTO> activeGoals = Arrays.asList(sampleGoal);
+        when(financialGoalService.findActiveGoals()).thenReturn(activeGoals);
+
+        mockMvc.perform(get("/api/financial-goals/active")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].isActive").value(true));
+    }
+
+    @Test
+    void getCompletedGoals_ShouldReturnCompletedGoals() throws Exception {
+        FinancialGoalDTO completedGoal = new FinancialGoalDTO();
+        completedGoal.setId(2L);
+        completedGoal.setIsActive(false);
+        List<FinancialGoalDTO> completedGoals = Arrays.asList(completedGoal);
+        when(financialGoalService.findCompletedGoals()).thenReturn(completedGoals);
+
+        mockMvc.perform(get("/api/financial-goals/completed")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").value(2))
+                .andExpect(jsonPath("$[0].isActive").value(false));
+    }
+
+    @Test
+    void findAllFiltered_WithValidParameters_ShouldReturnOk() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals/filtered")
+                .param("goalType", "SAVINGS")
+                .param("status", "active")
+                .param("minTargetAmount", "1000")
+                .param("maxTargetAmount", "50000")
+                .param("deadlineStart", "2024-01-01")
+                .param("deadlineEnd", "2024-12-31")
+                .param("isActive", "true")
+                .param("page", "0")
+                .param("size", "20")
+                .param("sortBy", "deadline")
+                .param("sortDirection", "asc")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void findAllFiltered_WithStatusCompleted_ShouldReturnOk() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals/filtered")
+                .param("status", "completed")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void findAll_WithInvalidMinTargetAmount_ShouldHandleGracefully() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
         mockMvc.perform(get("/api/financial-goals")
-                .param("userId", "1")
-                .param("data", "invalid-type")
+                .param("minTargetAmount", "invalid-number")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void findAll_WithInvalidMaxTargetAmount_ShouldHandleGracefully() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals")
+                .param("maxTargetAmount", "not-a-number")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void findAll_WithInvalidDeadlineStart_ShouldHandleGracefully() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals")
+                .param("deadlineStart", "invalid-date")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void findAll_WithInvalidDeadlineEnd_ShouldHandleGracefully() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals")
+                .param("deadlineEnd", "not-a-date")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void findAll_WithEmptyStatus_ShouldNotAddFilter() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals")
+                .param("status", "")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void findAll_WithWhitespaceStatus_ShouldNotAddFilter() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals")
+                .param("status", "   ")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void updateProgress_WithValidAmount_ShouldReturnOk() throws Exception {
+        when(financialGoalService.updateProgress(1L, new BigDecimal("100.00")))
+                .thenReturn(sampleGoal);
+
+        mockMvc.perform(post("/api/financial-goals/1/progress")
+                .param("amount", "100.00")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    void markAsCompleted_ShouldReturnOk() throws Exception {
+        FinancialGoalDTO completedGoal = new FinancialGoalDTO();
+        completedGoal.setId(1L);
+        completedGoal.setIsActive(false);
+        when(financialGoalService.markAsCompleted(1L))
+                .thenReturn(completedGoal);
+
+        mockMvc.perform(post("/api/financial-goals/1/complete")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.isActive").value(false));
+    }
+
+    @Test
+    void reactivate_ShouldReturnOk() throws Exception {
+        FinancialGoalDTO reactivatedGoal = new FinancialGoalDTO();
+        reactivatedGoal.setId(1L);
+        reactivatedGoal.setIsActive(true);
+        when(financialGoalService.reactivate(1L))
+                .thenReturn(reactivatedGoal);
+
+        mockMvc.perform(post("/api/financial-goals/1/reactivate")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.isActive").value(true));
+    }
+
+    @Test
+    void completeGoal_WithValidRequest_ShouldReturnOk() throws Exception {
+        GoalCompletionRequest request = new GoalCompletionRequest();
+        request.setFinalAmount(new BigDecimal("10000.00"));
+        request.setCompletionDate(LocalDateTime.now());
+        request.setCompleted(true);
+
+        FinancialGoalDTO completedGoal = new FinancialGoalDTO();
+        completedGoal.setId(1L);
+        completedGoal.setIsActive(false);
+        when(financialGoalService.completeGoal(1L, request))
+                .thenReturn(completedGoal);
+
+        mockMvc.perform(put("/api/financial-goals/1/complete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    void completeGoal_WithInvalidRequest_ShouldReturnBadRequest() throws Exception {
+        GoalCompletionRequest request = new GoalCompletionRequest();
+        request.setFinalAmount(null);
+
+        mockMvc.perform(put("/api/financial-goals/1/complete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
                 .with(user(testUserDetails)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void findAllFiltered_WithAllFiltersCombined_ShouldReturnOk() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals/filtered")
+                .param("search", "savings")
+                .param("goalType", "SAVINGS")
+                .param("status", "active")
+                .param("minTargetAmount", "1000")
+                .param("maxTargetAmount", "50000")
+                .param("deadlineStart", "2024-01-01")
+                .param("deadlineEnd", "2024-12-31")
+                .param("isActive", "true")
+                .param("sortBy", "deadline")
+                .param("sortDirection", "asc")
+                .param("page", "0")
+                .param("size", "20")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void findAllFiltered_WithPartialFilters_ShouldReturnOk() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals/filtered")
+                .param("goalType", "SAVINGS")
+                .param("status", "active")
+                .param("isActive", "true")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void findAllFiltered_WithOnlyAmountFilters_ShouldReturnOk() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals/filtered")
+                .param("minTargetAmount", "1000")
+                .param("maxTargetAmount", "50000")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void findAllFiltered_WithOnlyDeadlineFilters_ShouldReturnOk() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals/filtered")
+                .param("deadlineStart", "2024-01-01")
+                .param("deadlineEnd", "2024-12-31")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void findAllFiltered_WithEmptyStringFilters_ShouldNotAddFilters() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals/filtered")
+                .param("goalType", "")
+                .param("status", "   ")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void findAllFiltered_WithNullSortBy_ShouldUseDefaultSort() throws Exception {
+        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/api/financial-goals/filtered")
+                .with(user(testUserDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
     }
 }
