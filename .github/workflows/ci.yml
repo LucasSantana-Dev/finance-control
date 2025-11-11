@@ -133,14 +133,20 @@ jobs:
       run: chmod +x ./gradlew
 
     - name: Run Checkstyle
+      env:
+        GRADLE_OPTS: -Dorg.gradle.unsafe.configuration-cache=false
       run: ./gradlew checkstyleMain checkstyleTest --no-daemon
       continue-on-error: true
 
     - name: Run PMD
+      env:
+        GRADLE_OPTS: -Dorg.gradle.unsafe.configuration-cache=false
       run: ./gradlew pmdMain pmdTest --no-daemon
       continue-on-error: true
 
     - name: Run SpotBugs
+      env:
+        GRADLE_OPTS: -Dorg.gradle.unsafe.configuration-cache=false
       run: ./gradlew spotbugsMain spotbugsTest --no-daemon
       continue-on-error: true
 
@@ -192,6 +198,8 @@ jobs:
       run: chmod +x ./gradlew
 
     - name: Run OWASP Dependency Check
+      env:
+        GRADLE_OPTS: -Dorg.gradle.unsafe.configuration-cache=false
       run: ./gradlew dependencyCheckAnalyze --no-daemon
       continue-on-error: true
 
