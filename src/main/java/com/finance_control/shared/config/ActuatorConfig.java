@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.Customizer;
 
 /**
  * Actuator configuration that uses environment variables through AppProperties.
@@ -36,7 +37,7 @@ public class ActuatorConfig {
                 .requestMatchers(EndpointRequest.to("health")).permitAll()
                 .requestMatchers(EndpointRequest.toAnyEndpoint()).authenticated()
             )
-            .httpBasic();
+            .httpBasic(Customizer.withDefaults());
         
         return http.build();
     }

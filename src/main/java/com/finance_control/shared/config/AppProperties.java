@@ -3,7 +3,6 @@ package com.finance_control.shared.config;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -156,7 +155,7 @@ public class AppProperties {
         private String version = "1.0.0";
         private String contactName = "Finance Control Team";
         private String contactEmail = "support@finance-control.com";
-        private String contactUrl = "https://github.com/LucasSantana-Dev/finance-control";
+        private String contactUrl = "https://github.com/LucasSantana/finance-control";
         private String licenseName = "MIT License";
         private String licenseUrl = "https://opensource.org/licenses/MIT";
         private String serverUrl = "http://localhost:8080";

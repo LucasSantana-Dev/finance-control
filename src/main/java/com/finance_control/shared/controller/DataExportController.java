@@ -30,7 +30,10 @@ public class DataExportController {
     private final DataExportService dataExportService;
 
     @GetMapping("/all/csv")
-    @Operation(summary = "Export all user data as CSV", description = "Exports all user data including profile, transactions, and financial goals in CSV format")
+    @Operation(
+            summary = "Export all user data as CSV",
+            description = "Exports all user data including profile, transactions, and financial goals in CSV format"
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Data exported successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -59,7 +62,10 @@ public class DataExportController {
     }
 
     @GetMapping("/all/json")
-    @Operation(summary = "Export all user data as JSON", description = "Exports all user data including profile, transactions, and financial goals in JSON format")
+    @Operation(
+            summary = "Export all user data as JSON",
+            description = "Exports all user data including profile, transactions, and financial goals in JSON format"
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Data exported successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
