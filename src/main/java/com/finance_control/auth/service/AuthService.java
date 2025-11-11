@@ -41,7 +41,8 @@ public class AuthService {
             }
 
             metricsService.incrementUserLogin();
-            log.info("User authenticated successfully: {}", email);
+            // Avoid logging PII such as email at INFO level
+            log.info("User authenticated successfully");
             return user.getId();
         } finally {
             metricsService.recordAuthenticationTime(sample);
