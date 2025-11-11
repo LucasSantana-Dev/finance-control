@@ -79,6 +79,8 @@ class SpecificationUtilsTest {
     @Test
     void fieldEqual_WithNonNullValue_ShouldCreatePredicate() {
         String value = "testValue";
+        lenient().when(root.get("fieldName")).thenReturn(path);
+        lenient().when(criteriaBuilder.equal(path, value)).thenReturn(predicate);
         Specification<TestEntity> spec = SpecificationUtils.fieldEqual("fieldName", value);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -98,8 +100,10 @@ class SpecificationUtilsTest {
     @Test
     void fieldEqualNested_WithNonNullValue_ShouldCreatePredicate() {
         String value = "testValue";
-        when(root.get("fieldName")).thenReturn(path);
-        when(path.get("nestedField")).thenReturn(path);
+        Path nestedPath = mock(Path.class);
+        lenient().when(root.get("fieldName")).thenReturn(path);
+        lenient().when(path.get("nestedField")).thenReturn(nestedPath);
+        lenient().when(criteriaBuilder.equal(nestedPath, value)).thenReturn(predicate);
         Specification<TestEntity> spec = SpecificationUtils.fieldEqualNested("fieldName", "nestedField", value);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -137,7 +141,7 @@ class SpecificationUtilsTest {
     @Test
     void likeIgnoreCase_WithValidValue_ShouldCreatePredicate() {
         String value = "Test";
-        when(root.get("fieldName")).thenReturn((Path) stringExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.likeIgnoreCase("fieldName", value);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -175,7 +179,7 @@ class SpecificationUtilsTest {
     @Test
     void like_WithValidValue_ShouldCreatePredicate() {
         String value = "test";
-        when(root.get("fieldName")).thenReturn((Path) stringExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.like("fieldName", value);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -196,7 +200,7 @@ class SpecificationUtilsTest {
     void dateBetween_WithBothPresent_ShouldCreatePredicate() {
         LocalDateTime startDate = LocalDateTime.of(2024, 1, 1, 0, 0);
         LocalDateTime endDate = LocalDateTime.of(2024, 12, 31, 23, 59);
-        when(root.get("fieldName")).thenReturn((Path) dateExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.dateBetween("fieldName", startDate, endDate);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -207,7 +211,7 @@ class SpecificationUtilsTest {
     @Test
     void dateBetween_WithOnlyStartDate_ShouldCreatePredicate() {
         LocalDateTime startDate = LocalDateTime.of(2024, 1, 1, 0, 0);
-        when(root.get("fieldName")).thenReturn((Path) dateExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.dateBetween("fieldName", startDate, null);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -218,7 +222,7 @@ class SpecificationUtilsTest {
     @Test
     void dateBetween_WithOnlyEndDate_ShouldCreatePredicate() {
         LocalDateTime endDate = LocalDateTime.of(2024, 12, 31, 23, 59);
-        when(root.get("fieldName")).thenReturn((Path) dateExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.dateBetween("fieldName", null, endDate);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -239,7 +243,7 @@ class SpecificationUtilsTest {
     void numberBetween_WithBothPresent_ShouldCreatePredicate() {
         Integer minValue = 10;
         Integer maxValue = 20;
-        when(root.get("fieldName")).thenReturn((Path) numberExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.numberBetween("fieldName", minValue, maxValue);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -250,7 +254,7 @@ class SpecificationUtilsTest {
     @Test
     void numberBetween_WithOnlyMinValue_ShouldCreatePredicate() {
         Integer minValue = 10;
-        when(root.get("fieldName")).thenReturn((Path) numberExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.numberBetween("fieldName", minValue, null);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -261,7 +265,7 @@ class SpecificationUtilsTest {
     @Test
     void numberBetween_WithOnlyMaxValue_ShouldCreatePredicate() {
         Integer maxValue = 20;
-        when(root.get("fieldName")).thenReturn((Path) numberExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.numberBetween("fieldName", null, maxValue);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -280,7 +284,7 @@ class SpecificationUtilsTest {
 
     @Test
     void isTrue_WithTrueValue_ShouldCreatePredicate() {
-        when(root.get("fieldName")).thenReturn((Path) booleanExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.isTrue("fieldName", true);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -290,7 +294,7 @@ class SpecificationUtilsTest {
 
     @Test
     void isTrue_WithFalseValue_ShouldCreatePredicate() {
-        when(root.get("fieldName")).thenReturn((Path) booleanExpression);
+        lenient().when(root.get("fieldName")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.isTrue("fieldName", false);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -346,9 +350,6 @@ class SpecificationUtilsTest {
 
     @Test
     void joinFieldEqual_WithNullValue_ShouldReturnNull() {
-        Join<Object, Object> join = mock(Join.class);
-        when(root.join("joinField")).thenReturn(join);
-        when(join.get("nestedField")).thenReturn(path);
         Specification<TestEntity> spec = SpecificationUtils.joinFieldEqual("joinField", "nestedField", null);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
@@ -360,8 +361,10 @@ class SpecificationUtilsTest {
     void joinFieldEqual_WithNonNullValue_ShouldCreatePredicate() {
         String value = "testValue";
         Join<Object, Object> join = mock(Join.class);
-        when(root.join("joinField")).thenReturn(join);
-        when(join.get("nestedField")).thenReturn(path);
+        Path nestedPath = mock(Path.class);
+        lenient().when(root.join("joinField")).thenReturn(join);
+        lenient().when(join.get("nestedField")).thenReturn(nestedPath);
+        lenient().when(criteriaBuilder.equal(nestedPath, value)).thenReturn(predicate);
         Specification<TestEntity> spec = SpecificationUtils.joinFieldEqual("joinField", "nestedField", value);
 
         Predicate result = spec.toPredicate(root, query, criteriaBuilder);
