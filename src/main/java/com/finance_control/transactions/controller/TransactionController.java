@@ -6,7 +6,6 @@ import com.finance_control.transactions.dto.TransactionReconciliationRequest;
 import com.finance_control.transactions.model.Transaction;
 import com.finance_control.transactions.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;

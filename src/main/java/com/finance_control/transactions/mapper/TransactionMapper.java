@@ -41,6 +41,13 @@ public abstract class TransactionMapper {
     @Mapping(target = "responsibilities", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    // Reconciliation fields managed by service layer
+    @Mapping(target = "reconciledAmount", ignore = true)
+    @Mapping(target = "reconciliationDate", ignore = true)
+    @Mapping(target = "reconciled", ignore = true)
+    @Mapping(target = "reconciliationNotes", ignore = true)
+    @Mapping(target = "bankReference", ignore = true)
+    @Mapping(target = "externalReference", ignore = true)
     public abstract Transaction toEntity(TransactionDTO dto);
 
     /**
@@ -55,6 +62,13 @@ public abstract class TransactionMapper {
     @Mapping(target = "responsibilities", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    // Reconciliation fields managed by service layer
+    @Mapping(target = "reconciledAmount", ignore = true)
+    @Mapping(target = "reconciliationDate", ignore = true)
+    @Mapping(target = "reconciled", ignore = true)
+    @Mapping(target = "reconciliationNotes", ignore = true)
+    @Mapping(target = "bankReference", ignore = true)
+    @Mapping(target = "externalReference", ignore = true)
     public abstract void updateEntityFromDTO(TransactionDTO dto, @MappingTarget Transaction entity);
 
     /**
