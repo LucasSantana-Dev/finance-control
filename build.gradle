@@ -1016,6 +1016,14 @@ dependencyCheck {
     if (file('dependency-check-suppressions.xml').exists()) {
         suppressionFile = 'dependency-check-suppressions.xml'
     }
+
+    // NVD API Key configuration (optional but recommended)
+    if (System.getenv('NVD_API_KEY')) {
+        nvd {
+            apiKey = System.getenv('NVD_API_KEY')
+            delay = 16000 // 16 seconds between requests to avoid rate limits
+        }
+    }
 }
 
 // Prefer stable versions in dependency updates report

@@ -200,6 +200,7 @@ jobs:
     - name: Run OWASP Dependency Check
       env:
         GRADLE_OPTS: -Dorg.gradle.unsafe.configuration-cache=false
+        NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
       run: ./gradlew dependencyCheckAnalyze --no-daemon
       continue-on-error: true
 
