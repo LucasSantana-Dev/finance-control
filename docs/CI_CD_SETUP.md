@@ -6,7 +6,7 @@ This document provides detailed instructions for setting up the CI/CD pipeline w
 
 The project uses GitHub Actions for automated CI/CD with comprehensive quality assurance:
 - **CI Pipeline**: Automated build, tests, and quality checks on every push/PR
-- **SonarQube Analysis**: Code quality analysis with self-hosted SonarQube instance
+- **SonarQube Cloud Analysis**: Code quality analysis with SonarQube Cloud
 - **Quality Gates**: Enforced standards for code quality, security, and coverage
 
 ## GitHub Actions Workflows
@@ -17,37 +17,40 @@ The project uses GitHub Actions for automated CI/CD with comprehensive quality a
 - **Duration**: ~5-10 minutes
 - **Artifacts**: Quality reports, test results, coverage reports
 
-### SonarQube Analysis (`sonarqube.yml`)
-- **Triggers**: Push to main, manual dispatch
-- **Jobs**: Self-hosted SonarQube with PostgreSQL, full analysis
-- **Duration**: ~10-15 minutes
-- **Artifacts**: SonarQube reports, coverage data
+### SonarQube Cloud Analysis (`sonarqube-cloud.yml`)
+- **Triggers**: Push to main, Pull Requests (opened, synchronize, reopened)
+- **Jobs**: Build and analyze with SonarQube Cloud
+- **Duration**: ~5-10 minutes
+- **Artifacts**: Analysis results available in SonarQube Cloud dashboard
 
 ## Required GitHub Secrets
 
 ### SONAR_TOKEN
 **Required for SonarQube analysis workflow**
 
-#### How to Create SonarQube Token
+#### How to Create SonarQube Cloud Token
 
-1. **Access SonarQube UI**:
-   - If using self-hosted: `http://localhost:9000` (after running `docker-compose --profile sonarqube up`)
-   - If using SonarCloud: `https://sonarcloud.io`
+1. **Access SonarQube Cloud**:
+   - Go to `https://sonarcloud.io`
+   - Login with your GitHub account (or create an account)
 
-2. **Login as Administrator**:
-   - Default credentials: `admin` / `admin`
-   - Change password on first login
+2. **Create Project** (if not already created):
+   - Navigate to your organization: `lucassantana-dev`
+   - Click **Add Project** → **From GitHub**
+   - Select the `finance-control` repository
+   - Follow the setup wizard
 
-3. **Create Project Token**:
-   - Navigate to: **Administration** → **Security** → **Users**
-   - Click on your user account
-   - Scroll to **Tokens** section
-   - Click **Generate Token**
+3. **Generate Project Token**:
+   - Go to your project: **LucasSantana-Dev_finance-control**
+   - Navigate to: **Project Settings** → **Analysis Method** → **GitHub Actions**
+   - Or go to: **My Account** → **Security** → **Generate Token**
    - Enter token name: `finance-control-ci`
-   - Copy the generated token immediately
+   - Select project: `LucasSantana-Dev_finance-control`
+   - Click **Generate Token**
+   - **Important**: Copy the token immediately (it won't be shown again)
 
 4. **Add to GitHub Secrets**:
-   - Go to your GitHub repository
+   - Go to your GitHub repository: `LucasSantana-Dev/finance-control`
    - Navigate to: **Settings** → **Secrets and variables** → **Actions**
    - Click **New repository secret**
    - Name: `SONAR_TOKEN`
@@ -55,7 +58,7 @@ The project uses GitHub Actions for automated CI/CD with comprehensive quality a
    - Click **Add secret**
 
 #### Token Permissions
-The token needs the following permissions in SonarQube:
+The token automatically has the following permissions in SonarQube Cloud:
 - Execute Analysis
 - Create Projects (if project doesn't exist yet)
 
@@ -70,27 +73,30 @@ The token needs the following permissions in SonarQube:
 # Run tests with coverage
 ./gradlew test jacocoTestReport
 
-# Run SonarQube analysis (requires Docker)
-docker-compose --profile sonarqube up -d
-./gradlew sonarqube
+# Run SonarQube Cloud analysis (requires SONAR_TOKEN environment variable)
+export SONAR_TOKEN=your-token-here
+./gradlew build sonar
 
 # Run security scan
 ./gradlew dependencyCheckAnalyze
 ```
 
-### Docker Compose Profiles
+### SonarQube Cloud Setup
 
-The project includes multiple Docker Compose profiles:
+The project uses SonarQube Cloud for code quality analysis. No local Docker setup is required.
 
+**Project Configuration:**
+- **Organization**: `lucassantana-dev`
+- **Project Key**: `LucasSantana-Dev_finance-control`
+- **Analysis**: Automatic on every push to main and Pull Requests
+
+**Local Analysis:**
 ```bash
-# Full development environment
-docker-compose up
+# Set your SonarQube Cloud token
+export SONAR_TOKEN=your-token-here
 
-# SonarQube analysis only
-docker-compose --profile sonarqube up
-
-# Database only
-docker-compose --profile postgres up
+# Run analysis
+./gradlew build sonar
 ```
 
 ## Quality Standards
@@ -112,10 +118,11 @@ docker-compose --profile postgres up
 
 ### Common Issues
 
-#### SonarQube Connection Failed
-- Verify `SONAR_TOKEN` secret is set correctly
-- Check if SonarQube container is running: `docker-compose ps`
-- Ensure SonarQube is accessible: `curl http://localhost:9000/api/system/status`
+#### SonarQube Cloud Connection Failed
+- Verify `SONAR_TOKEN` secret is set correctly in GitHub repository settings
+- Check token is valid: Go to SonarQube Cloud → My Account → Security
+- Ensure project exists: Verify `LucasSantana-Dev_finance-control` exists in organization `lucassantana-dev`
+- Check workflow logs for detailed error messages
 
 #### Quality Checks Failing
 - Run locally: `./gradlew qualityCheck`
@@ -136,16 +143,17 @@ docker-compose --profile postgres up
 
 ### Key Configuration Files
 - `.github/workflows/ci.yml` - CI pipeline
-- `.github/workflows/sonarqube.yml` - SonarQube analysis
-- `sonar-project.properties` - SonarQube configuration
-- `build.gradle` - Quality check configuration
+- `.github/workflows/sonarqube-cloud.yml` - SonarQube Cloud analysis
+- `.github/workflows/sonarqube.yml` - Legacy self-hosted SonarQube (optional)
+- `sonar-project.properties` - SonarQube configuration (legacy, optional)
+- `build.gradle` - Quality check and SonarQube Cloud configuration
 - `checkstyle.xml` - Checkstyle rules
 - `pmd-ruleset.xml` - PMD rules
 - `spotbugs-exclude.xml` - SpotBugs exclusions
 
 ### Environment Variables
-- `SONAR_HOST_URL` - SonarQube server URL (default: http://localhost:9000)
-- `SONAR_TOKEN` - Project analysis token (GitHub secret)
+- `SONAR_TOKEN` - SonarQube Cloud project analysis token (GitHub secret, required)
+- `SONAR_HOST_URL` - Only needed for self-hosted SonarQube (not used with SonarQube Cloud)
 
 ## Best Practices
 
@@ -172,24 +180,27 @@ docs: update CI/CD setup guide
 ## Monitoring & Alerts
 
 ### Quality Metrics
-- Track coverage trends in SonarQube
-- Monitor build times and failure rates
-- Review security vulnerabilities regularly
+- Track coverage trends in SonarQube Cloud dashboard
+- Monitor build times and failure rates in GitHub Actions
+- Review security vulnerabilities regularly in SonarQube Cloud
 - Update dependencies for security patches
+- View analysis results at: `https://sonarcloud.io/project/overview?id=LucasSantana-Dev_finance-control`
 
 ### Notifications
 - GitHub Actions notifications on failures
-- SonarQube quality gate alerts
+- SonarQube Cloud quality gate alerts (configured in project settings)
 - Security scan failure alerts
+- Pull Request comments with analysis results (automatic)
 
 ## Support
 
 For issues with CI/CD setup:
 1. Check workflow logs in GitHub Actions
 2. Verify local environment matches CI
-3. Review configuration files
-4. Check SonarQube server status
-5. Review this documentation
+3. Review configuration files (`build.gradle`, workflow files)
+4. Verify `SONAR_TOKEN` secret is set correctly in GitHub
+5. Check SonarQube Cloud project status: `https://sonarcloud.io/project/overview?id=LucasSantana-Dev_finance-control`
+6. Review this documentation
 
 ## Related Documentation
 

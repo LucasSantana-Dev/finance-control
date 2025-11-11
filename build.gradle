@@ -6,7 +6,7 @@ plugins {
     id 'pmd'
     id 'com.github.spotbugs' version '6.0.15'
     id 'jacoco'
-    id 'org.sonarqube' version '5.0.0.4638'
+    id 'org.sonarqube' version '7.0.1.6134'
     id 'org.owasp.dependencycheck' version '10.0.3'
     id 'com.github.ben-manes.versions' version '0.52.0'
 }
@@ -283,7 +283,8 @@ jacocoTestCoverageVerification {
 
 sonarqube {
     properties {
-        property "sonar.projectKey", "finance-control"
+        property "sonar.projectKey", "LucasSantana-Dev_finance-control"
+        property "sonar.organization", "lucassantana-dev"
         property "sonar.java.coveragePlugin", "jacoco"
         property "sonar.coverage.jacoco.xmlReportPaths", "${buildDir}/reports/jacoco/test/jacocoTestReport.xml"
     }
@@ -917,13 +918,13 @@ springBoot {
 // SonarQube configuration
 sonarqube {
     properties {
-        property 'sonar.projectKey', 'finance-control'
+        property 'sonar.projectKey', 'LucasSantana-Dev_finance-control'
+        property 'sonar.organization', 'lucassantana-dev'
         property 'sonar.projectName', 'Finance Control'
         property 'sonar.projectVersion', version
 
-        // SonarQube server configuration (from sonar-project.properties or env)
-        // sonar.host.url is configured in sonar-project.properties with env fallback
-        property 'sonar.login', System.getenv('SONAR_TOKEN') ?: 'admin'
+        // SonarQube Cloud configuration
+        // Token is provided via SONAR_TOKEN environment variable (GitHub secret)
 
         // Source and test directories
         property 'sonar.sources', 'src/main/java'
