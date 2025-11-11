@@ -146,7 +146,7 @@ services:
       sh -c "
         if [ \"$$SKIP_TESTS\" = \"true\" ]; then
           echo 'Running quality checks without tests...'
-          ./gradlew checkstyleMain pmdMain spotbugsMain --console=rich
+          ./gradlew checkstyleMain pmdMain spotbugsMain dependencyCheckAnalyze dependencyUpdates --console=rich
         else
           echo 'Running full quality checks...'
           ./gradlew qualityCheck --console=rich
