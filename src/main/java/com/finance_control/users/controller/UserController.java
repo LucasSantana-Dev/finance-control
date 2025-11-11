@@ -10,9 +10,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
 
+import jakarta.validation.constraints.Positive;
 import java.util.Optional;
 
 /**
@@ -22,6 +24,7 @@ import java.util.Optional;
  */
 @RestController
 @Slf4j
+@Validated
 @RequestMapping("/users")
 @Tag(name = "Users", description = "Endpoints for managing users")
 public class UserController extends BaseController<User, Long, UserDTO> {
@@ -50,21 +53,21 @@ public class UserController extends BaseController<User, Long, UserDTO> {
 
     @DeleteMapping("/{id}/soft")
     @Operation(summary = "Soft delete user", description = "Deactivate a user account instead of hard deleting it.")
-    public ResponseEntity<Void> softDelete(@PathVariable Long id) {
+    public ResponseEntity<Void> softDelete(@PathVariable @Positive Long id) {
         userService.softDelete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/reactivate")
     @Operation(summary = "Reactivate user", description = "Reactivate a previously deactivated user account.")
-    public ResponseEntity<Void> reactivate(@PathVariable Long id) {
+    public ResponseEntity<Void> reactivate(@PathVariable @Positive Long id) {
         userService.reactivate(id);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}/password")
     @Operation(summary = "Reset user password", description = "Reset user password by administrator")
-    public ResponseEntity<Void> resetPassword(@PathVariable Long id, @Valid @RequestBody PasswordResetRequest request) {
+    public ResponseEntity<Void> resetPassword(@PathVariable @Positive Long id, @Valid @RequestBody PasswordResetRequest request) {
         log.debug("PUT request to reset password for user ID: {}", id);
 
         if (request.isPasswordConfirmationInvalid()) {
@@ -79,7 +82,7 @@ public class UserController extends BaseController<User, Long, UserDTO> {
 
     @PutMapping("/{id}/status")
     @Operation(summary = "Update user status", description = "Activate or deactivate user account by administrator")
-    public ResponseEntity<UserDTO> updateStatus(@PathVariable Long id, @Valid @RequestBody UserStatusRequest request) {
+    public ResponseEntity<UserDTO> updateStatus(@PathVariable @Positive Long id, @Valid @RequestBody UserStatusRequest request) {
         log.debug("PUT request to update status for user ID: {} - active: {}", id, request.getActive());
 
         UserDTO updatedUser = userService.updateStatus(id, request.getActive(), request.getReason());

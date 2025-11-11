@@ -13,12 +13,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 @Tag(name = "Authentication", description = "Authentication endpoints")
 public class AuthController {
 
@@ -47,7 +49,7 @@ public class AuthController {
 
     @PostMapping("/validate")
     @Operation(summary = "Validate token", description = "Validate JWT token and return user ID")
-    public ResponseEntity<LoginResponse> validateToken(@RequestHeader("Authorization") String authorization) {
+    public ResponseEntity<LoginResponse> validateToken(@RequestHeader(value = "Authorization", required = false) String authorization) {
         if (authorization != null && authorization.startsWith("Bearer ")) {
             String token = authorization.substring(7);
             if (jwtUtils.validateToken(token)) {

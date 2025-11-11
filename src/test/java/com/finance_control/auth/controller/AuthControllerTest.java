@@ -2,7 +2,6 @@ package com.finance_control.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance_control.auth.dto.LoginRequest;
-import com.finance_control.auth.dto.LoginResponse;
 import com.finance_control.auth.dto.PasswordChangeRequest;
 import com.finance_control.auth.exception.AuthenticationException;
 import com.finance_control.auth.service.AuthService;
@@ -230,12 +229,10 @@ class AuthControllerTest {
     }
 
     @Test
-    void validateToken_WithMissingAuthorizationHeader_ShouldReturnInternalServerError() throws Exception {
-        // Note: @RequestHeader("Authorization") is required, so Spring throws an exception
-        // when the header is missing, resulting in 500. In production, this should be handled
-        // by making the header optional or by GlobalExceptionHandler.
+    void validateToken_WithMissingAuthorizationHeader_ShouldReturnBadRequest() throws Exception {
+        // Authorization header is optional and missing should result in 400 Bad Request
         mockMvc.perform(post("/api/auth/validate"))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
