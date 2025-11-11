@@ -121,7 +121,8 @@ public class Transaction extends BaseModel<Long> {
 
     public boolean isPercentageValid() {
         BigDecimal total = getTotalPercentage();
-        return total.compareTo(new BigDecimal("100.00")) == 0;
+        // compareTo ignores scale, use constant without String constructor
+        return total.compareTo(BigDecimal.valueOf(100)) == 0;
     }
 
     public BigDecimal getAmountForResponsible(TransactionResponsibles responsible) {
