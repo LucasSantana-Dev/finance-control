@@ -21,12 +21,4 @@ public class MonitoringConfig {
 
     // Removed @PostConstruct initialization to avoid circular dependencies
     // Monitoring services will be initialized lazily when first accessed
-
-    private String getApplicationVersion() {
-        try {
-            return this.getClass().getPackage().getImplementationVersion();
-        } catch (Exception e) {
-            return "1.0.0-SNAPSHOT";
-        }
-    }
 }

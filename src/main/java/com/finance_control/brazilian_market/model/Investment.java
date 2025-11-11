@@ -42,7 +42,7 @@ public class Investment extends BaseModel<Long> {
     private String ticker;
 
     @NotBlank(message = "Name is required")
-    @Size(max = 255, message = "Name must not exceed 255 characters")
+    @Size(message = "Name must not exceed 255 characters")
     @Column(nullable = false, length = 255)
     private String name;
 

@@ -16,20 +16,20 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode
 @ToString(callSuper = false)
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseModel<I> {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private I id;
-    
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
+
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-} 
+}

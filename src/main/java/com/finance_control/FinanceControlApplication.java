@@ -10,8 +10,8 @@ import org.springframework.context.annotation.ComponentScan;
                                                      pattern = "com\\.finance_control\\.unit\\..*"))
 public class FinanceControlApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(FinanceControlApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(FinanceControlApplication.class, args);
+    }
 
 }

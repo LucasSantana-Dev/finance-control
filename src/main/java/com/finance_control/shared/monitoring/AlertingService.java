@@ -188,7 +188,7 @@ public class AlertingService {
             case "HIGH" -> SentryLevel.ERROR;
             case "MEDIUM" -> SentryLevel.WARNING;
             case "LOW" -> SentryLevel.INFO;
-            default -> SentryLevel.WARNING;
+            default -> SentryLevel.INFO; // Unknown severities treated as low priority
         };
     }
 
@@ -203,7 +203,7 @@ public class AlertingService {
 
         switch (alert.getSeverity()) {
             case "CRITICAL":
-                log.error(logMessage);
+                log.error("CRITICAL ALERT: " + logMessage);
                 break;
             case "HIGH":
                 log.error(logMessage);
@@ -215,7 +215,7 @@ public class AlertingService {
                 log.info(logMessage);
                 break;
             default:
-                log.warn(logMessage);
+                log.debug(logMessage); // Unknown severities logged at debug level
         }
     }
 
