@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Code Quality and Security Automation**: Comprehensive quality assurance tools and scripts
+  - Added Qodana configuration for automated code quality analysis
+  - Implemented code quality checker script with file size and complexity validation
+  - Added security vulnerability scanning script with dependency and code pattern checks
+  - Created comprehensive unit test suite covering auth, profile, security, and user modules
+  - Enhanced .gitignore to exclude IDE-generated inspection files
+
+- **UI/UX Design Specification**: Complete design system and user experience documentation
+  - Added comprehensive UI/UX design specification for the finance control application
+  - Documented user personas, journey mapping, and emotional design principles
+  - Defined visual design system, component specifications, and interaction patterns
+  - Specified dashboard layouts, transaction management interfaces, and Brazilian market integration
+  - Created detailed design guidelines for responsive web application
+
+- **Project Development Guidelines**: Enhanced documentation for development workflow
+  - Added .junie guidelines with build, testing, and quality assurance practices
+  - Documented Docker-based development environment and CI/CD workflows
+  - Provided troubleshooting guides and maintenance procedures
+  - Enhanced developer onboarding with comprehensive project knowledge base
+
 - **CI/CD Pipeline with Quality Gates**: Comprehensive automated quality assurance system
   - Added GitHub Actions CI pipeline with build, tests, and quality checks
   - Implemented SonarQube analysis workflow with self-hosted Docker services
