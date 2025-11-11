@@ -112,3 +112,11 @@ logs/
 # Backup files
 *.backup
 build.gradle.backup
+
+# IDE inspection files
+.descriptions.xml
+.xml
+
+# IDE inspection files
+.descriptions.xml
+.xml
