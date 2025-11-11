@@ -640,6 +640,7 @@ Junie (the AI assistant) can connect to external Model Context Protocol (MCP) se
 To keep secrets out of version control, the config expects environment variables:
 - `POSTMAN_MCP_TOKEN` — used by `postman-mcp` via header `Authorization: Bearer ${POSTMAN_MCP_TOKEN}`.
 - `TB_TOKEN` — used by `Tinybird` via `?token=${TB_TOKEN}`.
+- `NVD_API_KEY` — used by OWASP Dependency Check for faster vulnerability scanning (optional but recommended).
 
 Set them in your shell before starting the client/IDE that hosts Junie:
 ```bash

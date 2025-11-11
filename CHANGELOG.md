@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **NVD API Key Configuration**: Improved OWASP Dependency Check performance with optional NVD API key support
+  - Added conditional NVD API key configuration in build.gradle for faster vulnerability scans
+  - Updated CI/CD pipeline to use NVD_API_KEY secret for 10x faster security scans
+  - Added comprehensive documentation for NVD API key setup in CI/CD and local development
+  - Rate limit increases from 5 to 50 requests per 30 seconds when API key is provided
+  - Maintains backward compatibility - scans work without API key (just slower)
+
 - **CI/CD Performance Optimizations**: Comprehensive pipeline improvements for faster builds
   - Implemented parallel job execution (build-test, quality-checks, security-scan)
   - Added multi-level caching strategy (dependencies, build cache, test results)

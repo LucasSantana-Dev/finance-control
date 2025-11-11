@@ -77,6 +77,51 @@ The token automatically has the following permissions in SonarQube Cloud:
 - Execute Analysis
 - Create Projects (if project doesn't exist yet)
 
+## NVD API Key Setup (Optional but Recommended)
+
+The OWASP Dependency Check tool can run significantly faster with an NVD (National Vulnerability Database) API key. Without an API key, requests are limited to 5 per 30 seconds; with an API key, this increases to 50 requests per 30 seconds.
+
+### 1. Request NVD API Key
+
+1. **Visit NVD API Key Request Page**:
+   - Go to: https://nvd.nist.gov/developers/request-an-api-key
+
+2. **Fill out the Request Form**:
+   - Provide your organization name
+   - Enter a valid email address
+   - Select your organization type
+   - Scroll to the end and check "I agree to the Terms of Use"
+   - Click **Submit Request**
+
+3. **Activate Your Key**:
+   - Check your email for an activation link
+   - Click the link to activate and view your API key
+   - **Note**: The activation link is valid for 7 days
+
+### 2. Add to GitHub Secrets
+
+1. **Navigate to Repository Secrets**:
+   - Go to your GitHub repository: `LucasSantana-Dev/finance-control`
+   - Navigate to: **Settings** → **Secrets and variables** → **Actions**
+   - Click **New repository secret**
+
+2. **Configure the Secret**:
+   - Name: `NVD_API_KEY`
+   - Value: Paste your NVD API key from the activation email
+   - Click **Add secret**
+
+### 3. Benefits
+
+- **10x faster scans**: Rate limit increases from 5 to 50 requests per 30 seconds
+- **Reduced CI time**: Security scans complete faster
+- **Better developer experience**: Faster local development scans
+
+### 4. Notes
+
+- The API key is optional - scans work without it, just slower
+- The CI/CD pipeline is configured to use the API key automatically if the secret is set
+- For local development, set the `NVD_API_KEY` environment variable
+
 ## Performance Optimizations
 
 ### Caching Strategy
