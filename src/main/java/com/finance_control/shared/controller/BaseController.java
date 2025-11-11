@@ -19,11 +19,11 @@ import java.util.Map;
 /**
  * Abstract base controller providing default implementations for common REST
  * operations with OpenAPI documentation.
- * 
+ *
  * This class implements the CrudApi interface to provide consistent API documentation
  * while offering concrete implementations of all CRUD operations. Controllers extending
  * this class automatically get both functionality and proper Swagger documentation.
- * 
+ *
  * @param <T> The entity type managed by this controller (must extend BaseModel<I>)
  * @param <I> The ID type of the entity (typically Long)
  * @param <D> The DTO type used for all operations (create, update, response)
@@ -37,7 +37,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
 
     /**
      * Constructs a new BaseController with the specified service.
-     * 
+     *
      * @param service the service to use for business logic operations
      */
     protected BaseController(BaseService<T, I, D> service) {
@@ -48,7 +48,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
      * Retrieves a paginated list of entities with optional search, filtering, and
      * sorting.
      * Supports multiple query parameters for flexible filtering.
-     * 
+     *
      * @param search        optional search term to filter entities across
      *                      searchable fields
      * @param sortBy        optional field name to sort by
@@ -60,7 +60,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
      */
     @Override
     @GetMapping
-    @Operation(summary = "List entities", 
+    @Operation(summary = "List entities",
                description = "Retrieve a paginated list of entities with optional search, filtering, and sorting.")
     public ResponseEntity<Page<D>> findAll(
             @RequestParam(required = false) String search,
@@ -69,7 +69,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
             Pageable pageable,
             HttpServletRequest request) {
 
-        log.debug("GET request to list entities - search: '{}', sortBy: '{}', sortDirection: '{}', page: {}", 
+        log.debug("GET request to list entities - search: '{}', sortBy: '{}', sortDirection: '{}', page: {}",
                  search, sortBy, sortDirection, pageable.getPageNumber());
 
         // Extract all query parameters as filters (excluding standard ones)
@@ -83,7 +83,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
     /**
      * Extracts filter parameters from the HTTP request.
      * Excludes standard parameters like search, sortBy, sortDirection, page, size.
-     * 
+     *
      * @param request       the HTTP request
      * @param search        the search parameter
      * @param sortBy        the sort by parameter
@@ -122,7 +122,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
 
     /**
      * Converts string parameter values to appropriate types.
-     * 
+     *
      * @param value the string value
      * @return the converted value
      */
@@ -151,7 +151,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
 
     /**
      * Retrieves a single entity by its ID.
-     * 
+     *
      * @param id the ID of the entity to retrieve
      * @return a ResponseEntity containing the response DTO if found, or 404 if not
      *         found
@@ -174,7 +174,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
 
     /**
      * Creates a new entity.
-     * 
+     *
      * @param createDTO the DTO containing data for the new entity
      * @return a ResponseEntity containing the created entity as a response DTO
      */
@@ -190,14 +190,14 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
 
     /**
      * Partially updates an existing entity by its ID.
-     * 
+     *
      * @param id        the ID of the entity to update
      * @param updateDTO the DTO containing partial update data
      * @return a ResponseEntity containing the updated entity as a response DTO
      */
     @Override
     @PatchMapping("/{id}")
-    @Operation(summary = "Partially update entity", 
+    @Operation(summary = "Partially update entity",
                description = "Partially update an existing entity by its ID. Only provided fields will be updated.")
     public ResponseEntity<D> update(@PathVariable I id, @Valid @RequestBody D updateDTO) {
         log.debug("PATCH request to partially update entity with ID: {} and DTO: {}", id, updateDTO);
@@ -208,7 +208,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
 
     /**
      * Deletes an entity by its ID.
-     * 
+     *
      * @param id the ID of the entity to delete
      * @return a ResponseEntity with no content if successful
      */
