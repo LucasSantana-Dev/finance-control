@@ -14,20 +14,20 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PasswordResetRequest {
-    
+
     @NotBlank(message = "New password is required")
     @Size(min = 8, message = "Password must be at least 8 characters long")
     private String newPassword;
-    
+
     @NotBlank(message = "Password confirmation is required")
     private String confirmPassword;
-    
+
     private String reason;
-    
+
     /**
-     * Validates that the new password and confirmation match.
+     * Validates that the new password and confirmation do not match.
      */
-    public boolean isPasswordConfirmationValid() {
-        return newPassword != null && newPassword.equals(confirmPassword);
+    public boolean isPasswordConfirmationInvalid() {
+        return newPassword == null || !newPassword.equals(confirmPassword);
     }
-} 
+}

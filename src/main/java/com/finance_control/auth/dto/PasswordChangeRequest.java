@@ -14,28 +14,28 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PasswordChangeRequest {
-    
+
     @NotBlank(message = "Current password is required")
     private String currentPassword;
-    
+
     @NotBlank(message = "New password is required")
     @Size(min = 8, message = "Password must be at least 8 characters long")
     private String newPassword;
-    
+
     @NotBlank(message = "Password confirmation is required")
     private String confirmPassword;
-    
+
     /**
-     * Validates that the new password and confirmation match.
+     * Validates that the new password and confirmation do not match.
      */
-    public boolean isPasswordConfirmationValid() {
-        return newPassword != null && newPassword.equals(confirmPassword);
+    public boolean isPasswordConfirmationInvalid() {
+        return newPassword == null || !newPassword.equals(confirmPassword);
     }
-    
+
     /**
      * Validates the password change request.
      * Ensures all required fields are present and valid.
-     * 
+     *
      * @throws IllegalArgumentException if validation fails
      */
     public void validate() {
@@ -51,11 +51,11 @@ public class PasswordChangeRequest {
         if (confirmPassword == null || confirmPassword.trim().isEmpty()) {
             throw new IllegalArgumentException("Password confirmation is required");
         }
-        if (!isPasswordConfirmationValid()) {
+        if (isPasswordConfirmationInvalid()) {
             throw new IllegalArgumentException("Password confirmation does not match");
         }
         if (currentPassword.equals(newPassword)) {
             throw new IllegalArgumentException("New password must be different from current password");
         }
     }
-} 
+}

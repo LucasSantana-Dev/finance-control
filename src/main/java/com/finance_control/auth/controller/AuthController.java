@@ -62,7 +62,7 @@ public class AuthController {
     public ResponseEntity<Void> changePassword(@Valid @RequestBody PasswordChangeRequest request) {
         log.debug("PUT request to change password");
 
-        if (!request.isPasswordConfirmationValid()) {
+        if (request.isPasswordConfirmationInvalid()) {
             log.warn("Password confirmation does not match");
             return ResponseEntity.badRequest().build();
         }
