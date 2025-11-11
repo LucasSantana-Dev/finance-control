@@ -1,12 +1,14 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.4.0'
+    id 'org.springframework.boot' version '3.5.3'
     id 'io.spring.dependency-management' version '1.1.6'
     id 'checkstyle'
     id 'pmd'
     id 'com.github.spotbugs' version '6.0.15'
     id 'jacoco'
     id 'org.sonarqube' version '5.0.0.4638'
+    id 'org.owasp.dependencycheck' version '10.0.3'
+    id 'com.github.ben-manes.versions' version '0.52.0'
 }
 
 group = 'com.finance-control'
@@ -41,9 +43,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
     implementation 'com.bucket4j:bucket4j-core:8.10.1'
     implementation 'com.bucket4j:bucket4j-redis:8.10.1'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.sentry:sentry-spring-boot-starter:7.15.0'
     implementation 'io.sentry:sentry-logback:7.15.0'
+    implementation 'org.apache.commons:commons-lang3:3.19.0'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -59,6 +61,9 @@ dependencies {
     // MapStruct for DTO-Entity mapping (Industry Standard)
     implementation 'org.mapstruct:mapstruct:1.6.2'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.2'
+
+    // SpotBugs security rules via FindSecBugs
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.13.0'
 }
 
 checkstyle {
@@ -69,7 +74,7 @@ checkstyle {
 }
 
 // Configure Checkstyle task with colored output
-tasks.withType(Checkstyle) {
+tasks.withType(Checkstyle).configureEach {
     reports {
         xml.required = true
         html.required = true
@@ -110,7 +115,7 @@ pmd {
 }
 
 // Configure PMD task with colored output
-tasks.withType(Pmd) {
+tasks.withType(Pmd).configureEach {
     reports {
         xml.required = true
         html.required = true
@@ -149,7 +154,7 @@ spotbugs {
 }
 
 // Configure SpotBugs task with colored output
-tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
     reports {
         xml.required = true
         html.required = true
@@ -288,7 +293,7 @@ sonarqube {
 gradle.startParameter.consoleOutput = org.gradle.api.logging.configuration.ConsoleOutput.Rich
 
 // Configure Java compilation
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.compilerArgs += ['--enable-preview']
 
@@ -297,13 +302,13 @@ tasks.withType(JavaCompile) {
 }
 
 // Re-enable test compilation
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     if (it.name.contains('Test')) {
         enabled = true
     }
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     testLogging {
         events "passed", "skipped", "failed"
     }
@@ -424,7 +429,7 @@ task generateQualityReportNoTests {
 
 // Task to run quality checks without tests
 task qualityCheckNoTests {
-    dependsOn checkstyleMain, pmdMain, spotbugsMain, generateQualityReportNoTests
+    dependsOn checkstyleMain, pmdMain, spotbugsMain, dependencyCheckAnalyze, dependencyUpdates, generateQualityReportNoTests
     description = 'Runs code quality checks without tests'
     // Configure colored output
     logging.captureStandardOutput(org.gradle.api.logging.LogLevel.INFO)
@@ -442,7 +447,7 @@ task qualityCheckNoTests {
 
 // Task to run all quality checks
 task qualityCheck {
-    dependsOn checkstyleMain, pmdMain, spotbugsMain, test, jacocoTestReport, jacocoTestCoverageVerification
+    dependsOn checkstyleMain, pmdMain, spotbugsMain, dependencyCheckAnalyze, dependencyUpdates, test, jacocoTestReport, jacocoTestCoverageVerification
     description = 'Runs all code quality checks'
 
     // Configure colored output
@@ -817,7 +822,7 @@ To view build log: cat ${buildDir}/build.log
 
 // Configure all tasks to log to file
 allprojects {
-    tasks.withType(JavaCompile) {
+    tasks.withType(JavaCompile).configureEach {
         doFirst {
             def logFile = file("${buildDir}/logs/compile.log")
             logFile.parentFile.mkdirs()
@@ -825,7 +830,7 @@ allprojects {
         }
     }
 
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         doFirst {
             def logFile = file("${buildDir}/logs/test.log")
             logFile.parentFile.mkdirs()
@@ -833,7 +838,7 @@ allprojects {
         }
     }
 
-    tasks.withType(Checkstyle) {
+    tasks.withType(Checkstyle).configureEach {
         doFirst {
             def logFile = file("${buildDir}/logs/checkstyle.log")
             logFile.parentFile.mkdirs()
@@ -841,7 +846,7 @@ allprojects {
         }
     }
 
-    tasks.withType(Pmd) {
+    tasks.withType(Pmd).configureEach {
         doFirst {
             def logFile = file("${buildDir}/logs/pmd.log")
             logFile.parentFile.mkdirs()
@@ -916,10 +921,9 @@ sonarqube {
         property 'sonar.projectName', 'Finance Control'
         property 'sonar.projectVersion', version
 
-        // SonarQube server configuration (Docker setup)
-        property 'sonar.host.url', 'http://localhost:9000'
+        // SonarQube server configuration (from sonar-project.properties or env)
+        // sonar.host.url is configured in sonar-project.properties with env fallback
         property 'sonar.login', System.getenv('SONAR_TOKEN') ?: 'admin'
-        property 'sonar.password', System.getenv('SONAR_PASSWORD') ?: 'admin'
 
         // Source and test directories
         property 'sonar.sources', 'src/main/java'
@@ -990,5 +994,43 @@ task checkSonarQube {
             println "📋 To view logs:"
             println "   ./scripts/dev.sh sonarqube-logs"
         }
+    }
+}
+
+
+
+// ------------------------------
+// Security & Dependency scanning configuration
+// ------------------------------
+
+dependencyCheck {
+    // Update NVD data automatically; consider caching in CI
+    autoUpdate = true
+    // Fail build only on CRITICAL by default; adjust policy in CI as needed
+    failBuildOnCVSS = 9.0
+    // Report formats and location
+    outputDirectory = file("${buildDir}/reports")
+    formats = ["HTML", "JSON"]
+    // Optional suppressions file (create if needed)
+    if (file('dependency-check-suppressions.xml').exists()) {
+        suppressionFile = 'dependency-check-suppressions.xml'
+    }
+}
+
+// Prefer stable versions in dependency updates report
+ext.isNonStable = { String version ->
+    def v = version?.toLowerCase() ?: ''
+    return v.contains('alpha') || v.contains('beta') || v.contains('rc') || v.contains('cr') ||
+           v.contains('m') || v.contains('preview') || v.contains('b') || v.contains('ea') ||
+           v.endsWith('-snapshot')
+}
+
+tasks.named('dependencyUpdates', com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask) {
+    checkForGradleUpdate = true
+    outputFormatter = 'json,plain,html'
+    outputDir = "${buildDir}/reports/dependencyUpdates"
+    reportfileName = 'report'
+    rejectVersionIf {
+        isNonStable(candidate.version) && !isNonStable(currentVersion)
     }
 }

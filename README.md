@@ -8,6 +8,11 @@ A comprehensive financial management system built with Spring Boot, designed to 
 [![Gradle](https://img.shields.io/badge/Gradle-8.7+-green.svg)](https://gradle.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+[![CI](https://github.com/LucasSantana/finance-control/actions/workflows/ci.yml/badge.svg)](https://github.com/LucasSantana/finance-control/actions/workflows/ci.yml)
+[![SonarQube](https://github.com/LucasSantana/finance-control/actions/workflows/sonarqube.yml/badge.svg)](https://github.com/LucasSantana/finance-control/actions/workflows/sonarqube.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=finance-control&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=finance-control)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=finance-control&metric=coverage)](https://sonarcloud.io/summary/new_code?id=finance-control)
+
 ## 🚀 Features
 
 ### 📊 Financial Dashboard
@@ -497,6 +502,49 @@ git commit -m "feat: add new transaction filtering feature"
 git push origin feature/your-feature
 ```
 
+### Continuous Integration & Quality Gates
+
+This project uses GitHub Actions for automated CI/CD with comprehensive quality gates:
+
+#### CI Pipeline (`ci.yml`)
+- **Build & Test**: Clean build, unit tests, integration tests
+- **Quality Checks**: Checkstyle, PMD, SpotBugs analysis
+- **Security Scan**: OWASP Dependency-Check for vulnerabilities
+- **Coverage**: JaCoCo test coverage reports (minimum 80%)
+- **Artifacts**: All reports uploaded for review
+
+#### SonarQube Analysis (`sonarqube.yml`)
+- **Code Quality**: Automated SonarQube analysis with Docker services
+- **Coverage Integration**: JaCoCo reports fed into SonarQube
+- **Quality Gates**: Reliability, Security, Maintainability, Coverage metrics
+- **Manual Trigger**: Run on-demand via GitHub Actions dispatch
+
+#### Running Locally
+```bash
+# Run all quality checks
+./gradlew qualityCheck
+
+# Run tests with coverage
+./gradlew test jacocoTestReport
+
+# Run SonarQube analysis (requires Docker)
+docker-compose --profile sonarqube up -d
+./gradlew sonarqube
+
+# Run security scan
+./gradlew dependencyCheckAnalyze
+```
+
+#### Quality Standards
+- **Test Coverage**: Minimum 80% required
+- **Code Quality**: Zero critical issues in Checkstyle, PMD, SpotBugs
+- **Security**: No high/critical vulnerabilities
+- **SonarQube**: Quality gate must pass
+
+#### GitHub Secrets Setup
+For SonarQube analysis, add these secrets in your repository:
+- `SONAR_TOKEN`: Project token from SonarQube UI (Administration > Security > Users > Tokens)
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -566,3 +614,64 @@ Quality reports are generated in `build/reports/`:
 - **SpotBugs**: `build/reports/spotbugs/`
 - **JaCoCo**: `build/reports/jacoco/`
 - **SonarQube**: Available via SonarQube server
+
+
+
+## 🧩 Using MCP servers with Junie
+
+Junie (the AI assistant) can connect to external Model Context Protocol (MCP) servers defined in `.cursor/mcp.json` at the project root.
+
+### What’s already set up
+- The repository includes `.cursor/mcp.json` with these servers:
+  - `postman-mcp` (HTTPS)
+  - `finance-control` (SSE)
+  - `Sentry` (HTTPS)
+  - `Context7` (HTTPS)
+  - `Tinybird` (command via `npx`)
+  - `sequential-thinking` (command via `npx`)
+  - `playwright` (command via `npx`)
+
+### Prerequisites
+- Your Junie/client session must start in the project root so it can find `.cursor/mcp.json`.
+- For command-based servers (`npx ...`): install Node.js (LTS) with `npx` available in PATH.
+- Outbound HTTPS access must be allowed. For npm-based servers, access to the npm registry is required on first run.
+
+### Secrets via environment variables
+To keep secrets out of version control, the config expects environment variables:
+- `POSTMAN_MCP_TOKEN` — used by `postman-mcp` via header `Authorization: Bearer ${POSTMAN_MCP_TOKEN}`.
+- `TB_TOKEN` — used by `Tinybird` via `?token=${TB_TOKEN}`.
+
+Set them in your shell before starting the client/IDE that hosts Junie:
+```bash
+export POSTMAN_MCP_TOKEN="<your-postman-token>"
+export TB_TOKEN="<your-tinybird-token>"
+```
+
+If you use the Docker dev shell for parity:
+```bash
+./scripts/dev.sh dev
+# Inside the container shell:
+export POSTMAN_MCP_TOKEN="<your-postman-token>"
+export TB_TOKEN="<your-tinybird-token>"
+```
+
+### Start/reload
+- Restart your Junie session (or the MCP-capable IDE) after setting env vars so it re-loads `.cursor/mcp.json` and reconnects to servers.
+
+### Verify connectivity
+- Ask Junie: "What MCP servers are connected?" You should see:
+  `postman-mcp`, `finance-control`, `Sentry`, `Context7`, `Tinybird`, `sequential-thinking`, `playwright`.
+- Try a simple tool from a server (examples vary by client/server):
+  - Sequential Thinking: invoke its planning tool on a trivial prompt.
+  - Postman MCP: list collections or run a minimal request (requires `POSTMAN_MCP_TOKEN`).
+  - Playwright MCP: basic navigation stub (requires Node.js).
+
+### Troubleshooting
+- Server missing in list: ensure `.cursor/mcp.json` is at project root and JSON is valid; restart the session.
+- `npx` not found: install Node.js or run only URL-based servers.
+- 401/403: verify `POSTMAN_MCP_TOKEN` / `TB_TOKEN` are set in the same environment as the client.
+- Corporate proxy: set `HTTP_PROXY`/`HTTPS_PROXY` so the MCP client inherits them.
+- SSE drops (for `finance-control`): ensure long-lived connections aren’t blocked by the network.
+
+### Security note
+Do not commit real tokens to `.cursor/mcp.json`. Use environment variables as shown above. Keep any local overrides in untracked files or your shell profile.

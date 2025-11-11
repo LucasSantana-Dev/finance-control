@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CI/CD Pipeline with Quality Gates**: Comprehensive automated quality assurance system
+  - Added GitHub Actions CI pipeline with build, tests, and quality checks
+  - Implemented SonarQube analysis workflow with self-hosted Docker services
+  - Added OWASP Dependency-Check for security vulnerability scanning
+  - Integrated Checkstyle, PMD, and SpotBugs for code quality enforcement
+  - Added JaCoCo test coverage reporting with minimum 80% threshold
+  - Configured automated artifact uploads for all quality reports
+  - Parameterized SonarQube configuration to support multiple environments
+  - Added quality gate badges to README with CI and SonarQube status
+  - Documented local quality check commands and GitHub Actions setup
+  - Enhanced development workflow with automated quality gates
+
 - **Generic Market Data Provider Architecture**: Complete API decoupling and flexible integration system
   - Created `MarketDataProvider` interface for easy API provider swapping
   - Implemented `BrazilianMarketDataProvider` for Brazilian stocks and FIIs
@@ -44,6 +56,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added market data update scheduling and background processing
 
 ### Fixed
+- **Security Vulnerability**: Updated commons-lang3 dependency to fix CVE-2025-48924
+  - Added explicit commons-lang3:3.19.0 dependency to override vulnerable transitive dependency (3.17.0) from springdoc-openapi
+  - CVSS Score: 5.3 (Medium severity)
+
+- **Null Pointer Safety**: Fixed potential NullPointerException issues in market data providers and health checks
+  - Added null check in BrazilianMarketDataProvider.java error logging to prevent NPE when accessing quote.getSymbol()
+  - Added null check in UsMarketDataProvider.java error logging to prevent NPE when accessing quote.getSymbol()
+  - Added null check in HealthCheckService.java for Redis connection factory to prevent NPE in health checks (2 locations)
+
+- **Annotation Compliance**: Fixed @NotNull annotation issues in RateLimitFilter
+  - Added @NonNull annotations to doFilterInternal method parameters (request, response, filterChain)
+
+- **Code Quality Improvements**: Comprehensive fixes for XML report issues
+  - Fixed duplicate property keys in application.properties, application-docker.properties, and application-test.properties
+  - Fixed Dockerfile RUN command syntax error with proper line continuation
+  - Replaced deprecated `fromHttpUrl()` with `fromUriString()` in market data providers
+  - Updated RedisConfig to use `RedisStandaloneConfiguration` instead of deprecated setters
+  - Replaced deprecated Bucket4j API with builder pattern in RateLimitConfig
+  - Fixed deprecated `DaoAuthenticationProvider` constructor usage
+  - Replaced deprecated `acceptsProfiles()` with `Profiles.of()` in EnvironmentConfig
+  - Consolidated optional validation patterns in BaseValidation with new utility methods
+  - Fixed boolean method names that were always inverted (password confirmation validation)
+  - Removed redundant default annotation parameters (@Size max=255, @EqualsAndHashCode callSuper=false)
+  - Fixed main method indentation in FinanceControlApplication
+  - Simplified duplicate switch branches in AlertingService with distinct logging levels
+  - Added documentation for intentionally empty validation methods
+  - Created `MarketDataConversionUtils` utility class to reduce code duplication
+  - Refactored BaseService with consolidated user ownership validation
+  - Extracted common validation logic in TransactionDTO
+  - Consolidated DTO mapping logic in TransactionSourceService
+  - Extracted pagination utility in TransactionSubcategoryService
+  - Added timestamp formatting method in DataExportService
+  - Ensures proper null safety contract compliance with Spring's @NonNullApi package-level annotation
+  - Updated Gradle build configuration to use modern `configureEach` pattern for task configuration
+  - Converted statement lambdas to expression lambdas in test files for better readability
+  - Converted test class fields to local variables in 29 test classes for better isolation
+  - Fixed GitHub username typo: corrected "LucasSantana-Dev" to "LucasSantana" across configuration files
+
+### Changed
+- **Code Quality Improvements**: Reduced code duplication and improved maintainability through systematic refactoring
+  - **Market Data Conversion Utilities**: Extracted common conversion logic to reduce duplication
+    - Created `MarketDataConversionUtils` utility class with reusable price calculation methods
+    - Refactored `BrazilianMarketDataProvider` to use utility methods (reduced ~40 lines of duplication)
+    - Refactored `UsMarketDataProvider` to use utility methods (reduced ~40 lines of duplication)
+    - Added `PriceCalculation` result container for clean price calculations
+    - Introduced `toBigDecimalSafe()` method for consistent null-safe BigDecimal conversions
+    - Introduced `calculatePrices()` method combining current price, previous close, day change, and percentage calculations
+    - Eliminated repetitive BigDecimal conversion patterns across both providers
+  - **BaseService User Security Pattern**: Consolidated user ownership validation and filter injection
+    - Extracted `validateUserOwnership()` private method for entity ownership checks (reduced ~26 lines of duplication)
+    - Reused existing `ensureUserFilter()` method in `count()` operation (reduced ~10 lines of duplication)
+    - Simplified `update()` and `delete()` methods with single-line ownership validation calls
+    - Improved consistency in security checks across all CRUD operations
+    - Enhanced code readability with clear separation of concerns
+
 - **Monitoring System Issues**: Fixed implementation issues in monitoring and observability components
   - Fixed MonitoringController missing HealthCheckService dependency in constructor
   - Updated health endpoint to use proper HealthCheckService integration
