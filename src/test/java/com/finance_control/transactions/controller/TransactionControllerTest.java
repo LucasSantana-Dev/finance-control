@@ -216,4 +216,105 @@ class TransactionControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content").isArray());
     }
+
+    @Test
+    void getTransactions_WithAllFiltersCombined_ShouldReturnFilteredResults() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("search", "grocery")
+                .param("category", "Food")
+                .param("subcategory", "Groceries")
+                .param("source", "Credit Card")
+                .param("type", "EXPENSE")
+                .param("startDate", "2024-01-01")
+                .param("endDate", "2024-12-31")
+                .param("minAmount", "50.00")
+                .param("maxAmount", "200.00")
+                .param("isActive", "true")
+                .param("sortBy", "amount")
+                .param("sortDirection", "desc")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void getTransactions_WithEmptyStringFilters_ShouldNotAddFilters() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("category", "")
+                .param("subcategory", "   ")
+                .param("source", "")
+                .param("type", "")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void getTransactions_WithPartialFilters_ShouldReturnFilteredResults() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("category", "Food")
+                .param("type", "EXPENSE")
+                .param("isActive", "true")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void getTransactions_WithOnlyDateFilters_ShouldReturnFilteredResults() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("startDate", "2024-01-01")
+                .param("endDate", "2024-12-31")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void getTransactions_WithOnlyAmountFilters_ShouldReturnFilteredResults() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("minAmount", "10.00")
+                .param("maxAmount", "500.00")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void getTransactions_WithNullSortBy_ShouldUseDefaultSort() throws Exception {
+        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(samplePage);
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray());
+    }
 }

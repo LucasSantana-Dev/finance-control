@@ -76,9 +76,10 @@ class BCBApiClientTest {
     @Test
     void getCurrentSelicRate_WithNullValue_ShouldReturnZero() {
         // Given
-        List<Map<String, Object>> responseData = List.of(
-            Map.of("data", "2024-01-15", "valor", null)
-        );
+        Map<String, Object> responseMap = new java.util.HashMap<>();
+        responseMap.put("data", "2024-01-15");
+        responseMap.put("valor", null);
+        List<Map<String, Object>> responseData = List.of(responseMap);
         ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
@@ -257,5 +258,189 @@ class BCBApiClientTest {
 
         // Then
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getCurrentCDIRate_WithEmptyResponse_ShouldReturnZero() {
+        ResponseEntity<List> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        BigDecimal result = bcbApiClient.getCurrentCDIRate();
+
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getCurrentCDIRate_WithNullValue_ShouldReturnZero() {
+        Map<String, Object> responseMap = new java.util.HashMap<>();
+        responseMap.put("data", "2024-01-15");
+        responseMap.put("valor", null);
+        List<Map<String, Object>> responseData = List.of(responseMap);
+        ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        BigDecimal result = bcbApiClient.getCurrentCDIRate();
+
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getCurrentCDIRate_WithException_ShouldReturnZero() {
+        when(restTemplate.getForEntity(anyString(), eq(List.class)))
+                .thenThrow(new RuntimeException("API Error"));
+
+        BigDecimal result = bcbApiClient.getCurrentCDIRate();
+
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getCurrentIPCA_WithEmptyResponse_ShouldReturnZero() {
+        ResponseEntity<List> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        BigDecimal result = bcbApiClient.getCurrentIPCA();
+
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getCurrentIPCA_WithNullValue_ShouldReturnZero() {
+        Map<String, Object> responseMap = new java.util.HashMap<>();
+        responseMap.put("data", "2024-01-15");
+        responseMap.put("valor", null);
+        List<Map<String, Object>> responseData = List.of(responseMap);
+        ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        BigDecimal result = bcbApiClient.getCurrentIPCA();
+
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getCurrentIPCA_WithException_ShouldReturnZero() {
+        when(restTemplate.getForEntity(anyString(), eq(List.class)))
+                .thenThrow(new RuntimeException("API Error"));
+
+        BigDecimal result = bcbApiClient.getCurrentIPCA();
+
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getCurrentExchangeRate_WithEmptyResponse_ShouldReturnZero() {
+        ResponseEntity<List> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        BigDecimal result = bcbApiClient.getCurrentExchangeRate();
+
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getCurrentExchangeRate_WithNullValue_ShouldReturnZero() {
+        Map<String, Object> responseMap = new java.util.HashMap<>();
+        responseMap.put("data", "2024-01-15");
+        responseMap.put("valor", null);
+        List<Map<String, Object>> responseData = List.of(responseMap);
+        ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        BigDecimal result = bcbApiClient.getCurrentExchangeRate();
+
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getCurrentExchangeRate_WithException_ShouldReturnZero() {
+        when(restTemplate.getForEntity(anyString(), eq(List.class)))
+                .thenThrow(new RuntimeException("API Error"));
+
+        BigDecimal result = bcbApiClient.getCurrentExchangeRate();
+
+        assertThat(result).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getDataInRange_WithNonOkStatus_ShouldReturnEmptyList() {
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        LocalDate endDate = LocalDate.of(2024, 1, 31);
+        ResponseEntity<List> response = new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        List<Map<String, Object>> result = bcbApiClient.getDataInRange("432", startDate, endDate);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getDataInRange_WithNullBody_ShouldReturnEmptyList() {
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        LocalDate endDate = LocalDate.of(2024, 1, 31);
+        ResponseEntity<List> response = new ResponseEntity<>(null, HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        List<Map<String, Object>> result = bcbApiClient.getDataInRange("432", startDate, endDate);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getHistoricalData_WithNonOkStatus_ShouldReturnEmptyList() {
+        ResponseEntity<List> response = new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        List<Map<String, Object>> result = bcbApiClient.getHistoricalData("432", 5);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getHistoricalData_WithNullBody_ShouldReturnEmptyList() {
+        ResponseEntity<List> response = new ResponseEntity<>(null, HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        List<Map<String, Object>> result = bcbApiClient.getHistoricalData("432", 5);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void createMarketIndicator_WithEmptyResponse_ShouldCreateIndicatorWithoutValue() {
+        ResponseEntity<List> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        MarketIndicator indicator = bcbApiClient.createMarketIndicator(
+                "SELIC",
+                "Taxa Selic",
+                "Description",
+                MarketIndicator.IndicatorType.INTEREST_RATE,
+                MarketIndicator.Frequency.DAILY
+        );
+
+        assertThat(indicator.getCode()).isEqualTo("SELIC");
+        assertThat(indicator.getCurrentValue()).isNull();
+    }
+
+    @Test
+    void createMarketIndicator_WithNullValue_ShouldCreateIndicatorWithoutValue() {
+        Map<String, Object> responseMap = new java.util.HashMap<>();
+        responseMap.put("data", "2024-01-15");
+        responseMap.put("valor", null);
+        List<Map<String, Object>> responseData = List.of(responseMap);
+        ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
+        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+
+        MarketIndicator indicator = bcbApiClient.createMarketIndicator(
+                "SELIC",
+                "Taxa Selic",
+                "Description",
+                MarketIndicator.IndicatorType.INTEREST_RATE,
+                MarketIndicator.Frequency.DAILY
+        );
+
+        assertThat(indicator.getCode()).isEqualTo("SELIC");
+        assertThat(indicator.getCurrentValue()).isNull();
     }
 }

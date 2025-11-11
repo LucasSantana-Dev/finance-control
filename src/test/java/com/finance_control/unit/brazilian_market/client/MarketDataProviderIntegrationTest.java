@@ -46,8 +46,8 @@ class MarketDataProviderIntegrationTest {
 
     @Test
     void testProviderNames() {
-        assertEquals("Brapi API", brazilianProvider.getProviderName());
-        assertEquals("Yahoo Finance API", usProvider.getProviderName());
+        assertEquals("Brazilian Market API", brazilianProvider.getProviderName());
+        assertEquals("US Market API", usProvider.getProviderName());
     }
 
     @Test

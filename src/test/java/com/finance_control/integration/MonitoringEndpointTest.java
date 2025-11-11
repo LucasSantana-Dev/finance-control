@@ -17,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-    "app.security.public-endpoints=/monitoring/**,/api/monitoring/**,/actuator/**"
+    "app.security.public-endpoints=/monitoring/**,/api/monitoring/**,/actuator/**",
+    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration,org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration,org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration"
 })
 @DisplayName("Monitoring Endpoint Test")
 class MonitoringEndpointTest {

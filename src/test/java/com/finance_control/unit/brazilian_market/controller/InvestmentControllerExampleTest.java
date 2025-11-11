@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -51,6 +52,7 @@ class InvestmentControllerExampleTest {
         objectMapper.findAndRegisterModules();
 
         mockMvc = MockMvcBuilders.standaloneSetup(investmentController)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
     }
 
@@ -62,7 +64,7 @@ class InvestmentControllerExampleTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then - Using unified endpoint with query parameters
-        mockMvc.perform(get("/api/investments")
+        mockMvc.perform(get("/investments")
                         .param("userId", "1")
                         .param("sort", "performance")
                         .param("order", "top")
@@ -81,7 +83,7 @@ class InvestmentControllerExampleTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then - Using unified endpoint for dividend yield sorting
-        mockMvc.perform(get("/api/investments")
+        mockMvc.perform(get("/investments")
                         .param("userId", "1")
                         .param("sort", "dividend-yield"))
                 .andExpect(status().isOk())
@@ -97,7 +99,7 @@ class InvestmentControllerExampleTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then - Using unified endpoint for type filtering
-        mockMvc.perform(get("/api/investments")
+        mockMvc.perform(get("/investments")
                         .param("userId", "1")
                         .param("type", "STOCK"))
                 .andExpect(status().isOk())
@@ -113,7 +115,7 @@ class InvestmentControllerExampleTest {
                 .thenReturn(List.of(testInvestment));
 
         // When & Then - Using unified endpoint for search
-        mockMvc.perform(get("/api/investments")
+        mockMvc.perform(get("/investments")
                         .param("userId", "1")
                         .param("search", "PETR4"))
                 .andExpect(status().isOk())
@@ -128,7 +130,7 @@ class InvestmentControllerExampleTest {
                 .thenReturn(List.of("Energy", "Technology"));
 
         // When & Then - Using unified metadata endpoint
-        mockMvc.perform(get("/api/investments/metadata")
+        mockMvc.perform(get("/investments/metadata")
                         .param("userId", "1")
                         .param("data", "sectors"))
                 .andExpect(status().isOk())
@@ -144,7 +146,7 @@ class InvestmentControllerExampleTest {
                 .thenReturn(Optional.of(10000.0));
 
         // When & Then - Using unified metadata endpoint for market value
-        mockMvc.perform(get("/api/investments/metadata")
+        mockMvc.perform(get("/investments/metadata")
                         .param("userId", "1")
                         .param("data", "total-market-value"))
                 .andExpect(status().isOk())

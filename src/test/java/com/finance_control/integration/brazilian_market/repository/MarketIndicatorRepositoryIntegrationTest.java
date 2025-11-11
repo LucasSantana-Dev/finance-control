@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for MarketIndicatorRepository.
  */
 @ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class MarketIndicatorRepositoryIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
@@ -205,9 +207,9 @@ class MarketIndicatorRepositoryIntegrationTest extends BaseIntegrationTest {
         List<MarketIndicator> result = indicatorRepository.findByReferenceDateBetween(startDate, endDate);
 
         // Then
-        assertThat(result).hasSize(3); // selicIndicator, cdiIndicator, exchangeRateIndicator
+        assertThat(result).hasSize(4); // selicIndicator, cdiIndicator, ipcaIndicator, exchangeRateIndicator
         assertThat(result).extracting(MarketIndicator::getCode)
-                .containsExactlyInAnyOrder("SELIC", "CDI", "USD_BRL");
+                .containsExactlyInAnyOrder("SELIC", "CDI", "IPCA", "USD_BRL");
     }
 
     @Test

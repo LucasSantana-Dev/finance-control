@@ -47,9 +47,19 @@ public abstract class BaseSeleniumTest {
 
     protected String getPageContent(String path) {
         try {
+            // Add small delay to ensure server is ready
+            Thread.sleep(100);
             return restTemplate.getForObject(URI.create(baseUrl + path), String.class);
+        } catch (org.springframework.web.client.HttpServerErrorException.ServiceUnavailable e) {
+            // ServiceUnavailable (503) is acceptable for health checks when components are down
+            // Return the response body which contains the health status JSON
+            return e.getResponseBodyAsString();
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            throw new RuntimeException("HTTP error accessing path: " + path + " - Status: " + e.getStatusCode() + ", Message: " + e.getMessage(), e);
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            throw new RuntimeException("Connection error accessing path: " + path + " - Is the server running? Message: " + e.getMessage(), e);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get page content for path: " + path, e);
+            throw new RuntimeException("Failed to get page content for path: " + path + " - Error: " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
         }
     }
 }

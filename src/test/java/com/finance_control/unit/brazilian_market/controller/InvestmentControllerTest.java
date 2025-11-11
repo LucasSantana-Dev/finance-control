@@ -1,23 +1,33 @@
 package com.finance_control.unit.brazilian_market.controller;
 
+import com.finance_control.brazilian_market.controller.InvestmentController;
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
+import com.finance_control.shared.context.UserContext;
 import com.finance_control.users.model.User;
 import com.finance_control.shared.security.CustomUserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.core.MethodParameter;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -50,6 +60,9 @@ class InvestmentControllerTest {
 
     @InjectMocks
     private TestInvestmentController testInvestmentController;
+
+    @InjectMocks
+    private InvestmentController investmentController;
 
     private ObjectMapper objectMapper;
 
@@ -109,6 +122,11 @@ class InvestmentControllerTest {
         testInvestmentDTO.setIsActive(true);
         testInvestmentDTO.setCreatedAt(LocalDateTime.now());
         testInvestmentDTO.setUpdatedAt(LocalDateTime.now());
+    }
+
+    @AfterEach
+    void tearDown() {
+        UserContext.clear();
     }
 
     @Test
@@ -342,5 +360,163 @@ class InvestmentControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /investments/{id} should return investment when found")
+    void findById_WithValidId_ShouldReturnOk() throws Exception {
+        MockMvc controllerMockMvc = MockMvcBuilders.standaloneSetup(investmentController).build();
+
+        UserContext.setCurrentUserId(1L);
+        when(investmentService.getInvestmentById(eq(1L), any(User.class)))
+                .thenReturn(Optional.of(testInvestment));
+        when(investmentService.convertToResponseDTO(testInvestment))
+                .thenReturn(testInvestmentDTO);
+
+        controllerMockMvc.perform(get("/investments/1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.ticker").value("PETR4"))
+                .andExpect(jsonPath("$.name").value("Petrobras"));
+
+        verify(investmentService).getInvestmentById(eq(1L), any(User.class));
+        verify(investmentService).convertToResponseDTO(testInvestment);
+    }
+
+    @Test
+    @DisplayName("GET /investments/{id} should return 404 when investment not found")
+    void findById_WithInvalidId_ShouldReturnNotFound() throws Exception {
+        MockMvc controllerMockMvc = MockMvcBuilders.standaloneSetup(investmentController).build();
+
+        UserContext.setCurrentUserId(1L);
+        when(investmentService.getInvestmentById(eq(999L), any(User.class)))
+                .thenReturn(Optional.empty());
+
+        controllerMockMvc.perform(get("/investments/999"))
+                .andExpect(status().isNotFound());
+
+        verify(investmentService).getInvestmentById(eq(999L), any(User.class));
+        verify(investmentService, never()).convertToResponseDTO(any());
+    }
+
+    @Test
+    @DisplayName("GET /investments/{id} should return 401 when user context not available")
+    void findById_WithoutUserContext_ShouldReturnUnauthorized() throws Exception {
+        MockMvc controllerMockMvc = MockMvcBuilders.standaloneSetup(investmentController).build();
+
+        UserContext.clear();
+
+        controllerMockMvc.perform(get("/investments/1"))
+                .andExpect(status().isUnauthorized());
+
+        verify(investmentService, never()).getInvestmentById(anyLong(), any(User.class));
+    }
+
+    @Test
+    @DisplayName("POST /investments/{id}/update-market-data should update market data successfully")
+    void updateMarketData_WithValidId_ShouldReturnOk() throws Exception {
+        HandlerMethodArgumentResolver argumentResolver = new HandlerMethodArgumentResolver() {
+            @Override
+            public boolean supportsParameter(MethodParameter parameter) {
+                return parameter.getParameterType().equals(CustomUserDetails.class);
+            }
+
+            @Override
+            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+                return testUserDetails;
+            }
+        };
+
+        MockMvc controllerMockMvc = MockMvcBuilders.standaloneSetup(investmentController)
+                .setCustomArgumentResolvers(argumentResolver)
+                .build();
+
+        Investment updatedInvestment = new Investment();
+        updatedInvestment.setId(1L);
+        updatedInvestment.setTicker("PETR4");
+        updatedInvestment.setCurrentPrice(BigDecimal.valueOf(27.00));
+        updatedInvestment.setUser(testUser);
+
+        InvestmentDTO updatedDTO = new InvestmentDTO();
+        updatedDTO.setId(1L);
+        updatedDTO.setTicker("PETR4");
+        updatedDTO.setCurrentPrice(BigDecimal.valueOf(27.00));
+
+        when(investmentService.getInvestmentById(eq(1L), eq(testUser)))
+                .thenReturn(Optional.of(testInvestment));
+        when(investmentService.updateMarketData(testInvestment))
+                .thenReturn(updatedInvestment);
+        when(investmentService.convertToResponseDTO(updatedInvestment))
+                .thenReturn(updatedDTO);
+
+        controllerMockMvc.perform(post("/investments/1/update-market-data"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.ticker").value("PETR4"))
+                .andExpect(jsonPath("$.currentPrice").value(27.00));
+
+        verify(investmentService).getInvestmentById(eq(1L), eq(testUser));
+        verify(investmentService).updateMarketData(testInvestment);
+        verify(investmentService).convertToResponseDTO(updatedInvestment);
+    }
+
+    @Test
+    @DisplayName("POST /investments/{id}/update-market-data should return 404 when investment not found")
+    void updateMarketData_WithInvalidId_ShouldReturnNotFound() throws Exception {
+        HandlerMethodArgumentResolver argumentResolver = new HandlerMethodArgumentResolver() {
+            @Override
+            public boolean supportsParameter(MethodParameter parameter) {
+                return parameter.getParameterType().equals(CustomUserDetails.class);
+            }
+
+            @Override
+            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+                return testUserDetails;
+            }
+        };
+
+        MockMvc controllerMockMvc = MockMvcBuilders.standaloneSetup(investmentController)
+                .setCustomArgumentResolvers(argumentResolver)
+                .build();
+
+        when(investmentService.getInvestmentById(eq(999L), eq(testUser)))
+                .thenReturn(Optional.empty());
+
+        controllerMockMvc.perform(post("/investments/999/update-market-data"))
+                .andExpect(status().isNotFound());
+
+        verify(investmentService).getInvestmentById(eq(999L), eq(testUser));
+        verify(investmentService, never()).updateMarketData(any());
+    }
+
+    @Test
+    @DisplayName("POST /investments/{id}/update-market-data should throw exception when authentication principal is null")
+    void updateMarketData_WithoutAuthentication_ShouldThrowException() throws Exception {
+        HandlerMethodArgumentResolver argumentResolver = new HandlerMethodArgumentResolver() {
+            @Override
+            public boolean supportsParameter(MethodParameter parameter) {
+                return parameter.getParameterType().equals(CustomUserDetails.class);
+            }
+
+            @Override
+            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+                return null;
+            }
+        };
+
+        MockMvc controllerMockMvc = MockMvcBuilders.standaloneSetup(investmentController)
+                .setCustomArgumentResolvers(argumentResolver)
+                .setControllerAdvice(new com.finance_control.shared.exception.GlobalExceptionHandler())
+                .build();
+
+        controllerMockMvc.perform(post("/investments/1/update-market-data"))
+                .andExpect(status().isInternalServerError());
+
+        verify(investmentService, never()).getInvestmentById(anyLong(), any(User.class));
     }
 }

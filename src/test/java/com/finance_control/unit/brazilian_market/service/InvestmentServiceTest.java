@@ -429,6 +429,133 @@ class InvestmentServiceTest {
         verify(investmentRepository).save(testInvestment);
     }
 
+    @Test
+    void updateMarketData_WithNullLastUpdated_ShouldCheckNeedsUpdate() {
+        // Given
+        testInvestment.setLastUpdated(null);
+        when(externalMarketDataService.needsUpdate(null)).thenReturn(true);
+        when(externalMarketDataService.fetchMarketData(anyString(), any()))
+                .thenReturn(Optional.of(createMarketQuote()));
+        when(investmentRepository.save(any(Investment.class))).thenReturn(testInvestment);
+
+        // When
+        Investment result = investmentService.updateMarketData(testInvestment);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(externalMarketDataService).needsUpdate(null);
+        verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
+        verify(investmentRepository).save(testInvestment);
+    }
+
+    @Test
+    void updateMarketData_WhenFetchMarketDataReturnsEmpty_ShouldNotUpdateFields() {
+        // Given
+        testInvestment.setLastUpdated(LocalDateTime.now().minusHours(1));
+        when(externalMarketDataService.needsUpdate(any())).thenReturn(true);
+        when(externalMarketDataService.fetchMarketData(anyString(), any()))
+                .thenReturn(Optional.empty());
+        when(investmentRepository.save(any(Investment.class))).thenReturn(testInvestment);
+
+        BigDecimal originalPrice = testInvestment.getCurrentPrice();
+
+        // When
+        Investment result = investmentService.updateMarketData(testInvestment);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getCurrentPrice()).isEqualTo(originalPrice);
+        verify(externalMarketDataService).needsUpdate(any());
+        verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
+        verify(investmentRepository).save(testInvestment);
+    }
+
+    @Test
+    void updateAllMarketData_WithEmptyInvestmentsList_ShouldNotCallUpdateMarketData() {
+        // Given
+        when(investmentRepository.findInvestmentsNeedingPriceUpdate(any(), any()))
+                .thenReturn(List.of());
+
+        // When
+        investmentService.updateAllMarketData(testUser);
+
+        // Then
+        verify(investmentRepository).findInvestmentsNeedingPriceUpdate(eq(1L), any());
+        verify(externalMarketDataService, never()).fetchMarketData(anyString(), any());
+        verify(investmentRepository, never()).save(any(Investment.class));
+    }
+
+    @Test
+    void updateAllMarketData_WithExceptionDuringUpdate_ShouldContinueWithNextInvestment() {
+        // Given
+        Investment investment2 = new Investment();
+        investment2.setId(2L);
+        investment2.setTicker("VALE3");
+        investment2.setInvestmentType(Investment.InvestmentType.STOCK);
+        investment2.setUser(testUser);
+
+        List<Investment> investmentsToUpdate = List.of(testInvestment, investment2);
+        when(investmentRepository.findInvestmentsNeedingPriceUpdate(any(), any()))
+                .thenReturn(investmentsToUpdate);
+        when(externalMarketDataService.needsUpdate(any())).thenReturn(true);
+        when(externalMarketDataService.fetchMarketData("PETR4", Investment.InvestmentType.STOCK))
+                .thenReturn(Optional.of(createMarketQuote()));
+        when(externalMarketDataService.fetchMarketData("VALE3", Investment.InvestmentType.STOCK))
+                .thenThrow(new RuntimeException("API error"));
+        when(investmentRepository.save(any(Investment.class))).thenReturn(testInvestment);
+
+        // When
+        investmentService.updateAllMarketData(testUser);
+
+        // Then
+        verify(investmentRepository).findInvestmentsNeedingPriceUpdate(eq(1L), any());
+        verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
+        verify(externalMarketDataService).fetchMarketData("VALE3", Investment.InvestmentType.STOCK);
+        verify(investmentRepository).save(testInvestment);
+    }
+
+    @Test
+    void getInvestmentById_WhenInvestmentIsNotActive_ShouldReturnEmpty() {
+        // Given
+        testInvestment.setIsActive(false);
+        when(investmentRepository.findById(1L)).thenReturn(Optional.of(testInvestment));
+
+        // When
+        Optional<Investment> result = investmentService.getInvestmentById(1L, testUser);
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(investmentRepository).findById(1L);
+    }
+
+    @Test
+    void getInvestmentByTicker_WithNullTicker_ShouldReturnEmpty() {
+        // Given
+        when(investmentRepository.findByTickerAndUser_IdAndIsActiveTrue(null, 1L))
+                .thenReturn(Optional.empty());
+
+        // When
+        Optional<Investment> result = investmentService.getInvestmentByTicker(null, testUser);
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(investmentRepository).findByTickerAndUser_IdAndIsActiveTrue(null, 1L);
+    }
+
+    @Test
+    void getInvestmentByTicker_WithEmptyTicker_ShouldReturnEmpty() {
+        // Given
+        when(investmentRepository.findByTickerAndUser_IdAndIsActiveTrue("", 1L))
+                .thenReturn(Optional.empty());
+
+        // When
+        Optional<Investment> result = investmentService.getInvestmentByTicker("", testUser);
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(investmentRepository).findByTickerAndUser_IdAndIsActiveTrue("", 1L);
+    }
+
     private MarketQuote createMarketQuote() {
         return MarketQuote.builder()
                 .symbol("PETR4")

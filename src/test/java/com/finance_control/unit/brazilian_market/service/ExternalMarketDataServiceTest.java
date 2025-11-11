@@ -316,4 +316,93 @@ class ExternalMarketDataServiceTest {
         verify(brazilianMarketProvider).getProviderName();
         verify(usMarketProvider).getProviderName();
     }
+
+    @Test
+    void fetchHistoricalData_ShouldReturnEmptyWhenNoProviderSupports() {
+        // Given
+        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO)).thenReturn(false);
+        when(usMarketProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO)).thenReturn(false);
+
+        // When
+        Optional<com.finance_control.brazilian_market.client.HistoricalData> result =
+                externalMarketDataService.fetchHistoricalData("BTC", Investment.InvestmentType.CRYPTO, "1d", "1h");
+
+        // Then
+        assertThat(result).isEmpty();
+
+        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.CRYPTO);
+        verify(usMarketProvider).supportsInvestmentType(Investment.InvestmentType.CRYPTO);
+        verify(brazilianMarketProvider, never()).getHistoricalData(anyString(), anyString(), anyString());
+        verify(usMarketProvider, never()).getHistoricalData(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void fetchHistoricalData_ShouldReturnEmptyWhenProviderThrowsException() {
+        // Given
+        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.getHistoricalData("INVALID", "1d", "1h"))
+                .thenThrow(new RuntimeException("API Error"));
+
+        // When
+        Optional<com.finance_control.brazilian_market.client.HistoricalData> result =
+                externalMarketDataService.fetchHistoricalData("INVALID", Investment.InvestmentType.STOCK, "1d", "1h");
+
+        // Then
+        assertThat(result).isEmpty();
+
+        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).getHistoricalData("INVALID", "1d", "1h");
+    }
+
+    @Test
+    void fetchMarketData_WithMultipleTickers_ShouldReturnEmptyWhenProviderThrowsException() {
+        // Given
+        List<String> tickers = List.of("PETR4", "VALE3");
+        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.getQuotes(tickers)).thenThrow(new RuntimeException("API Error"));
+
+        // When
+        List<MarketQuote> result = externalMarketDataService.fetchMarketData(tickers, Investment.InvestmentType.STOCK);
+
+        // Then
+        assertThat(result).isEmpty();
+
+        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).getQuotes(tickers);
+    }
+
+    @Test
+    void fetchHistoricalData_ShouldUseUSProviderWhenUSMarketSupports() {
+        // Given
+        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.ETF)).thenReturn(false);
+        when(usMarketProvider.supportsInvestmentType(Investment.InvestmentType.ETF)).thenReturn(true);
+        com.finance_control.brazilian_market.client.HistoricalData historicalData =
+                com.finance_control.brazilian_market.client.HistoricalData.builder().build();
+        when(usMarketProvider.getHistoricalData("SPY", "1d", "1h"))
+                .thenReturn(Optional.of(historicalData));
+
+        // When
+        Optional<com.finance_control.brazilian_market.client.HistoricalData> result =
+                externalMarketDataService.fetchHistoricalData("SPY", Investment.InvestmentType.ETF, "1d", "1h");
+
+        // Then
+        assertThat(result).isPresent();
+
+        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.ETF);
+        verify(usMarketProvider).supportsInvestmentType(Investment.InvestmentType.ETF);
+        verify(usMarketProvider).getHistoricalData("SPY", "1d", "1h");
+        verify(brazilianMarketProvider, never()).getHistoricalData(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void needsUpdate_ShouldReturnTrueWhenLastUpdatedIsExactly15MinutesAgo() {
+        // Given
+        LocalDateTime exactly15MinutesAgo = LocalDateTime.now().minusMinutes(15);
+
+        // When
+        boolean result = externalMarketDataService.needsUpdate(exactly15MinutesAgo);
+
+        // Then - Should return true because it's before (now - 15 minutes)
+        assertThat(result).isTrue();
+    }
 }
