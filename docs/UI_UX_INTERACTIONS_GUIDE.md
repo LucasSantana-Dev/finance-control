@@ -1088,6 +1088,3 @@ if (confirmed) {
 
 **Document Version**: 1.0
 **Last Updated**: 2025-01-XX
-
-
-
