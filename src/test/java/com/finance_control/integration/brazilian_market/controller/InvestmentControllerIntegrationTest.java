@@ -255,10 +255,6 @@ class InvestmentControllerIntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
-
-        // Then
-        Investment updatedInvestment = investmentRepository.findByTickerAndUser_IdAndIsActiveTrue("PETR4", testUser.getId())
-                .orElseThrow();
     }
 
     @Test

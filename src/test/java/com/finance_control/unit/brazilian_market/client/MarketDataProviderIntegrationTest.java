@@ -1,7 +1,6 @@
 package com.finance_control.unit.brazilian_market.client;
 
 import com.finance_control.brazilian_market.client.MarketDataProvider;
-import com.finance_control.brazilian_market.client.MarketQuote;
 import com.finance_control.brazilian_market.model.Investment;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

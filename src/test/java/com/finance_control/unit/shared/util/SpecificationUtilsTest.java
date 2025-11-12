@@ -373,7 +373,6 @@ class SpecificationUtilsTest {
     }
 
     private static class TestEntity {
-        private Long id;
-        private String name;
+        // Test entity for specification testing - no fields needed
     }
 }

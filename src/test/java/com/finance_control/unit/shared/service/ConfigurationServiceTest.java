@@ -7,6 +7,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.config.EnvironmentConfig;
 import com.finance_control.shared.service.ConfigurationService;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,154 +38,111 @@ class ConfigurationServiceTest {
     @InjectMocks
     private ConfigurationService configurationService;
 
-    private AppProperties.Database database;
-    private AppProperties.Database.Pool pool;
-    private AppProperties.Security security;
-    private AppProperties.Security.Jwt jwt;
-    private AppProperties.Security.Cors cors;
-    private AppProperties.Server server;
-    private AppProperties.Logging logging;
-    private AppProperties.Jpa jpa;
-    private AppProperties.Jpa.Properties jpaProperties;
-    private AppProperties.Flyway flyway;
-    private AppProperties.Actuator actuator;
-    private AppProperties.OpenApi openApi;
-    private AppProperties.Pagination pagination;
+    private AppProperties appPropertiesInstance;
 
     @BeforeEach
     void setUp() {
-        // Setup Database
-        pool = new AppProperties.Database.Pool();
-        pool.setInitialSize(5);
-        pool.setMaxSize(20);
-        pool.setMinIdle(5);
-        pool.setMaxLifetime(300000L);
-        pool.setConnectionTimeout(20000L);
-        pool.setIdleTimeout(300000L);
-        pool.setLeakDetectionThreshold(60000L);
+        // Create AppProperties instance using constructor binding
+        appPropertiesInstance = new AppProperties(
+            new AppProperties.Database(
+                "jdbc:postgresql://localhost:5432/testdb",
+                "testuser",
+                "testpass",
+                "org.postgresql.Driver",
+                "5432",
+                "testdb",
+                new AppProperties.Pool(5, 20, 5, 300000, 20000, 300000, 60000)
+            ),
+            new AppProperties.Security(
+                new AppProperties.Jwt(
+                    "test-secret-key",
+                    86400000L,
+                    604800000L,
+                    "finance-control",
+                    "finance-control-users"
+                ),
+                new AppProperties.Cors(
+                    List.of("http://localhost:3000"),
+                    List.of("GET", "POST"),
+                    List.of("*"),
+                    true,
+                    3600
+                ),
+                List.of("/api/auth/**")
+            ),
+            new AppProperties.Server(
+                8080, "", "/", 8192, 2097152, 20000, 30000, 30000
+            ),
+            new AppProperties.Logging(
+                "INFO",
+                "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n",
+                "logs",
+                "finance-control.log",
+                "finance-control-error.log",
+                10485760,
+                30,
+                512,
+                true
+            ),
+            new AppProperties.Jpa(
+                "validate",
+                "org.hibernate.dialect.PostgreSQLDialect",
+                false,
+                false,
+                false,
+                "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl",
+                false,
+                new AppProperties.Properties(
+                    "false", "false", "20", "true", "true", "true", "20", "16"
+                )
+            ),
+            new AppProperties.Flyway(
+                true,
+                List.of("classpath:db/migration"),
+                "false",
+                "0",
+                "true",
+                "false",
+                "true",
+                "false"
+            ),
+            new AppProperties.Actuator(
+                true,
+                List.of("health", "info"),
+                "/actuator",
+                true,
+                true,
+                true
+            ),
+            new AppProperties.OpenApi(
+                "Finance Control API",
+                "API for managing personal finances",
+                "1.0.0",
+                "Finance Control Team",
+                "support@finance-control.com",
+                "https://github.com/LucasSantana/finance-control",
+                "MIT License",
+                "https://opensource.org/licenses/MIT",
+                "http://localhost:8080",
+                "Development server"
+            ),
+            new AppProperties.Pagination(10, 100, "id", "ASC"),
+            new AppProperties.Redis("localhost", 6379, "", 0, 2000, new AppProperties.RedisPool(8, 8, 0, -1)),
+            new AppProperties.Cache(true, 900000, 300000, 1800000),
+            new AppProperties.RateLimit(true, 100, 200, 60),
+            new AppProperties.Monitoring(true, new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30, true))
+        );
 
-        database = new AppProperties.Database();
-        database.setUrl("jdbc:postgresql://localhost:5432/testdb");
-        database.setPort("5432");
-        database.setName("testdb");
-        database.setUsername("testuser");
-        database.setDriverClassName("org.postgresql.Driver");
-        database.setPool(pool);
-
-        // Setup Security
-        jwt = new AppProperties.Security.Jwt();
-        jwt.setSecret("test-secret-key");
-        jwt.setExpirationMs(86400000L);
-        jwt.setRefreshExpirationMs(604800000L);
-        jwt.setIssuer("finance-control");
-        jwt.setAudience("finance-control-users");
-
-        cors = new AppProperties.Security.Cors();
-        cors.setAllowedOrigins(new String[]{"http://localhost:3000"});
-        cors.setAllowedMethods(new String[]{"GET", "POST"});
-        cors.setAllowedHeaders(new String[]{"*"});
-        cors.setAllowCredentials(true);
-        cors.setMaxAge(3600L);
-
-        security = new AppProperties.Security();
-        security.setJwt(jwt);
-        security.setCors(cors);
-        security.setPublicEndpoints(new String[]{"/api/auth/**"});
-
-        // Setup Server
-        server = new AppProperties.Server();
-        server.setPort(8080);
-        server.setContextPath("");
-        server.setServletPath("/");
-        server.setMaxHttpHeaderSize(8192);
-        server.setMaxHttpPostSize(2097152);
-        server.setConnectionTimeout(20000);
-        server.setReadTimeout(30000);
-        server.setWriteTimeout(30000);
-
-        // Setup Logging
-        logging = new AppProperties.Logging();
-        logging.setLevel("INFO");
-        logging.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n");
-        logging.setFilePath("logs");
-        logging.setFileName("finance-control.log");
-        logging.setErrorFileName("finance-control-error.log");
-        logging.setMaxFileSize(10485760);
-        logging.setMaxHistory(30);
-        logging.setQueueSize(512);
-        logging.setAsync(true);
-
-        // Setup JPA
-        jpaProperties = new AppProperties.Jpa.Properties();
-        jpaProperties.setHibernateFormatSql("false");
-        jpaProperties.setHibernateUseSqlComments("false");
-        jpaProperties.setHibernateJdbcBatchSize("20");
-        jpaProperties.setHibernateOrderInserts("true");
-        jpaProperties.setHibernateOrderUpdates("true");
-        jpaProperties.setHibernateBatchVersionedData("true");
-        jpaProperties.setHibernateJdbcFetchSize("20");
-        jpaProperties.setHibernateDefaultBatchFetchSize("16");
-
-        jpa = new AppProperties.Jpa();
-        jpa.setHibernateDdlAuto("validate");
-        jpa.setDialect("org.hibernate.dialect.PostgreSQLDialect");
-        jpa.setShowSql(false);
-        jpa.setFormatSql(false);
-        jpa.setUseSqlComments(false);
-        jpa.setNamingStrategy("org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl");
-        jpa.setDeferDatasourceInitialization(false);
-        jpa.setProperties(jpaProperties);
-
-        // Setup Flyway
-        flyway = new AppProperties.Flyway();
-        flyway.setEnabled(true);
-        flyway.setLocations(new String[]{"classpath:db/migration"});
-        flyway.setBaselineOnMigrate("false");
-        flyway.setBaselineVersion("0");
-        flyway.setValidateOnMigrate("true");
-        flyway.setOutOfOrder("false");
-        flyway.setCleanDisabled("true");
-        flyway.setCleanOnValidationError("false");
-
-        // Setup Actuator
-        actuator = new AppProperties.Actuator();
-        actuator.setEnabled(true);
-        actuator.setEndpoints(new String[]{"health", "info"});
-        actuator.setBasePath("/actuator");
-        actuator.setExposeHealthDetails(true);
-        actuator.setShowDetails(true);
-        actuator.setShowComponents(true);
-
-        // Setup OpenAPI
-        openApi = new AppProperties.OpenApi();
-        openApi.setTitle("Finance Control API");
-        openApi.setDescription("API for managing personal finances");
-        openApi.setVersion("1.0.0");
-        openApi.setContactName("Finance Control Team");
-        openApi.setContactEmail("support@finance-control.com");
-        openApi.setContactUrl("https://github.com/LucasSantana/finance-control");
-        openApi.setLicenseName("MIT License");
-        openApi.setLicenseUrl("https://opensource.org/licenses/MIT");
-        openApi.setServerUrl("http://localhost:8080");
-        openApi.setServerDescription("Development server");
-
-        // Setup Pagination
-        pagination = new AppProperties.Pagination();
-        pagination.setDefaultPageSize(10);
-        pagination.setMaxPageSize(100);
-        pagination.setDefaultSort("id");
-        pagination.setDefaultDirection("ASC");
-
-        // Mock AppProperties
-        when(appProperties.getDatabase()).thenReturn(database);
-        when(appProperties.getSecurity()).thenReturn(security);
-        when(appProperties.getServer()).thenReturn(server);
-        when(appProperties.getLogging()).thenReturn(logging);
-        when(appProperties.getJpa()).thenReturn(jpa);
-        when(appProperties.getFlyway()).thenReturn(flyway);
-        when(appProperties.getActuator()).thenReturn(actuator);
-        when(appProperties.getOpenApi()).thenReturn(openApi);
-        when(appProperties.getPagination()).thenReturn(pagination);
+        // Mock AppProperties using record accessors
+        when(appProperties.database()).thenReturn(appPropertiesInstance.database());
+        when(appProperties.security()).thenReturn(appPropertiesInstance.security());
+        when(appProperties.server()).thenReturn(appPropertiesInstance.server());
+        when(appProperties.logging()).thenReturn(appPropertiesInstance.logging());
+        when(appProperties.jpa()).thenReturn(appPropertiesInstance.jpa());
+        when(appProperties.flyway()).thenReturn(appPropertiesInstance.flyway());
+        when(appProperties.actuator()).thenReturn(appPropertiesInstance.actuator());
+        when(appProperties.openApi()).thenReturn(appPropertiesInstance.openApi());
+        when(appProperties.pagination()).thenReturn(appPropertiesInstance.pagination());
 
         // Mock EnvironmentInfo
         when(environmentInfo.isDevelopment()).thenReturn(false);
@@ -214,7 +172,7 @@ class ConfigurationServiceTest {
         assertThat(poolConfig.get("maxSize")).isEqualTo(20);
         assertThat(poolConfig.get("minIdle")).isEqualTo(5);
 
-        verify(appProperties).getDatabase();
+        verify(appProperties).database();
     }
 
     @Test
@@ -240,7 +198,7 @@ class ConfigurationServiceTest {
         assertThat(corsConfig.get("allowCredentials")).isEqualTo(true);
         assertThat(corsConfig.get("maxAge")).isEqualTo(3600L);
 
-        verify(appProperties).getSecurity();
+        verify(appProperties).security();
     }
 
     @Test
@@ -258,7 +216,7 @@ class ConfigurationServiceTest {
         assertThat(result.get("readTimeout")).isEqualTo(30000);
         assertThat(result.get("writeTimeout")).isEqualTo(30000);
 
-        verify(appProperties).getServer();
+        verify(appProperties).server();
     }
 
     @Test
@@ -277,7 +235,7 @@ class ConfigurationServiceTest {
         assertThat(result.get("queueSize")).isEqualTo(512);
         assertThat(result.get("async")).isEqualTo(true);
 
-        verify(appProperties).getLogging();
+        verify(appProperties).logging();
     }
 
     @Test
@@ -299,7 +257,7 @@ class ConfigurationServiceTest {
         assertThat(hibernateProps.get("orderInserts")).isEqualTo("true");
         assertThat(hibernateProps.get("orderUpdates")).isEqualTo("true");
 
-        verify(appProperties).getJpa();
+        verify(appProperties).jpa();
     }
 
     @Test
@@ -316,7 +274,7 @@ class ConfigurationServiceTest {
         assertThat(result.get("cleanDisabled")).isEqualTo("true");
         assertThat(result.get("cleanOnValidationError")).isEqualTo("false");
 
-        verify(appProperties).getFlyway();
+        verify(appProperties).flyway();
     }
 
     @Test
@@ -331,7 +289,7 @@ class ConfigurationServiceTest {
         assertThat(result.get("showDetails")).isEqualTo(true);
         assertThat(result.get("showComponents")).isEqualTo(true);
 
-        verify(appProperties).getActuator();
+        verify(appProperties).actuator();
     }
 
     @Test
@@ -348,7 +306,7 @@ class ConfigurationServiceTest {
         assertThat(result.get("licenseName")).isEqualTo("MIT License");
         assertThat(result.get("serverUrl")).isEqualTo("http://localhost:8080");
 
-        verify(appProperties).getOpenApi();
+        verify(appProperties).openApi();
     }
 
     @Test
@@ -362,7 +320,7 @@ class ConfigurationServiceTest {
         assertThat(result.get("defaultSort")).isEqualTo("id");
         assertThat(result.get("defaultDirection")).isEqualTo("ASC");
 
-        verify(appProperties).getPagination();
+        verify(appProperties).pagination();
     }
 
     @Test
@@ -403,15 +361,15 @@ class ConfigurationServiceTest {
         assertThat(result).containsKey("pagination");
         assertThat(result).containsKey("environment");
 
-        verify(appProperties, atLeastOnce()).getDatabase();
-        verify(appProperties, atLeastOnce()).getSecurity();
-        verify(appProperties, atLeastOnce()).getServer();
-        verify(appProperties, atLeastOnce()).getLogging();
-        verify(appProperties, atLeastOnce()).getJpa();
-        verify(appProperties, atLeastOnce()).getFlyway();
-        verify(appProperties, atLeastOnce()).getActuator();
-        verify(appProperties, atLeastOnce()).getOpenApi();
-        verify(appProperties, atLeastOnce()).getPagination();
+        verify(appProperties, atLeastOnce()).database();
+        verify(appProperties, atLeastOnce()).security();
+        verify(appProperties, atLeastOnce()).server();
+        verify(appProperties, atLeastOnce()).logging();
+        verify(appProperties, atLeastOnce()).jpa();
+        verify(appProperties, atLeastOnce()).flyway();
+        verify(appProperties, atLeastOnce()).actuator();
+        verify(appProperties, atLeastOnce()).openApi();
+        verify(appProperties, atLeastOnce()).pagination();
     }
 
     @Test
@@ -439,7 +397,34 @@ class ConfigurationServiceTest {
     @Test
     @DisplayName("getSecurityConfig_WithNullSecret_ShouldReturnFalseForSecretConfigured")
     void getSecurityConfig_WithNullSecret_ShouldReturnFalseForSecretConfigured() {
-        jwt.setSecret(null);
+        // Create a new JWT with null secret and create new security config
+        AppProperties.Jwt nullSecretJwt = new AppProperties.Jwt(
+            null, 86400000L, 604800000L, "finance-control", "finance-control-users"
+        );
+        AppProperties.Security nullSecretSecurity = new AppProperties.Security(
+            nullSecretJwt,
+            appPropertiesInstance.security().cors(),
+            appPropertiesInstance.security().publicEndpoints()
+        );
+
+        // Create new AppProperties with the null secret security
+        AppProperties nullSecretAppProperties = new AppProperties(
+            appPropertiesInstance.database(),
+            nullSecretSecurity,
+            appPropertiesInstance.server(),
+            appPropertiesInstance.logging(),
+            appPropertiesInstance.jpa(),
+            appPropertiesInstance.flyway(),
+            appPropertiesInstance.actuator(),
+            appPropertiesInstance.openApi(),
+            appPropertiesInstance.pagination(),
+            appPropertiesInstance.redis(),
+            appPropertiesInstance.cache(),
+            appPropertiesInstance.rateLimit(),
+            appPropertiesInstance.monitoring()
+        );
+
+        configurationService = new ConfigurationService(nullSecretAppProperties, environmentInfo);
 
         Map<String, Object> result = configurationService.getSecurityConfig();
 

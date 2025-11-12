@@ -14,6 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -44,7 +46,7 @@ class DataExportControllerTest {
 
     @Test
     void exportAllDataAsCsv_ShouldReturnCsvFile() throws Exception {
-        byte[] csvData = "id,name,amount\n1,Transaction 1,100.00".getBytes();
+        byte[] csvData = "id,name,amount\n1,Transaction 1,100.00".getBytes(StandardCharsets.UTF_8);
         when(dataExportService.exportUserDataAsCsv()).thenReturn(csvData);
 
         mockMvc.perform(get("/api/export/all/csv")
@@ -100,7 +102,7 @@ class DataExportControllerTest {
 
     @Test
     void exportTransactionsAsCsv_ShouldReturnCsvFile() throws Exception {
-        byte[] csvData = "id,description,amount\n1,Transaction 1,100.00".getBytes();
+        byte[] csvData = "id,description,amount\n1,Transaction 1,100.00".getBytes(StandardCharsets.UTF_8);
         when(dataExportService.exportTransactionsAsCsv()).thenReturn(csvData);
 
         mockMvc.perform(get("/api/export/transactions/csv")
@@ -130,7 +132,7 @@ class DataExportControllerTest {
 
     @Test
     void exportFinancialGoalsAsCsv_ShouldReturnCsvFile() throws Exception {
-        byte[] csvData = "id,name,targetAmount\n1,Goal 1,10000.00".getBytes();
+        byte[] csvData = "id,name,targetAmount\n1,Goal 1,10000.00".getBytes(StandardCharsets.UTF_8);
         when(dataExportService.exportFinancialGoalsAsCsv()).thenReturn(csvData);
 
         mockMvc.perform(get("/api/export/goals/csv")

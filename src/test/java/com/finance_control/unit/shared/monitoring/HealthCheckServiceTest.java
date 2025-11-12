@@ -17,6 +17,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -70,32 +71,41 @@ class HealthCheckServiceTest {
         lenient().when(redisConnectionFactory.getConnection()).thenReturn(redisConnection);
         lenient().when(redisConnection.ping()).thenReturn("PONG");
 
-        AppProperties.Redis redisProperties = new AppProperties.Redis();
-        redisProperties.setHost("localhost");
-        redisProperties.setPort(6379);
-        redisProperties.setDatabase(0);
+        AppProperties.Redis redisProperties = new AppProperties.Redis(
+            "localhost", 6379, "", 0, 2000, new AppProperties.RedisPool()
+        );
 
-        AppProperties.Security securityProperties = new AppProperties.Security();
-        securityProperties.getJwt().setSecret("test-secret");
+        AppProperties.Jwt jwtProperties = new AppProperties.Jwt(
+            "test-secret", 86400000L, 604800000L, "finance-control", "finance-control-users"
+        );
+        AppProperties.Security securityProperties = new AppProperties.Security(
+            jwtProperties,
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of()
+        );
 
-        AppProperties.Database databaseProperties = new AppProperties.Database();
-        databaseProperties.setUrl("jdbc:postgresql://localhost:5432/test");
+        AppProperties.Database databaseProperties = new AppProperties.Database(
+            "jdbc:postgresql://localhost:5432/test", "user", "password", "org.postgresql.Driver", "5432", "test", new AppProperties.Pool()
+        );
 
-        AppProperties.Cache cacheProperties = new AppProperties.Cache();
-        cacheProperties.setEnabled(true);
+        AppProperties.Cache cacheProperties = new AppProperties.Cache(
+            true, 3600, 1800, 900
+        );
 
-        AppProperties.RateLimit rateLimitProperties = new AppProperties.RateLimit();
-        rateLimitProperties.setEnabled(true);
+        AppProperties.RateLimit rateLimitProperties = new AppProperties.RateLimit(
+            true, 100, 200, 60
+        );
 
-        AppProperties.Monitoring monitoringProperties = new AppProperties.Monitoring();
-        monitoringProperties.setEnabled(true);
+        AppProperties.Monitoring monitoringProperties = new AppProperties.Monitoring(
+            true, new AppProperties.Sentry(), new AppProperties.HealthCheck()
+        );
 
-        lenient().when(appProperties.getRedis()).thenReturn(redisProperties);
-        lenient().when(appProperties.getSecurity()).thenReturn(securityProperties);
-        lenient().when(appProperties.getDatabase()).thenReturn(databaseProperties);
-        lenient().when(appProperties.getCache()).thenReturn(cacheProperties);
-        lenient().when(appProperties.getRateLimit()).thenReturn(rateLimitProperties);
-        lenient().when(appProperties.getMonitoring()).thenReturn(monitoringProperties);
+        lenient().when(appProperties.redis()).thenReturn(redisProperties);
+        lenient().when(appProperties.security()).thenReturn(securityProperties);
+        lenient().when(appProperties.database()).thenReturn(databaseProperties);
+        lenient().when(appProperties.cache()).thenReturn(cacheProperties);
+        lenient().when(appProperties.rateLimit()).thenReturn(rateLimitProperties);
+        lenient().when(appProperties.monitoring()).thenReturn(monitoringProperties);
 
         healthCheckService = new HealthCheckService(dataSource, redisTemplate, appProperties);
     }
@@ -164,9 +174,10 @@ class HealthCheckServiceTest {
     @DisplayName("Should return unhealthy status when configuration is missing")
     void health_WithMissingConfiguration_ShouldReturnDown() {
         // Given
-        AppProperties.Database databaseProperties = new AppProperties.Database();
-        databaseProperties.setUrl(null); // Missing database URL
-        when(appProperties.getDatabase()).thenReturn(databaseProperties);
+        AppProperties.Database databaseProperties = new AppProperties.Database(
+            null, "user", "password", "org.postgresql.Driver", "5432", "test", new AppProperties.Pool() // Missing database URL
+        );
+        when(appProperties.database()).thenReturn(databaseProperties);
 
         // When
         Map<String, Object> health = healthCheckService.health();

@@ -14,7 +14,9 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,12 +29,6 @@ class JwtUtilsTest {
     @Mock
     private AppProperties appProperties;
 
-    @Mock
-    private AppProperties.Security security;
-
-    @Mock
-    private AppProperties.Security.Jwt jwt;
-
     @InjectMocks
     private JwtUtils jwtUtils;
 
@@ -44,17 +40,20 @@ class JwtUtilsTest {
     @BeforeEach
     void setUp() {
         testSecret = "testSecretKeyMustBeAtLeast32CharactersLongForHS256Algorithm";
-        testKey = Keys.hmacShaKeyFor(testSecret.getBytes());
+        testKey = Keys.hmacShaKeyFor(testSecret.getBytes(StandardCharsets.UTF_8));
         testUserId = 1L;
         testNow = new Date();
 
-        when(appProperties.getSecurity()).thenReturn(security);
-        when(security.getJwt()).thenReturn(jwt);
-        when(jwt.getSecret()).thenReturn(testSecret);
-        when(jwt.getExpirationMs()).thenReturn(86400000L);
-        when(jwt.getRefreshExpirationMs()).thenReturn(604800000L);
-        when(jwt.getIssuer()).thenReturn("finance-control");
-        when(jwt.getAudience()).thenReturn("finance-control-users");
+        AppProperties.Jwt jwtRecord = new AppProperties.Jwt(
+            testSecret, 86400000L, 604800000L, "finance-control", "finance-control-users"
+        );
+        AppProperties.Security securityRecord = new AppProperties.Security(
+            jwtRecord,
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of()
+        );
+
+        when(appProperties.security()).thenReturn(securityRecord);
     }
 
     @Test
@@ -132,12 +131,15 @@ class JwtUtilsTest {
     @Test
     void validateToken_WithExpiredToken_ShouldReturnFalse() throws Exception {
         // Create a token that expires very soon
-        AppProperties.Security.Jwt shortJwt = org.mockito.Mockito.mock(AppProperties.Security.Jwt.class);
-        when(shortJwt.getSecret()).thenReturn(testSecret);
-        when(shortJwt.getExpirationMs()).thenReturn(1L);
-        when(shortJwt.getIssuer()).thenReturn("finance-control");
-        when(shortJwt.getAudience()).thenReturn("finance-control-users");
-        when(security.getJwt()).thenReturn(shortJwt);
+        AppProperties.Jwt shortJwt = new AppProperties.Jwt(
+            testSecret, 1L, 604800000L, "finance-control", "finance-control-users"
+        );
+        AppProperties.Security shortSecurity = new AppProperties.Security(
+            shortJwt,
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of()
+        );
+        when(appProperties.security()).thenReturn(shortSecurity);
 
         String token = jwtUtils.generateToken(testUserId);
 
@@ -185,12 +187,15 @@ class JwtUtilsTest {
     @Test
     void getUserIdFromToken_WithExpiredToken_ShouldReturnNull() throws Exception {
         // Create a token that expires very soon
-        AppProperties.Security.Jwt shortJwt = org.mockito.Mockito.mock(AppProperties.Security.Jwt.class);
-        when(shortJwt.getSecret()).thenReturn(testSecret);
-        when(shortJwt.getExpirationMs()).thenReturn(1L);
-        when(shortJwt.getIssuer()).thenReturn("finance-control");
-        when(shortJwt.getAudience()).thenReturn("finance-control-users");
-        when(security.getJwt()).thenReturn(shortJwt);
+        AppProperties.Jwt shortJwt = new AppProperties.Jwt(
+            testSecret, 1L, 604800000L, "finance-control", "finance-control-users"
+        );
+        AppProperties.Security shortSecurity = new AppProperties.Security(
+            shortJwt,
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of()
+        );
+        when(appProperties.security()).thenReturn(shortSecurity);
 
         String token = jwtUtils.generateToken(testUserId);
 
@@ -248,12 +253,15 @@ class JwtUtilsTest {
         // Note: When token is expired, getExpirationFromToken catches JwtException
         // (including ExpiredJwtException) and returns null. Since expiration is null,
         // isTokenExpired returns false (see implementation: expiration != null && expiration.before(new Date()))
-        AppProperties.Security.Jwt shortJwt = org.mockito.Mockito.mock(AppProperties.Security.Jwt.class);
-        when(shortJwt.getSecret()).thenReturn(testSecret);
-        when(shortJwt.getExpirationMs()).thenReturn(-1000L); // Negative = expired in the past
-        when(shortJwt.getIssuer()).thenReturn("finance-control");
-        when(shortJwt.getAudience()).thenReturn("finance-control-users");
-        when(security.getJwt()).thenReturn(shortJwt);
+        AppProperties.Jwt shortJwt = new AppProperties.Jwt(
+            testSecret, -1000L, 604800000L, "finance-control", "finance-control-users"
+        );
+        AppProperties.Security shortSecurity = new AppProperties.Security(
+            shortJwt,
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of()
+        );
+        when(appProperties.security()).thenReturn(shortSecurity);
 
         String token = jwtUtils.generateToken(testUserId);
 

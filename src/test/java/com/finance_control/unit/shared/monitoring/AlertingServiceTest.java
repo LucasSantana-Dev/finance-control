@@ -33,15 +33,16 @@ class AlertingServiceTest {
     @Mock
     private AppProperties appProperties;
 
-    @Mock
-    private AppProperties.Monitoring monitoringProperties;
-
     private AlertingService alertingService;
 
     @BeforeEach
     void setUp() {
-        lenient().when(appProperties.getMonitoring()).thenReturn(monitoringProperties);
-        lenient().when(monitoringProperties.isEnabled()).thenReturn(true);
+        AppProperties.Monitoring monitoringRecord = new AppProperties.Monitoring(
+            true,
+            new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true),
+            new AppProperties.HealthCheck(30, true)
+        );
+        lenient().when(appProperties.monitoring()).thenReturn(monitoringRecord);
 
         alertingService = new AlertingService(sentryService, appProperties);
     }
@@ -55,7 +56,12 @@ class AlertingServiceTest {
     @Test
     @DisplayName("Should not start monitoring when disabled")
     void startMonitoring_WhenDisabled_ShouldNotStartMonitoring() {
-        when(monitoringProperties.isEnabled()).thenReturn(false);
+        AppProperties.Monitoring disabledMonitoring = new AppProperties.Monitoring(
+            false,
+            new AppProperties.Sentry(false, "", "dev", "1.0.0", 0.1, 0.1, false, true, true),
+            new AppProperties.HealthCheck(30, true)
+        );
+        when(appProperties.monitoring()).thenReturn(disabledMonitoring);
         alertingService.startMonitoring();
     }
 
@@ -322,8 +328,7 @@ class AlertingServiceTest {
     @Test
     @DisplayName("Should start monitoring when not already started")
     void startMonitoring_WhenNotStarted_ShouldStart() {
-        // Given
-        when(monitoringProperties.isEnabled()).thenReturn(true);
+        // Given - monitoring is already enabled in setUp
 
         // When
         alertingService.startMonitoring();

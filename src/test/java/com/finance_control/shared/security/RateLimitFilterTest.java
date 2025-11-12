@@ -4,7 +4,6 @@ import com.finance_control.shared.config.AppProperties;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,8 +14,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-
-import java.io.IOException;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -52,15 +50,16 @@ class RateLimitFilterTest {
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
 
-        when(appProperties.getRateLimit()).thenReturn(rateLimit);
-        when(appProperties.getSecurity()).thenReturn(security);
+        when(appProperties.rateLimit()).thenReturn(rateLimit);
+        when(appProperties.security()).thenReturn(security);
     }
 
     @Test
     void doFilterInternal_WhenRateLimitDisabled_ShouldSkipFiltering() throws Exception {
         request.setRequestURI("/api/transactions");
 
-        when(rateLimit.isEnabled()).thenReturn(false);
+        AppProperties.RateLimit disabledRateLimit = new AppProperties.RateLimit(false, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(disabledRateLimit);
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -72,8 +71,14 @@ class RateLimitFilterTest {
     void doFilterInternal_ForPublicEndpoint_ShouldSkipFiltering() throws Exception {
         request.setRequestURI("/api/auth/login");
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**", "/api/users"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**", "/api/users")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -90,8 +95,14 @@ class RateLimitFilterTest {
         when(probe.getRemainingTokens()).thenReturn(99L);
         when(probe.getNanosToWaitForRefill()).thenReturn(0L);
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
         when(rateLimitBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -109,8 +120,14 @@ class RateLimitFilterTest {
         when(probe.getRemainingTokens()).thenReturn(50L);
         when(probe.getNanosToWaitForRefill()).thenReturn(0L);
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
         when(rateLimitBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -129,8 +146,14 @@ class RateLimitFilterTest {
         when(probe.getRemainingTokens()).thenReturn(0L);
         when(probe.getNanosToWaitForRefill()).thenReturn(1_000_000_000L); // 1 second
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
         when(rateLimitBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -149,8 +172,14 @@ class RateLimitFilterTest {
         when(probe.isConsumed()).thenReturn(false);
         when(probe.getNanosToWaitForRefill()).thenReturn(5_000_000_000L); // 5 seconds
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
         when(rateLimitBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -167,8 +196,14 @@ class RateLimitFilterTest {
         when(probe.isConsumed()).thenReturn(false);
         when(probe.getNanosToWaitForRefill()).thenReturn(1_000_000_000L);
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
         when(rateLimitBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -189,8 +224,14 @@ class RateLimitFilterTest {
         when(probe.isConsumed()).thenReturn(false);
         when(probe.getNanosToWaitForRefill()).thenReturn(1_000_000_000L);
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
         when(rateLimitBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -208,8 +249,14 @@ class RateLimitFilterTest {
         when(probe.isConsumed()).thenReturn(false);
         when(probe.getNanosToWaitForRefill()).thenReturn(1_000_000_000L);
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
         when(rateLimitBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -226,8 +273,14 @@ class RateLimitFilterTest {
         when(probe.isConsumed()).thenReturn(false);
         when(probe.getNanosToWaitForRefill()).thenReturn(1_000_000_000L);
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
         when(rateLimitBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -239,8 +292,14 @@ class RateLimitFilterTest {
     void doFilterInternal_ForMultiplePublicEndpoints_ShouldSkipFiltering() throws Exception {
         request.setRequestURI("/api/users");
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(new String[]{"/api/auth/**", "/api/users", "/api/monitoring/**"});
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            List.of("/api/auth/**", "/api/users", "/api/monitoring/**")
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -257,8 +316,14 @@ class RateLimitFilterTest {
         when(probe.getRemainingTokens()).thenReturn(99L);
         when(probe.getNanosToWaitForRefill()).thenReturn(0L);
 
-        when(rateLimit.isEnabled()).thenReturn(true);
-        when(security.getPublicEndpoints()).thenReturn(null);
+        AppProperties.RateLimit enabledRateLimit = new AppProperties.RateLimit(true, 100, 200, 60);
+        when(appProperties.rateLimit()).thenReturn(enabledRateLimit);
+        AppProperties.Security testSecurity = new AppProperties.Security(
+            new AppProperties.Jwt("secret", 86400000L, 604800000L, "test", "test"),
+            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
+            null
+        );
+        when(appProperties.security()).thenReturn(testSecurity);
         when(rateLimitBucket.tryConsumeAndReturnRemaining(1)).thenReturn(probe);
 
         filter.doFilterInternal(request, response, filterChain);

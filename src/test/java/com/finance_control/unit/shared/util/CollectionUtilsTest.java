@@ -4,8 +4,6 @@ import com.finance_control.shared.util.CollectionUtils;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

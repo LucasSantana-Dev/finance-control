@@ -370,23 +370,6 @@ public class TestInvestmentController {
         return ResponseEntity.ok(investmentService.getMarketValueByType(user));
     }
 
-    private Investment convertToEntity(InvestmentDTO dto) {
-        return Investment.builder()
-                .ticker(dto.getTicker())
-                .name(dto.getName())
-                .description(dto.getDescription())
-                .investmentType(dto.getInvestmentType())
-                .investmentSubtype(dto.getInvestmentSubtype())
-                .currentPrice(dto.getCurrentPrice())
-                .dayChangePercent(dto.getDayChangePercent())
-                .dividendYield(dto.getDividendYield())
-                .sector(dto.getSector())
-                .industry(dto.getIndustry())
-                .exchange(dto.getExchange())
-                .isActive(dto.getIsActive())
-                .build();
-    }
-
     private InvestmentDTO convertToDTO(Investment investment) {
         InvestmentDTO dto = new InvestmentDTO();
         dto.setId(investment.getId());

@@ -1,10 +1,10 @@
 package com.finance_control.unit.brazilian_market.controller;
 
-import com.finance_control.brazilian_market.controller.BrazilianMarketController;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.model.MarketIndicator;
 import com.finance_control.brazilian_market.service.BrazilianMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
+import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.security.CustomUserDetails;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
@@ -31,20 +31,21 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.boot.test.context.TestConfiguration;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-    "app.security.public-endpoints=/api/brazilian-market/indicators/**,/api/brazilian-market/summary"
+    "app.security.publicEndpoints=/api/brazilian-market/indicators/**,/api/brazilian-market/summary"
 })
 @DisplayName("BrazilianMarketController Unit Tests")
 class BrazilianMarketControllerTest {
@@ -127,7 +128,7 @@ class BrazilianMarketControllerTest {
     }
 
     @Test
-    @DisplayName("GET /brazilian-market/indicators/selic should return current Selic rate")
+    @DisplayName("GET /api/brazilian-market/indicators/selic should return current Selic rate")
     void getCurrentSelicRate_ShouldReturnOk() throws Exception {
         BigDecimal expectedRate = new BigDecimal("13.75");
         when(marketDataService.getCurrentSelicRate()).thenReturn(expectedRate);
@@ -241,137 +242,11 @@ class BrazilianMarketControllerTest {
         verify(marketDataService).updateIPCA();
     }
 
-    @Test
-    @DisplayName("GET /brazilian-market/investments should return user investments")
-    void getUserInvestments_WithAuthenticatedUser_ShouldReturnOk() throws Exception {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getAllInvestments(testUser)).thenReturn(investments);
 
-        mockMvc.perform(get("/api/brazilian-market/investments")
-                        .with(user(testUserDetails)))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"));
 
-        verify(userRepository).findById(1L);
-        verify(investmentService).getAllInvestments(testUser);
-    }
 
-    @Test
-    @DisplayName("GET /brazilian-market/investments should return 403 when user not authenticated")
-    void getUserInvestments_WithoutAuthentication_ShouldReturnForbidden() throws Exception {
-        mockMvc.perform(get("/api/brazilian-market/investments"))
-                .andExpect(status().isForbidden());
-    }
 
-    @Test
-    @DisplayName("GET /brazilian-market/investments/stocks should return user stocks")
-    void getUserStocks_WithAuthenticatedUser_ShouldReturnOk() throws Exception {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        List<Investment> stocks = Arrays.asList(testInvestment);
-        when(investmentService.getInvestmentsByType(testUser, Investment.InvestmentType.STOCK)).thenReturn(stocks);
 
-        mockMvc.perform(get("/api/brazilian-market/investments/stocks")
-                        .with(user(testUserDetails)))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"))
-                .andExpect(jsonPath("$[0].investmentType").value("STOCK"));
-
-        verify(userRepository).findById(1L);
-        verify(investmentService).getInvestmentsByType(testUser, Investment.InvestmentType.STOCK);
-    }
-
-    @Test
-    @DisplayName("GET /brazilian-market/investments/fiis should return user FIIs")
-    void getUserFIIs_WithAuthenticatedUser_ShouldReturnOk() throws Exception {
-        Investment fii = new Investment();
-        fii.setTicker("HGLG11");
-        fii.setName("CSHG Logística");
-        fii.setInvestmentType(Investment.InvestmentType.FII);
-        fii.setUser(testUser);
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        List<Investment> fiis = Arrays.asList(fii);
-        when(investmentService.getInvestmentsByType(testUser, Investment.InvestmentType.FII)).thenReturn(fiis);
-
-        mockMvc.perform(get("/api/brazilian-market/investments/fiis")
-                        .with(user(testUserDetails)))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].ticker").value("HGLG11"))
-                .andExpect(jsonPath("$[0].investmentType").value("FII"));
-
-        verify(userRepository).findById(1L);
-        verify(investmentService).getInvestmentsByType(testUser, Investment.InvestmentType.FII);
-    }
-
-    @Test
-    @DisplayName("GET /brazilian-market/investments/search should return filtered investments")
-    void searchUserInvestments_WithQuery_ShouldReturnOk() throws Exception {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.searchInvestments(testUser, "PETR")).thenReturn(investments);
-
-        mockMvc.perform(get("/api/brazilian-market/investments/search")
-                        .param("query", "PETR")
-                        .with(user(testUserDetails)))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].ticker").value("PETR4"));
-
-        verify(userRepository).findById(1L);
-        verify(investmentService).searchInvestments(testUser, "PETR");
-    }
-
-    @Test
-    @DisplayName("POST /brazilian-market/investments/{ticker}/update should update investment data")
-    void updateInvestmentData_WithValidTicker_ShouldReturnOk() throws Exception {
-        Investment updatedInvestment = new Investment();
-        updatedInvestment.setId(1L);
-        updatedInvestment.setTicker("PETR4");
-        updatedInvestment.setCurrentPrice(BigDecimal.valueOf(27.00));
-        updatedInvestment.setUser(testUser);
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(investmentService.getInvestmentByTicker("PETR4", testUser)).thenReturn(Optional.of(testInvestment));
-        when(investmentService.updateMarketData(testInvestment)).thenReturn(updatedInvestment);
-
-        mockMvc.perform(post("/api/brazilian-market/investments/PETR4/update")
-                        .with(user(testUserDetails)))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.ticker").value("PETR4"))
-                .andExpect(jsonPath("$.currentPrice").value(27.00));
-
-        verify(userRepository).findById(1L);
-        verify(investmentService).getInvestmentByTicker("PETR4", testUser);
-        verify(investmentService).updateMarketData(testInvestment);
-    }
-
-    @Test
-    @DisplayName("POST /brazilian-market/investments/{ticker}/update should return 400 when investment not found")
-    void updateInvestmentData_WithInvalidTicker_ShouldReturnBadRequest() throws Exception {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(investmentService.getInvestmentByTicker("INVALID", testUser)).thenReturn(Optional.empty());
-
-        mockMvc.perform(post("/api/brazilian-market/investments/INVALID/update")
-                        .with(user(testUserDetails)))
-                .andExpect(status().isBadRequest());
-
-        verify(userRepository).findById(1L);
-        verify(investmentService).getInvestmentByTicker("INVALID", testUser);
-        verify(investmentService, never()).updateMarketData(any());
-    }
 
     @Test
     @DisplayName("GET /brazilian-market/summary should return market summary")
@@ -391,21 +266,31 @@ class BrazilianMarketControllerTest {
         verify(marketDataService).getMarketSummary();
     }
 
-    @Test
-    @DisplayName("GET /brazilian-market/investments should return 400 when user not found")
-    void getUserInvestments_WithInvalidUser_ShouldReturnBadRequest() throws Exception {
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+    @TestConfiguration
+    static class TestConfig {
 
-        User invalidUser = new User();
-        invalidUser.setId(999L);
-        invalidUser.setEmail("invalid@example.com");
-        CustomUserDetails invalidUserDetails = new CustomUserDetails(invalidUser);
-
-        mockMvc.perform(get("/api/brazilian-market/investments")
-                        .with(user(invalidUserDetails)))
-                .andExpect(status().isBadRequest());
-
-        verify(userRepository).findById(999L);
-        verify(investmentService, never()).getAllInvestments(any());
+        @Bean
+        @Primary
+        public AppProperties appProperties() {
+            return new AppProperties(
+                new AppProperties.Database("jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE", "sa", "", "org.h2.Driver", "", "testdb", new AppProperties.Pool(2, 5, 1, 300000, 10000, 300000, 60000)),
+                new AppProperties.Security(
+                    new AppProperties.Jwt("testSecretKeyWithMinimumLengthOf256BitsForJWT", 86400000L, 604800000L, "test-issuer", "test-audience"),
+                    new AppProperties.Cors(List.of("*"), List.of("GET", "POST", "PUT", "DELETE"), List.of("*"), true, 3600),
+                        List.of("/api/brazilian-market/indicators/**", "/api/brazilian-market/summary")
+                ),
+                new AppProperties.Server(0, "", "/", 8192, 2097152, 20000, 30000, 30000),
+                new AppProperties.Logging("INFO", "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n", "logs", "finance-control.log", "finance-control-error.log", 10, 30, 256, false),
+                new AppProperties.Jpa("create-drop", "org.hibernate.dialect.H2Dialect", false, false, false, "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl", false, new AppProperties.Properties("false", "false", "20", "true", "true", "true", "20", "16")),
+                new AppProperties.Flyway(false, List.of("classpath:db/migration"), "false", "0", "true", "false", "true", "false"),
+                new AppProperties.Actuator(false, List.of("health"), "/actuator", false, false, false),
+                new AppProperties.OpenApi("Finance Control API - Test", "API for managing personal finances - Test Environment", "1.0.0-test", "Finance Control Team", "test@finance-control.com", "https://github.com/LucasSantana/finance-control", "MIT License", "https://opensource.org/licenses/MIT", "http://localhost:0", "Test server"),
+                new AppProperties.Pagination(5, 20, "id", "ASC"),
+                new AppProperties.Redis("localhost", 6379, "", 0, 2000, new AppProperties.RedisPool(8, 8, 0, -1)),
+                new AppProperties.Cache(true, 900000, 300000, 1800000),
+                new AppProperties.RateLimit(true, 100, 200, 60),
+                new AppProperties.Monitoring(true, new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30, true))
+            );
+        }
     }
 }

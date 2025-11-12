@@ -9,10 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.never;
-import static org.assertj.core.api.Assertions.assertThat;
-import org.mockito.ArgumentCaptor;
 import io.sentry.SentryOptions;
 
 /**
