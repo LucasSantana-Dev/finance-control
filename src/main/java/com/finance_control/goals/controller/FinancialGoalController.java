@@ -74,28 +74,28 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
             try {
                 filters.put("minTargetAmount", new BigDecimal(minTargetAmountStr));
             } catch (NumberFormatException e) {
-                log.warn("Invalid minTargetAmount parameter: {}", minTargetAmountStr);
+                log.warn("Invalid minTargetAmount parameter (length: {})", minTargetAmountStr.length());
             }
         }
         if (maxTargetAmountStr != null && !maxTargetAmountStr.trim().isEmpty()) {
             try {
                 filters.put("maxTargetAmount", new BigDecimal(maxTargetAmountStr));
             } catch (NumberFormatException e) {
-                log.warn("Invalid maxTargetAmount parameter: {}", maxTargetAmountStr);
+                log.warn("Invalid maxTargetAmount parameter (length: {})", maxTargetAmountStr.length());
             }
         }
         if (deadlineStartStr != null && !deadlineStartStr.trim().isEmpty()) {
             try {
                 filters.put("deadlineStart", LocalDate.parse(deadlineStartStr));
             } catch (Exception e) {
-                log.warn("Invalid deadlineStart parameter: {}", deadlineStartStr);
+                log.warn("Invalid deadlineStart parameter (length: {})", deadlineStartStr.length());
             }
         }
         if (deadlineEndStr != null && !deadlineEndStr.trim().isEmpty()) {
             try {
                 filters.put("deadlineEnd", LocalDate.parse(deadlineEndStr));
             } catch (Exception e) {
-                log.warn("Invalid deadlineEnd parameter: {}", deadlineEndStr);
+                log.warn("Invalid deadlineEnd parameter (length: {})", deadlineEndStr.length());
             }
         }
         if (isActiveStr != null && !isActiveStr.trim().isEmpty()) {
@@ -212,10 +212,10 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
                description = "Complete a financial goal with final completion data")
     public ResponseEntity<FinancialGoalDTO> completeGoal(@PathVariable Long id,
                                                          @Valid @RequestBody GoalCompletionRequest request) {
-        log.debug("PUT request to complete goal ID: {} with data: {}", id, request);
+        log.debug("PUT request to complete goal (ID length: {}) with data: [REDACTED]", String.valueOf(id).length());
 
         FinancialGoalDTO completedGoal = financialGoalService.completeGoal(id, request);
-        log.info("Goal completed successfully with ID: {}", id);
+        log.info("Goal completed successfully (ID present: {})", id != null);
         return ResponseEntity.ok(completedGoal);
     }
 

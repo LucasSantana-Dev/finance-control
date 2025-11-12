@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -20,6 +21,13 @@ public class HistoricalData {
     private String timezone;
     private List<HistoricalPoint> data;
     private LocalDateTime lastUpdated;
+
+    /**
+     * Returns an unmodifiable view of the data list to prevent external modification.
+     */
+    public List<HistoricalPoint> getData() {
+        return data != null ? Collections.unmodifiableList(data) : null;
+    }
 }
 
 /**
@@ -35,4 +43,3 @@ class HistoricalPoint {
     private BigDecimal close;
     private Long volume;
 }
-

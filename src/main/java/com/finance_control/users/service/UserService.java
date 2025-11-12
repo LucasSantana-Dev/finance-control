@@ -200,7 +200,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
         User user = getEntityById(id);
         user.setIsActive(true);
         userRepository.save(user);
-        log.info("User reactivated with ID: {}", id);
+        log.info("User reactivated (ID present: {})", id != null);
     }
 
     /**

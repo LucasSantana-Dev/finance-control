@@ -46,7 +46,7 @@ public class DashboardService {
         var sample = metricsService.startDashboardGenerationTimer();
         try {
             Long userId = UserContext.getCurrentUserId();
-            log.debug("Generating dashboard summary for user: {}", userId);
+            log.debug("Generating dashboard summary (user present: {})", userId != null);
 
         LocalDate startOfMonth = YearMonth.now().atDay(1);
         LocalDate endOfMonth = YearMonth.now().atEndOfMonth();
@@ -92,7 +92,7 @@ public class DashboardService {
                 key = "#root.methodName + '_' + T(com.finance_control.shared.context.UserContext).getCurrentUserId() + '_' + #startDate + '_' + #endDate")
     public FinancialMetricsDTO getFinancialMetrics(LocalDate startDate, LocalDate endDate) {
         Long userId = UserContext.getCurrentUserId();
-        log.debug("Generating financial metrics for user: {} from {} to {}", userId, startDate, endDate);
+        log.debug("Generating financial metrics (user present: {}, dates present: {}, {})", userId != null, startDate != null, endDate != null);
 
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
@@ -136,7 +136,7 @@ public class DashboardService {
      */
     @Cacheable(value = "dashboard", key = "#root.methodName + '_' + #userId + '_' + #limit")
     public List<CategorySpendingDTO> getTopSpendingCategories(Long userId, int limit) {
-        log.debug("Getting top {} spending categories for user: {}", limit, userId);
+        log.debug("Getting top {} spending categories (user present: {})", limit, userId != null);
 
         LocalDate startOfMonth = YearMonth.now().atDay(1);
         LocalDate endOfMonth = YearMonth.now().atEndOfMonth();
@@ -183,7 +183,7 @@ public class DashboardService {
      */
     @Cacheable(value = "dashboard", key = "#root.methodName + '_' + #userId + '_' + #months")
     public List<MonthlyTrendDTO> getMonthlyTrends(Long userId, int months) {
-        log.debug("Getting monthly trends for user: {} for last {} months", userId, months);
+        log.debug("Getting monthly trends (user present: {}) for last {} months", userId != null, months);
 
         List<MonthlyTrendDTO> trends = new ArrayList<>();
         LocalDate currentMonth = YearMonth.now().atDay(1);

@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -43,7 +45,7 @@ public class DataExportService {
         log.info("Exporting user data as CSV for user: {}", userId);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-             PrintWriter writer = new PrintWriter(outputStream)) {
+             PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
 
             // Write CSV header
             writer.println("Finance Control Data Export");
@@ -111,7 +113,7 @@ public class DataExportService {
         log.info("Exporting transactions as CSV for user: {}", userId);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-             PrintWriter writer = new PrintWriter(outputStream)) {
+             PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
 
             // Write CSV header
             writer.println("Transaction Export");
@@ -137,7 +139,7 @@ public class DataExportService {
         log.info("Exporting financial goals as CSV for user: {}", userId);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-             PrintWriter writer = new PrintWriter(outputStream)) {
+             PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
 
             // Write CSV header
             writer.println("Financial Goals Export");

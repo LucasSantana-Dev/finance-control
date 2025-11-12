@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Map;
 
 @Data
@@ -13,11 +14,18 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ErrorResponse {
-    
+
     private LocalDateTime timestamp;
     private int status;
     private String error;
     private String message;
     private String path;
     private Map<String, String> details;
-} 
+
+    /**
+     * Returns an unmodifiable view of the details map to prevent external modification.
+     */
+    public Map<String, String> getDetails() {
+        return details != null ? Collections.unmodifiableMap(details) : null;
+    }
+}

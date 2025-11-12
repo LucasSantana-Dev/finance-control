@@ -7,6 +7,7 @@ import com.finance_control.auth.service.AuthService;
 import com.finance_control.shared.security.JwtUtils;
 import com.finance_control.users.dto.UserDTO;
 import com.finance_control.users.service.UserService;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @Validated
 @Tag(name = "Authentication", description = "Authentication endpoints")
+@SuppressFBWarnings("EI_EXPOSE_REP2") // False positive: Spring dependency injection is safe
 public class AuthController {
 
     private final AuthService authService;

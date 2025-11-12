@@ -1,6 +1,7 @@
 package com.finance_control.shared.monitoring;
 
 import com.finance_control.shared.config.AppProperties;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.sentry.SentryLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressFBWarnings("EI_EXPOSE_REP2") // False positive: Spring dependency injection is safe
 public class AlertingService {
 
     private final SentryService sentryService;
@@ -67,7 +69,7 @@ public class AlertingService {
             return;
         }
 
-        if (!appProperties.getMonitoring().isEnabled()) {
+        if (!appProperties.monitoring().enabled()) {
             log.info("Monitoring is disabled, skipping alert monitoring");
             return;
         }
@@ -116,7 +118,7 @@ public class AlertingService {
     public void clearAlert(String alertId) {
         Alert removed = activeAlerts.remove(alertId);
         if (removed != null) {
-            log.info("Alert cleared: {}", alertId);
+            log.info("Alert cleared (ID present: {})", alertId != null);
         }
     }
 

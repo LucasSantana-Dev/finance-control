@@ -35,7 +35,7 @@ public class ProfileController {
     @PutMapping
     @Operation(summary = "Update current user profile", description = "Update the current authenticated user's profile")
     public ResponseEntity<ProfileDTO> updateCurrentProfile(@Valid @RequestBody ProfileUpdateRequest request) {
-        log.debug("PUT request to update current user profile: {}", request);
+        log.debug("PUT request to update current user profile (request present: {})", request != null);
 
         ProfileDTO updatedProfile = profileService.updateCurrentProfile(request);
         log.info("Profile updated successfully");

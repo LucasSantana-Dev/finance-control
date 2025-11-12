@@ -29,7 +29,11 @@ public class TransactionCategoryController extends BaseController<TransactionCat
     public ResponseEntity<Object> getMetadata(
             @RequestParam String data) {
 
-        log.debug("GET request to retrieve transaction categories metadata: {}", data);
+        if (data == null || data.trim().isEmpty()) {
+            throw new IllegalArgumentException("Data parameter is required");
+        }
+
+        log.debug("GET request to retrieve transaction categories metadata (data length: {})", data.length());
 
         return switch (data) {
             case "all" -> ResponseEntity.ok(transactionCategoryService.findAllActive());

@@ -124,7 +124,7 @@ public class BrazilianMarketController {
     public ResponseEntity<List<Investment>> searchUserInvestments(
             @Parameter(description = "Search query (ticker or name)") @RequestParam String query,
             Authentication authentication) {
-        log.debug("GET request to search user investments with query: {}", query);
+        log.debug("GET request to search user investments (query length: {})", query != null ? query.length() : 0);
         List<Investment> investments = investmentService.searchInvestments(getUserFromAuthentication(authentication), query);
         return ResponseEntity.ok(investments);
     }
@@ -134,7 +134,7 @@ public class BrazilianMarketController {
     public ResponseEntity<Investment> updateInvestmentData(
             @Parameter(description = "Investment ticker symbol") @PathVariable String ticker,
             Authentication authentication) {
-        log.debug("POST request to update investment data for ticker: {}", ticker);
+        log.debug("POST request to update investment data (ticker length: {})", ticker != null ? ticker.length() : 0);
         Investment investment = investmentService.getInvestmentByTicker(ticker, getUserFromAuthentication(authentication))
                 .orElseThrow(() -> new IllegalArgumentException("Investment not found: " + ticker));
         Investment updatedInvestment = investmentService.updateMarketData(investment);

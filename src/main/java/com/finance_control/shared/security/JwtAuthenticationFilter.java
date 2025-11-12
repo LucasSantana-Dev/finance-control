@@ -59,13 +59,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     UserDetails userDetails = userDetailsService.loadUserByUsername(userId.toString());
                     logger.debug("Loaded user details for ID " + userId + ": " + (userDetails != null ? "SUCCESS" : "FAILED"));
-                    
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    logger.debug("Set authentication in security context for user ID: " + userId);
+                    if (userDetails != null) {
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        logger.debug("Set authentication in security context for user ID: " + userId);
+                    } else {
+                        logger.warn("User details could not be loaded for user ID: " + userId);
+                    }
                 }
             } else {
                 logger.debug("JWT validation failed or no JWT found");

@@ -5,6 +5,7 @@ import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.service.BaseService;
 import com.finance_control.shared.util.EntityMapper;
 import com.finance_control.shared.util.ValidationUtils;
+import java.util.Collections;
 import com.finance_control.transactions.dto.TransactionDTO;
 import com.finance_control.transactions.dto.TransactionReconciliationRequest;
 import com.finance_control.transactions.dto.responsibles.TransactionResponsiblesDTO;
@@ -319,7 +320,7 @@ public class TransactionService
      * @return list of distinct transaction types
      */
     public List<String> getTransactionTypes() {
-        return transactionRepository.findDistinctTypes();
+        return java.util.Collections.unmodifiableList(transactionRepository.findDistinctTypes());
     }
 
     /**
@@ -328,7 +329,7 @@ public class TransactionService
      * @return list of all source entities
      */
     public List<TransactionSourceEntity> getSourceEntities() {
-        return sourceEntityRepository.findAll();
+        return Collections.unmodifiableList(sourceEntityRepository.findAll());
     }
 
     /**
@@ -439,7 +440,7 @@ public class TransactionService
 
         transactionRepository.save(transaction);
 
-        log.info("Transaction reconciled successfully with ID: {}", id);
+        log.info("Transaction reconciled successfully (ID present: {})", id != null);
         return mapToResponseDTO(transaction);
     }
 

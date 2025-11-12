@@ -28,24 +28,24 @@ public class ConfigurationService {
      */
     public Map<String, Object> getDatabaseConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Database db = appProperties.getDatabase();
+        AppProperties.Database db = appProperties.database();
 
-        config.put("url", db.getUrl());
-        config.put("port", db.getPort());
-        config.put("name", db.getName());
-        config.put("username", db.getUsername());
-        config.put("driverClassName", db.getDriverClassName());
+        config.put("url", db.url());
+        config.put("port", db.port());
+        config.put("name", db.name());
+        config.put("username", db.username());
+        config.put("driverClassName", db.driverClassName());
 
         // Connection pool configuration
-        AppProperties.Database.Pool pool = db.getPool();
+        AppProperties.Pool pool = db.pool();
         Map<String, Object> poolConfig = new HashMap<>();
-        poolConfig.put("initialSize", pool.getInitialSize());
-        poolConfig.put("maxSize", pool.getMaxSize());
-        poolConfig.put("minIdle", pool.getMinIdle());
-        poolConfig.put("maxLifetime", pool.getMaxLifetime());
-        poolConfig.put("connectionTimeout", pool.getConnectionTimeout());
-        poolConfig.put("idleTimeout", pool.getIdleTimeout());
-        poolConfig.put("leakDetectionThreshold", pool.getLeakDetectionThreshold());
+        poolConfig.put("initialSize", pool.initialSize());
+        poolConfig.put("maxSize", pool.maxSize());
+        poolConfig.put("minIdle", pool.minIdle());
+        poolConfig.put("maxLifetime", pool.maxLifetime());
+        poolConfig.put("connectionTimeout", pool.connectionTimeout());
+        poolConfig.put("idleTimeout", pool.idleTimeout());
+        poolConfig.put("leakDetectionThreshold", pool.leakDetectionThreshold());
 
         config.put("pool", poolConfig);
 
@@ -59,30 +59,30 @@ public class ConfigurationService {
      */
     public Map<String, Object> getSecurityConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Security security = appProperties.getSecurity();
+        AppProperties.Security security = appProperties.security();
 
         // JWT configuration
-        AppProperties.Security.Jwt jwt = security.getJwt();
+        AppProperties.Jwt jwt = security.jwt();
         Map<String, Object> jwtConfig = new HashMap<>();
-        jwtConfig.put("secretConfigured", jwt.getSecret() != null);
-        jwtConfig.put("expirationMs", jwt.getExpirationMs());
-        jwtConfig.put("refreshExpirationMs", jwt.getRefreshExpirationMs());
-        jwtConfig.put("issuer", jwt.getIssuer());
-        jwtConfig.put("audience", jwt.getAudience());
+        jwtConfig.put("secretConfigured", jwt.secret() != null);
+        jwtConfig.put("expirationMs", jwt.expirationMs());
+        jwtConfig.put("refreshExpirationMs", jwt.refreshExpirationMs());
+        jwtConfig.put("issuer", jwt.issuer());
+        jwtConfig.put("audience", jwt.audience());
 
         config.put("jwt", jwtConfig);
 
         // CORS configuration
-        AppProperties.Security.Cors cors = security.getCors();
+        AppProperties.Cors cors = security.cors();
         Map<String, Object> corsConfig = new HashMap<>();
-        corsConfig.put("allowedOrigins", cors.getAllowedOrigins());
-        corsConfig.put("allowedMethods", cors.getAllowedMethods());
-        corsConfig.put("allowedHeaders", cors.getAllowedHeaders());
-        corsConfig.put("allowCredentials", cors.isAllowCredentials());
-        corsConfig.put("maxAge", cors.getMaxAge());
+        corsConfig.put("allowedOrigins", cors.allowedOrigins());
+        corsConfig.put("allowedMethods", cors.allowedMethods());
+        corsConfig.put("allowedHeaders", cors.allowedHeaders());
+        corsConfig.put("allowCredentials", cors.allowCredentials());
+        corsConfig.put("maxAge", cors.maxAge());
 
         config.put("cors", corsConfig);
-        config.put("publicEndpoints", security.getPublicEndpoints());
+        config.put("publicEndpoints", security.publicEndpoints());
 
         return config;
     }
@@ -94,16 +94,16 @@ public class ConfigurationService {
      */
     public Map<String, Object> getServerConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Server server = appProperties.getServer();
+        AppProperties.Server server = appProperties.server();
 
-        config.put("port", server.getPort());
-        config.put("contextPath", server.getContextPath());
-        config.put("servletPath", server.getServletPath());
-        config.put("maxHttpHeaderSize", server.getMaxHttpHeaderSize());
-        config.put("maxHttpPostSize", server.getMaxHttpPostSize());
-        config.put("connectionTimeout", server.getConnectionTimeout());
-        config.put("readTimeout", server.getReadTimeout());
-        config.put("writeTimeout", server.getWriteTimeout());
+        config.put("port", server.port());
+        config.put("contextPath", server.contextPath());
+        config.put("servletPath", server.servletPath());
+        config.put("maxHttpHeaderSize", server.maxHttpHeaderSize());
+        config.put("maxHttpPostSize", server.maxHttpPostSize());
+        config.put("connectionTimeout", server.connectionTimeout());
+        config.put("readTimeout", server.readTimeout());
+        config.put("writeTimeout", server.writeTimeout());
 
         return config;
     }
@@ -115,17 +115,17 @@ public class ConfigurationService {
      */
     public Map<String, Object> getLoggingConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Logging logging = appProperties.getLogging();
+        AppProperties.Logging logging = appProperties.logging();
 
-        config.put("level", logging.getLevel());
-        config.put("pattern", logging.getPattern());
-        config.put("filePath", logging.getFilePath());
-        config.put("fileName", logging.getFileName());
-        config.put("errorFileName", logging.getErrorFileName());
-        config.put("maxFileSize", logging.getMaxFileSize());
-        config.put("maxHistory", logging.getMaxHistory());
-        config.put("queueSize", logging.getQueueSize());
-        config.put("async", logging.isAsync());
+        config.put("level", logging.level());
+        config.put("pattern", logging.pattern());
+        config.put("filePath", logging.filePath());
+        config.put("fileName", logging.fileName());
+        config.put("errorFileName", logging.errorFileName());
+        config.put("maxFileSize", logging.maxFileSize());
+        config.put("maxHistory", logging.maxHistory());
+        config.put("queueSize", logging.queueSize());
+        config.put("async", logging.async());
 
         return config;
     }
@@ -137,27 +137,27 @@ public class ConfigurationService {
      */
     public Map<String, Object> getJpaConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Jpa jpa = appProperties.getJpa();
+        AppProperties.Jpa jpa = appProperties.jpa();
 
-        config.put("hibernateDdlAuto", jpa.getHibernateDdlAuto());
-        config.put("dialect", jpa.getDialect());
-        config.put("showSql", jpa.isShowSql());
-        config.put("formatSql", jpa.isFormatSql());
-        config.put("useSqlComments", jpa.isUseSqlComments());
-        config.put("deferDatasourceInitialization", jpa.isDeferDatasourceInitialization());
-        config.put("namingStrategy", jpa.getNamingStrategy());
+        config.put("hibernateDdlAuto", jpa.hibernateDdlAuto());
+        config.put("dialect", jpa.dialect());
+        config.put("showSql", jpa.showSql());
+        config.put("formatSql", jpa.formatSql());
+        config.put("useSqlComments", jpa.useSqlComments());
+        config.put("deferDatasourceInitialization", jpa.deferDatasourceInitialization());
+        config.put("namingStrategy", jpa.namingStrategy());
 
         // Hibernate properties
-        AppProperties.Jpa.Properties props = jpa.getProperties();
+        AppProperties.Properties props = jpa.properties();
         Map<String, Object> hibernateProps = new HashMap<>();
-        hibernateProps.put("formatSql", props.getHibernateFormatSql());
-        hibernateProps.put("useSqlComments", props.getHibernateUseSqlComments());
-        hibernateProps.put("jdbcBatchSize", props.getHibernateJdbcBatchSize());
-        hibernateProps.put("orderInserts", props.getHibernateOrderInserts());
-        hibernateProps.put("orderUpdates", props.getHibernateOrderUpdates());
-        hibernateProps.put("batchVersionedData", props.getHibernateBatchVersionedData());
-        hibernateProps.put("jdbcFetchSize", props.getHibernateJdbcFetchSize());
-        hibernateProps.put("defaultBatchFetchSize", props.getHibernateDefaultBatchFetchSize());
+        hibernateProps.put("formatSql", props.hibernateFormatSql());
+        hibernateProps.put("useSqlComments", props.hibernateUseSqlComments());
+        hibernateProps.put("jdbcBatchSize", props.hibernateJdbcBatchSize());
+        hibernateProps.put("orderInserts", props.hibernateOrderInserts());
+        hibernateProps.put("orderUpdates", props.hibernateOrderUpdates());
+        hibernateProps.put("batchVersionedData", props.hibernateBatchVersionedData());
+        hibernateProps.put("jdbcFetchSize", props.hibernateJdbcFetchSize());
+        hibernateProps.put("defaultBatchFetchSize", props.hibernateDefaultBatchFetchSize());
 
         config.put("properties", hibernateProps);
 
@@ -171,16 +171,16 @@ public class ConfigurationService {
      */
     public Map<String, Object> getFlywayConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Flyway flyway = appProperties.getFlyway();
+        AppProperties.Flyway flyway = appProperties.flyway();
 
-        config.put("enabled", flyway.isEnabled());
-        config.put("locations", flyway.getLocations());
-        config.put("baselineOnMigrate", flyway.getBaselineOnMigrate());
-        config.put("baselineVersion", flyway.getBaselineVersion());
-        config.put("validateOnMigrate", flyway.getValidateOnMigrate());
-        config.put("outOfOrder", flyway.getOutOfOrder());
-        config.put("cleanDisabled", flyway.getCleanDisabled());
-        config.put("cleanOnValidationError", flyway.getCleanOnValidationError());
+        config.put("enabled", flyway.enabled());
+        config.put("locations", flyway.locations());
+        config.put("baselineOnMigrate", flyway.baselineOnMigrate());
+        config.put("baselineVersion", flyway.baselineVersion());
+        config.put("validateOnMigrate", flyway.validateOnMigrate());
+        config.put("outOfOrder", flyway.outOfOrder());
+        config.put("cleanDisabled", flyway.cleanDisabled());
+        config.put("cleanOnValidationError", flyway.cleanOnValidationError());
 
         return config;
     }
@@ -192,14 +192,14 @@ public class ConfigurationService {
      */
     public Map<String, Object> getActuatorConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Actuator actuator = appProperties.getActuator();
+        AppProperties.Actuator actuator = appProperties.actuator();
 
-        config.put("enabled", actuator.isEnabled());
-        config.put("endpoints", actuator.getEndpoints());
-        config.put("basePath", actuator.getBasePath());
-        config.put("exposeHealthDetails", actuator.isExposeHealthDetails());
-        config.put("showDetails", actuator.isShowDetails());
-        config.put("showComponents", actuator.isShowComponents());
+        config.put("enabled", actuator.enabled());
+        config.put("endpoints", actuator.endpoints());
+        config.put("basePath", actuator.basePath());
+        config.put("exposeHealthDetails", actuator.exposeHealthDetails());
+        config.put("showDetails", actuator.showDetails());
+        config.put("showComponents", actuator.showComponents());
 
         return config;
     }
@@ -211,18 +211,18 @@ public class ConfigurationService {
      */
     public Map<String, Object> getOpenApiConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.OpenApi openApi = appProperties.getOpenApi();
+        AppProperties.OpenApi openApi = appProperties.openApi();
 
-        config.put("title", openApi.getTitle());
-        config.put("description", openApi.getDescription());
-        config.put("version", openApi.getVersion());
-        config.put("contactName", openApi.getContactName());
-        config.put("contactEmail", openApi.getContactEmail());
-        config.put("contactUrl", openApi.getContactUrl());
-        config.put("licenseName", openApi.getLicenseName());
-        config.put("licenseUrl", openApi.getLicenseUrl());
-        config.put("serverUrl", openApi.getServerUrl());
-        config.put("serverDescription", openApi.getServerDescription());
+        config.put("title", openApi.title());
+        config.put("description", openApi.description());
+        config.put("version", openApi.version());
+        config.put("contactName", openApi.contactName());
+        config.put("contactEmail", openApi.contactEmail());
+        config.put("contactUrl", openApi.contactUrl());
+        config.put("licenseName", openApi.licenseName());
+        config.put("licenseUrl", openApi.licenseUrl());
+        config.put("serverUrl", openApi.serverUrl());
+        config.put("serverDescription", openApi.serverDescription());
 
         return config;
     }
@@ -234,12 +234,12 @@ public class ConfigurationService {
      */
     public Map<String, Object> getPaginationConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Pagination pagination = appProperties.getPagination();
+        AppProperties.Pagination pagination = appProperties.pagination();
 
-        config.put("defaultPageSize", pagination.getDefaultPageSize());
-        config.put("maxPageSize", pagination.getMaxPageSize());
-        config.put("defaultSort", pagination.getDefaultSort());
-        config.put("defaultDirection", pagination.getDefaultDirection());
+        config.put("defaultPageSize", pagination.defaultPageSize());
+        config.put("maxPageSize", pagination.maxPageSize());
+        config.put("defaultSort", pagination.defaultSort());
+        config.put("defaultDirection", pagination.defaultDirection());
 
         return config;
     }

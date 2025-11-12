@@ -68,25 +68,25 @@ public class UserController extends BaseController<User, Long, UserDTO> {
     @PutMapping("/{id}/password")
     @Operation(summary = "Reset user password", description = "Reset user password by administrator")
     public ResponseEntity<Void> resetPassword(@PathVariable @Positive Long id, @Valid @RequestBody PasswordResetRequest request) {
-        log.debug("PUT request to reset password for user ID: {}", id);
+        log.debug("PUT request to reset password (ID present: {})", id != null);
 
         if (request.isPasswordConfirmationInvalid()) {
-            log.warn("Password confirmation does not match for user ID: {}", id);
+            log.warn("Password confirmation does not match (ID present: {})", id != null);
             return ResponseEntity.badRequest().build();
         }
 
         userService.resetPassword(id, request.getNewPassword(), request.getReason());
-        log.info("Password reset successfully for user ID: {}", id);
+        log.info("Password reset successfully (ID present: {})", id != null);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}/status")
     @Operation(summary = "Update user status", description = "Activate or deactivate user account by administrator")
     public ResponseEntity<UserDTO> updateStatus(@PathVariable @Positive Long id, @Valid @RequestBody UserStatusRequest request) {
-        log.debug("PUT request to update status for user ID: {} - active: {}", id, request.getActive());
+        log.debug("PUT request to update status (ID present: {}, active: {})", id != null, request.getActive());
 
         UserDTO updatedUser = userService.updateStatus(id, request.getActive(), request.getReason());
-        log.info("User status updated successfully for user ID: {} - active: {}", id, request.getActive());
+        log.info("User status updated successfully (ID present: {}, active: {})", id != null, request.getActive());
         return ResponseEntity.ok(updatedUser);
     }
 }

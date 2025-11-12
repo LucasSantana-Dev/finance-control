@@ -79,7 +79,11 @@ public class MonitoringController {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public ResponseEntity<Map<String, String>> clearAlert(@PathVariable String alertId) {
-        log.info("Clearing alert: {}", alertId);
+        if (alertId == null || alertId.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        log.info("Clearing alert (ID length: {})", alertId.length());
 
         try {
             alertingService.clearAlert(alertId);
@@ -88,7 +92,7 @@ public class MonitoringController {
             response.put("alertId", alertId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error clearing alert: {}", alertId, e);
+            log.error("Error clearing alert (ID length: {})", alertId.length(), e);
             return ResponseEntity.status(500).build();
         }
     }

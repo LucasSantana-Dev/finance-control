@@ -54,7 +54,11 @@ public class TransactionSubcategoryController
             @RequestParam String data,
             @RequestParam(required = false) Long categoryId) {
 
-        log.debug("GET request to retrieve transaction subcategories metadata: {}", data);
+        if (data == null || data.trim().isEmpty()) {
+            throw new IllegalArgumentException("Data parameter is required");
+        }
+
+        log.debug("GET request to retrieve transaction subcategories metadata (data length: {})", data.length());
 
         return switch (data) {
             case "all" -> ResponseEntity.ok(transactionSubcategoryService.findAllActive());

@@ -79,7 +79,7 @@ public class ProfileService extends BaseService<Profile, Long, ProfileDTO> {
     @Transactional(readOnly = true)
     public ProfileDTO getCurrentProfile() {
         Long currentUserId = UserContext.getCurrentUserId();
-        log.debug("Retrieving profile for user ID: {}", currentUserId);
+        log.debug("Retrieving profile (user present: {})", currentUserId != null);
 
         Profile profile = profileRepository.findByUserId(currentUserId)
                 .orElseThrow(() -> new RuntimeException("Profile not found"));
@@ -97,7 +97,7 @@ public class ProfileService extends BaseService<Profile, Long, ProfileDTO> {
     @Transactional
     public ProfileDTO updateCurrentProfile(ProfileUpdateRequest request) {
         Long currentUserId = UserContext.getCurrentUserId();
-        log.debug("Updating profile for user ID: {} with request: {}", currentUserId, request);
+        log.debug("Updating profile (user present: {}) with request: [REDACTED]", currentUserId != null);
 
         // Validate request
         request.validate();
@@ -129,7 +129,7 @@ public class ProfileService extends BaseService<Profile, Long, ProfileDTO> {
         // Save profile
         Profile savedProfile = profileRepository.save(profile);
 
-        log.info("Profile updated successfully for user ID: {}", currentUserId);
+        log.info("Profile updated successfully (user present: {})", currentUserId != null);
         return convertToResponseDTO(savedProfile);
     }
 

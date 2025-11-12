@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class TransactionSpecifications {
 
     private TransactionSpecifications() {
-        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+        // Utility class cannot be instantiated
     }
 
     /**

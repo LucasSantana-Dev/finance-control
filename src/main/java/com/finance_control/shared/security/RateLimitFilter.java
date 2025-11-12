@@ -8,6 +8,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
@@ -34,7 +36,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                   @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         // Skip rate limiting if disabled
-        if (!appProperties.getRateLimit().isEnabled()) {
+        if (!appProperties.rateLimit().enabled()) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -71,14 +73,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * Checks if the request path is a public endpoint that should skip rate limiting.
      */
     private boolean isPublicEndpoint(String requestPath) {
-        String[] publicEndpoints = appProperties.getSecurity().getPublicEndpoints();
-        if (publicEndpoints == null) {
-            return false;
-        }
+        List<String> publicEndpoints = appProperties.security().publicEndpoints();
 
-        for (String endpoint : publicEndpoints) {
-            if (requestPath.matches(endpoint.replace("**", ".*"))) {
-                return true;
+        if (publicEndpoints != null && !publicEndpoints.isEmpty()) {
+            for (String endpoint : publicEndpoints) {
+                if (requestPath.matches(endpoint.replace("**", ".*"))) {
+                    return true;
+                }
             }
         }
         return false;

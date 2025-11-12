@@ -69,14 +69,20 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
             Pageable pageable,
             HttpServletRequest request) {
 
-        log.debug("GET request to list entities - search: '{}', sortBy: '{}', sortDirection: '{}', page: {}",
-                 search, sortBy, sortDirection, pageable.getPageNumber());
+        log.debug("GET request to list entities - search present: {}, sortBy present: {}, sortDirection present: {}, page: {}",
+                 search != null && !search.trim().isEmpty(), sortBy != null && !sortBy.trim().isEmpty(),
+                 sortDirection != null && !sortDirection.trim().isEmpty(), pageable.getPageNumber());
 
         // Extract all query parameters as filters (excluding standard ones)
         Map<String, Object> filters = extractFiltersFromRequest(request, search, sortBy, sortDirection);
 
         Page<D> result = service.findAll(search, filters, sortBy, sortDirection, pageable);
-        log.debug("Returning {} entities out of {} total", result.getNumberOfElements(), result.getTotalElements());
+        // result.getNumberOfElements() and result.getTotalElements() return primitive integers
+        // These values cannot contain CRLF characters and are safe for logging
+        int elements = result.getNumberOfElements();
+        long total = result.getTotalElements();
+        // Primitive integers cannot contain CRLF characters and are safe for logging
+        log.debug("Returning {} entities out of {} total", elements, total);
         return ResponseEntity.ok(result);
     }
 
@@ -127,6 +133,10 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
      * @return the converted value
      */
     protected Object convertParameterValue(String value) {
+        if (value == null) {
+            return null;
+        }
+
         // Try to convert to boolean
         if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
             return Boolean.valueOf(value);
@@ -136,14 +146,14 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
         try {
             return Long.valueOf(value);
         } catch (NumberFormatException e) {
-            log.debug("Value '{}' is not a valid Long number, trying Double", value);
+            log.debug("Value length {} is not a valid Long number, trying Double", value.length());
         }
 
         // Try to convert to Double
         try {
             return Double.valueOf(value);
         } catch (NumberFormatException e) {
-            log.debug("Value '{}' is not a valid Double number, returning as String", value);
+            log.debug("Value length {} is not a valid Double number, returning as String", value.length());
         }
 
         return value;
@@ -160,14 +170,14 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
     @GetMapping("/{id}")
     @Operation(summary = "Get entity by ID", description = "Retrieve a single entity by its unique identifier.")
     public ResponseEntity<D> findById(@PathVariable I id) {
-        log.debug("GET request to find entity by ID: {}", id);
+        log.debug("GET request to find entity by ID (length: {})", String.valueOf(id).length());
         return service.findById(id)
                 .map(entity -> {
-                    log.debug("Entity found with ID: {}", id);
+                    log.debug("Entity found (ID present: {})", id != null);
                     return ResponseEntity.ok(entity);
                 })
                 .orElseGet(() -> {
-                    log.debug("Entity not found with ID: {}", id);
+                    log.debug("Entity not found (ID present: {})", id != null);
                     return ResponseEntity.notFound().build();
                 });
     }
@@ -182,7 +192,7 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
     @PostMapping
     @Operation(summary = "Create entity", description = "Create a new entity.")
     public ResponseEntity<D> create(@Valid @RequestBody D createDTO) {
-        log.debug("POST request to create entity: {}", createDTO);
+        log.debug("POST request to create entity (DTO present: {})", createDTO != null);
         D result = service.create(createDTO);
         log.info("Entity created successfully");
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
@@ -200,9 +210,9 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
     @Operation(summary = "Partially update entity",
                description = "Partially update an existing entity by its ID. Only provided fields will be updated.")
     public ResponseEntity<D> update(@PathVariable I id, @Valid @RequestBody D updateDTO) {
-        log.debug("PATCH request to partially update entity with ID: {} and DTO: {}", id, updateDTO);
+        log.debug("PATCH request to partially update entity (ID length: {}, DTO present: {})", String.valueOf(id).length(), updateDTO != null);
         D result = service.update(id, updateDTO);
-        log.info("Entity partially updated successfully with ID: {}", id);
+        log.info("Entity partially updated successfully (ID present: {})", id != null);
         return ResponseEntity.ok(result);
     }
 
@@ -216,9 +226,9 @@ public abstract class BaseController<T extends BaseModel<I>, I, D> implements Cr
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete entity", description = "Delete an entity by its ID.")
     public ResponseEntity<Void> delete(@PathVariable I id) {
-        log.debug("DELETE request to delete entity with ID: {}", id);
+        log.debug("DELETE request to delete entity (ID length: {})", String.valueOf(id).length());
         service.delete(id);
-        log.info("Entity deleted successfully with ID: {}", id);
+        log.info("Entity deleted successfully (ID present: {})", id != null);
         return ResponseEntity.noContent().build();
     }
 }

@@ -44,7 +44,7 @@ public class DashboardController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @Parameter(description = "End date (yyyy-MM-dd)")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        log.debug("GET request to retrieve financial metrics from {} to {}", startDate, endDate);
+        log.debug("GET request to retrieve financial metrics (dates present: {}, {})", startDate != null, endDate != null);
         FinancialMetricsDTO metrics = dashboardService.getFinancialMetrics(startDate, endDate);
         return ResponseEntity.ok(metrics);
     }
@@ -112,7 +112,11 @@ public class DashboardController {
             @Parameter(description = "Number of months for trends")
             @RequestParam(required = false, defaultValue = "12") int months) {
 
-        log.debug("GET request to retrieve dashboard data: {}", data);
+        if (data == null || data.trim().isEmpty()) {
+            throw new IllegalArgumentException("Data parameter is required");
+        }
+
+        log.debug("GET request to retrieve dashboard data (data length: {})", data.length());
 
         return switch (data) {
             case "summary" -> ResponseEntity.ok(dashboardService.getDashboardSummary());

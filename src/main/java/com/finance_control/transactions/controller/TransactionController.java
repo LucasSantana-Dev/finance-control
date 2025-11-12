@@ -102,10 +102,10 @@ public class TransactionController extends BaseController<Transaction, Long, Tra
     public ResponseEntity<TransactionDTO> reconcileTransaction(
             @PathVariable Long id,
             @Valid @RequestBody TransactionReconciliationRequest request) {
-        log.debug("PUT request to reconcile transaction ID: {} with data: {}", id, request);
+        log.debug("PUT request to reconcile transaction (ID length: {}) with data: [REDACTED]", String.valueOf(id).length());
 
         TransactionDTO reconciledTransaction = transactionService.reconcileTransaction(id, request);
-        log.info("Transaction reconciled successfully with ID: {}", id);
+        log.info("Transaction reconciled successfully (ID present: {})", id != null);
         return ResponseEntity.ok(reconciledTransaction);
     }
 

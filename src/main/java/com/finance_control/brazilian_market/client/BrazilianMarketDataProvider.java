@@ -199,7 +199,9 @@ public class BrazilianMarketDataProvider implements MarketDataProvider {
         private String took;
 
         // Getters and setters
-        public List<QuoteResponse> getResults() { return results; }
+        public List<QuoteResponse> getResults() {
+            return results != null ? java.util.Collections.unmodifiableList(results) : null;
+        }
         public void setResults(List<QuoteResponse> results) { this.results = results; }
         public String getRequestedAt() { return requestedAt; }
         public void setRequestedAt(String requestedAt) { this.requestedAt = requestedAt; }

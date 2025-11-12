@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -90,8 +91,9 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      */
     public Page<D> findAll(String search, Map<String, Object> filters, String sortBy, String sortDirection,
             Pageable pageable) {
-        log.debug("Finding all entities with search: '{}', filters: {}, sortBy: '{}', sortDirection: '{}', page: {}",
-                search, filters, sortBy, sortDirection,
+        log.debug("Finding all entities with search present: {}, filters present: {}, sortBy present: {}, sortDirection present: {}, page: {}",
+                search != null && !search.trim().isEmpty(), filters != null && !filters.isEmpty(),
+                sortBy != null && !sortBy.trim().isEmpty(), sortDirection != null && !sortDirection.trim().isEmpty(),
                 pageable.isUnpaged() ? "unpaged" : pageable.getPageNumber());
 
         Pageable finalPageable = createPageableWithSort(pageable, sortBy, sortDirection);
@@ -120,7 +122,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
             throw new SecurityException("User context not available");
         }
 
-        log.debug("Adding user filter for user ID: {}", currentUserId);
+        log.debug("Adding user filter (user present: {})", currentUserId != null);
         if (filters != null && !filters.containsKey(USER_ID_FIELD)) {
             filters.put(USER_ID_FIELD, currentUserId);
         }
@@ -204,7 +206,10 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * @return an Optional containing the response DTO if found, empty otherwise
      */
     public Optional<D> findById(I id) {
-        log.debug("Finding entity by ID: {}", id);
+        if (id == null) {
+            throw new IllegalArgumentException("ID cannot be null");
+        }
+        log.debug("Finding entity by ID (length: {})", String.valueOf(id).length());
         validateId(id);
         Optional<T> entity = repository.findById(id);
 
@@ -217,16 +222,16 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
             }
 
             if (!belongsToUser(entity.get(), currentUserId)) {
-                log.warn(ACCESS_DENIED_MSG, id, currentUserId);
+                log.warn(ACCESS_DENIED_MSG, String.valueOf(id).length(), String.valueOf(currentUserId).length());
                 throw new SecurityException("Access denied: entity does not belong to current user");
             }
-            log.debug(USER_OWNERSHIP_VERIFIED_MSG, id, currentUserId);
+            log.debug(USER_OWNERSHIP_VERIFIED_MSG, String.valueOf(id).length(), String.valueOf(currentUserId).length());
         }
 
         if (entity.isPresent()) {
-            log.debug("Entity found with ID: {}", id);
+            log.debug("Entity found with ID (length: {})", String.valueOf(id).length());
         } else {
-            log.debug("Entity not found with ID: {}", id);
+            log.debug("Entity not found with ID (length: {})", String.valueOf(id).length());
         }
 
         return entity.map(this::mapToResponseDTO);
@@ -239,7 +244,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * @return the created entity as a response DTO
      */
     public D create(D createDTO) {
-        log.debug("Creating new entity with DTO: {}", createDTO);
+        log.debug("Creating new entity (DTO present: {})", createDTO != null);
         validateCreateDTO(createDTO);
         T entity = mapToEntity(createDTO);
 
@@ -250,14 +255,14 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
                 log.error(USER_CONTEXT_UNAVAILABLE);
                 throw new SecurityException("User context not available");
             }
-            log.debug("Setting user ID {} for new entity", currentUserId);
+            log.debug("Setting user ID (length: {}) for new entity", String.valueOf(currentUserId).length());
             setUserId(entity, currentUserId);
         }
 
         validateEntity(entity);
         log.debug("Saving entity to repository");
         T savedEntity = repository.save(entity);
-        log.info("Entity created successfully with ID: {}", savedEntity.getId());
+        log.info("Entity created successfully (ID length: {})", savedEntity.getId() != null ? String.valueOf(savedEntity.getId()).length() : 0);
         return mapToResponseDTO(savedEntity);
     }
 
@@ -270,13 +275,16 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * @throws EntityNotFoundException if the entity with the given ID is not found
      */
     public D update(I id, D updateDTO) {
-        log.debug("Updating entity with ID: {} and DTO: {}", id, updateDTO);
+        if (id == null) {
+            throw new IllegalArgumentException("ID cannot be null");
+        }
+        log.debug("Updating entity (ID length: {}, DTO present: {})", String.valueOf(id).length(), updateDTO != null);
         validateId(id);
         validateUpdateDTO(updateDTO);
 
         T entity = repository.findById(id)
                 .orElseThrow(() -> {
-                    log.warn("Entity not found for update with ID: {}", id);
+                    log.warn("Entity not found for update (ID length: {})", String.valueOf(id).length());
                     return new EntityNotFoundException(getEntityName(), "id", id);
                 });
 
@@ -287,9 +295,9 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
         validateEntity(entity);
         log.debug("Saving updated entity to repository");
         T savedEntity = repository.save(entity);
-        log.info("Entity updated successfully with ID: {}", id);
+        log.info("Entity updated successfully (ID length: {})", String.valueOf(id).length());
         D result = mapToResponseDTO(savedEntity);
-        log.debug("Mapped result: {}", result);
+        log.debug("Mapped result present: {}", result != null);
         return result;
     }
 
@@ -300,11 +308,14 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * @throws EntityNotFoundException if the entity with the given ID is not found
      */
     public void delete(I id) {
-        log.debug("Deleting entity with ID: {}", id);
+        if (id == null) {
+            throw new IllegalArgumentException("ID cannot be null");
+        }
+        log.debug("Deleting entity (ID length: {})", String.valueOf(id).length());
         validateId(id);
         T entity = repository.findById(id)
                 .orElseThrow(() -> {
-                    log.warn("Entity not found for deletion with ID: {}", id);
+                    log.warn("Entity not found for deletion (ID length: {})", id != null ? String.valueOf(id).length() : 0);
                     return new EntityNotFoundException(getEntityName(), "id", id);
                 });
 
@@ -312,7 +323,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
         validateUserOwnership(entity, id);
 
         repository.deleteById(id);
-        log.info("Entity deleted successfully with ID: {}", id);
+        log.info("Entity deleted successfully (ID length: {})", String.valueOf(id).length());
     }
 
     /**
@@ -382,7 +393,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
             try {
                 Method method = repository.getClass().getMethod("existsByNameIgnoreCaseAndUserId", String.class, Long.class);
                 return (Boolean) method.invoke(repository, name, currentUserId);
-            } catch (Exception e) {
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
                 throw new UnsupportedOperationException("Repository does not support name-based operations");
             }
         } else {
@@ -390,7 +401,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
             try {
                 Method method = repository.getClass().getMethod("existsByNameIgnoreCase", String.class);
                 return (Boolean) method.invoke(repository, name);
-            } catch (Exception e) {
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
                 throw new UnsupportedOperationException("Repository does not support name-based operations");
             }
         }
@@ -619,10 +630,10 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
             }
 
             if (!belongsToUser(entity, currentUserId)) {
-                log.warn(ACCESS_DENIED_MSG, id, currentUserId);
+                log.warn(ACCESS_DENIED_MSG, String.valueOf(id).length(), String.valueOf(currentUserId).length());
                 throw new SecurityException("Access denied: entity does not belong to current user");
             }
-            log.debug(USER_OWNERSHIP_VERIFIED_MSG, id, currentUserId);
+            log.debug(USER_OWNERSHIP_VERIFIED_MSG, String.valueOf(id).length(), String.valueOf(currentUserId).length());
         }
     }
 
@@ -659,7 +670,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
             case USER_ID_FIELD -> predicates.add(createUserIdPredicate(root, criteriaBuilder, value));
             case "name" -> predicates.add(createNamePredicate(root, criteriaBuilder, value));
             case IS_ACTIVE_FIELD -> predicates.add(createIsActivePredicate(root, criteriaBuilder, value));
-            default -> log.debug("Ignoring unknown filter key: {}", key);
+            default -> log.debug("Ignoring unknown filter key (length: {})", key.length());
         }
     }
 

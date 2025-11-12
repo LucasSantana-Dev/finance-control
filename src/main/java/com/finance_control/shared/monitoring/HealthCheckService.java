@@ -1,6 +1,7 @@
 package com.finance_control.shared.monitoring;
 
 import com.finance_control.shared.config.AppProperties;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@SuppressFBWarnings("EI_EXPOSE_REP2") // False positive: Spring dependency injection is safe
 public class HealthCheckService {
 
     private final DataSource dataSource;
@@ -57,7 +59,7 @@ public class HealthCheckService {
             result.put("status", isHealthy ? "UP" : "DOWN");
             result.put("details", details);
 
-            return result;
+            return java.util.Collections.unmodifiableMap(result);
 
         } catch (Exception e) {
             log.error("Error during health check", e);
@@ -65,7 +67,7 @@ public class HealthCheckService {
             errorResult.put("status", "DOWN");
             errorResult.put("error", e.getMessage());
             errorResult.put("timestamp", LocalDateTime.now().toString());
-            return errorResult;
+            return java.util.Collections.unmodifiableMap(errorResult);
         }
     }
 
@@ -80,7 +82,7 @@ public class HealthCheckService {
             details.put("version", connection.getMetaData().getDriverVersion());
             details.put("checkTime", LocalDateTime.now().toString());
 
-            return details;
+            return java.util.Collections.unmodifiableMap(details);
 
         } catch (SQLException e) {
             log.error("Database health check failed", e);
@@ -88,7 +90,7 @@ public class HealthCheckService {
             errorDetails.put("status", "DOWN");
             errorDetails.put("error", e.getMessage());
             errorDetails.put("checkTime", LocalDateTime.now().toString());
-            return errorDetails;
+            return java.util.Collections.unmodifiableMap(errorDetails);
         }
     }
 
@@ -104,22 +106,22 @@ public class HealthCheckService {
             Map<String, Object> details = new HashMap<>();
             details.put("status", "UP");
             details.put("response", pong);
-            details.put("host", appProperties.getRedis().getHost());
-            details.put("port", appProperties.getRedis().getPort());
-            details.put("database", appProperties.getRedis().getDatabase());
+            details.put("host", appProperties.redis().host());
+            details.put("port", appProperties.redis().port());
+            details.put("database", appProperties.redis().database());
             details.put("checkTime", LocalDateTime.now().toString());
 
-            return details;
+            return java.util.Collections.unmodifiableMap(details);
 
         } catch (Exception e) {
             log.error("Redis health check failed", e);
             Map<String, Object> errorDetails = new HashMap<>();
             errorDetails.put("status", "DOWN");
             errorDetails.put("error", e.getMessage());
-            errorDetails.put("host", appProperties.getRedis().getHost());
-            errorDetails.put("port", appProperties.getRedis().getPort());
+            errorDetails.put("host", appProperties.redis().host());
+            errorDetails.put("port", appProperties.redis().port());
             errorDetails.put("checkTime", LocalDateTime.now().toString());
-            return errorDetails;
+            return java.util.Collections.unmodifiableMap(errorDetails);
         }
     }
 
@@ -128,35 +130,35 @@ public class HealthCheckService {
         boolean isHealthy = true;
 
         try {
-            if (appProperties.getDatabase().getUrl() == null || appProperties.getDatabase().getUrl().isEmpty()) {
+            if (appProperties.database().url() == null || appProperties.database().url().isEmpty()) {
                 details.put("databaseUrl", "MISSING");
                 isHealthy = false;
             } else {
                 details.put("databaseUrl", "CONFIGURED");
             }
 
-            if (appProperties.getSecurity().getJwt().getSecret() == null || appProperties.getSecurity().getJwt().getSecret().isEmpty()) {
+            if (appProperties.security().jwt().secret() == null || appProperties.security().jwt().secret().isEmpty()) {
                 details.put("jwtSecret", "MISSING");
                 isHealthy = false;
             } else {
                 details.put("jwtSecret", "CONFIGURED");
             }
 
-            if (appProperties.getRedis().getHost() == null || appProperties.getRedis().getHost().isEmpty()) {
+            if (appProperties.redis().host() == null || appProperties.redis().host().isEmpty()) {
                 details.put("redisHost", "MISSING");
                 isHealthy = false;
             } else {
                 details.put("redisHost", "CONFIGURED");
             }
 
-            details.put("cacheEnabled", appProperties.getCache().isEnabled());
-            details.put("rateLimitEnabled", appProperties.getRateLimit().isEnabled());
-            details.put("monitoringEnabled", appProperties.getMonitoring().isEnabled());
+            details.put("cacheEnabled", appProperties.cache().enabled());
+            details.put("rateLimitEnabled", appProperties.rateLimit().enabled());
+            details.put("monitoringEnabled", appProperties.monitoring().enabled());
 
             details.put("checkTime", LocalDateTime.now().toString());
             details.put("status", isHealthy ? "UP" : "DOWN");
 
-            return details;
+            return java.util.Collections.unmodifiableMap(details);
 
         } catch (Exception e) {
             log.error("Configuration health check failed", e);
@@ -164,7 +166,7 @@ public class HealthCheckService {
             errorDetails.put("status", "DOWN");
             errorDetails.put("error", e.getMessage());
             errorDetails.put("checkTime", LocalDateTime.now().toString());
-            return errorDetails;
+            return java.util.Collections.unmodifiableMap(errorDetails);
         }
     }
 
@@ -192,7 +194,7 @@ public class HealthCheckService {
             status.put("overallStatus", "UNHEALTHY");
         }
 
-        return status;
+        return java.util.Collections.unmodifiableMap(status);
     }
 
 }

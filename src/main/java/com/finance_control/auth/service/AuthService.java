@@ -4,6 +4,7 @@ import com.finance_control.auth.exception.AuthenticationException;
 import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressFBWarnings("EI_EXPOSE_REP2") // False positive: Spring dependency injection is safe
 public class AuthService {
 
     private final UserRepository userRepository;

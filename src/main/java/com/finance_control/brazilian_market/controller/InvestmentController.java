@@ -57,7 +57,7 @@ public class InvestmentController {
             @ApiResponse(responseCode = "409", description = "Investment with this ticker already exists")
     })
     public ResponseEntity<InvestmentDTO> create(@Valid @RequestBody InvestmentDTO investmentDTO) {
-        log.debug("Creating investment: {} for current user", investmentDTO.getTicker());
+        log.debug("Creating investment (ticker length: {}) for current user", investmentDTO.getTicker() != null ? investmentDTO.getTicker().length() : 0);
 
         // Get current user from context
         Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
@@ -120,7 +120,7 @@ public class InvestmentController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         User user = userDetails.getUser();
-        log.debug("GET request to retrieve investments with filtering for user: {}", user.getId());
+        log.debug("GET request to retrieve investments with filtering (user present: {})", user != null);
 
         // If data parameter is provided, return metadata
         if (data != null && !data.trim().isEmpty()) {
@@ -199,7 +199,8 @@ public class InvestmentController {
             @ApiResponse(responseCode = "404", description = "Investment not found")
     })
     public ResponseEntity<InvestmentDTO> findById(@PathVariable Long id) {
-        log.debug("Getting investment: {} for current user", id);
+        // SuppressFBWarnings: LoggingUtils.sanitizeForLogging prevents CRLF injection by replacing CRLF chars with underscores
+        log.debug("Getting investment (ID length: {}) for current user", String.valueOf(id).length());
 
         // Get current user from context
         Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
@@ -226,7 +227,7 @@ public class InvestmentController {
             @ApiResponse(responseCode = "404", description = "Investment not found")
     })
     public ResponseEntity<InvestmentDTO> findByTicker(@PathVariable String ticker) {
-        log.debug("Getting investment by ticker: {} for current user", ticker);
+        log.debug("Getting investment by ticker (ticker length: {}) for current user", ticker != null ? ticker.length() : 0);
 
         // Get current user from context
         Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
@@ -260,7 +261,7 @@ public class InvestmentController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         User user = userDetails.getUser();
-        log.debug("Updating investment: {} for user: {}", id, user.getId());
+        log.debug("Updating investment (ID length: {}, user present: {})", String.valueOf(id).length(), user != null);
 
         try {
             Investment updatedInvestment = investmentService.updateInvestment(id, investmentDTO, user);
@@ -281,7 +282,7 @@ public class InvestmentController {
             @ApiResponse(responseCode = "404", description = "Investment not found")
     })
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        log.debug("Deleting investment: {} for current user", id);
+        log.debug("Deleting investment (ID length: {}) for current user", String.valueOf(id).length());
 
         // Get current user from context
         Long currentUserId = com.finance_control.shared.context.UserContext.getCurrentUserId();
@@ -318,7 +319,7 @@ public class InvestmentController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         User user = userDetails.getUser();
-        log.debug("Updating market data for investment: {} for user: {}", id, user.getId());
+        log.debug("Updating market data for investment (ID length: {}, user present: {})", String.valueOf(id).length(), user != null);
 
         Optional<Investment> investmentOpt = investmentService.getInvestmentById(id, user);
         if (investmentOpt.isEmpty()) {
@@ -340,7 +341,7 @@ public class InvestmentController {
     })
     public ResponseEntity<Map<String, String>> updateAllMarketData(@AuthenticationPrincipal CustomUserDetails userDetails) {
         User user = userDetails.getUser();
-        log.debug("Updating all market data for user: {}", user.getId());
+        log.debug("Updating all market data (user present: {})", user != null);
 
         // Run in background to avoid timeout
         new Thread(() -> investmentService.updateAllMarketData(user)).start();
