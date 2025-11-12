@@ -23,7 +23,7 @@ The main logging configuration file that defines:
 - **Loggers**: Package-specific log levels
 - **Profiles**: Environment-specific configurations
 
-### 2. `application.properties`
+### 2. `application.yml`
 
 Contains basic logging level overrides that can be easily modified:
 
@@ -543,9 +543,11 @@ Add to `logback-spring.xml`:
 ```
 
 ### Modifying Log Levels
-Update in `application.properties`:
-```properties
-logging.level.com.finance_control.your.package=DEBUG
+Update in `application.yml`:
+```yaml
+logging:
+  level:
+    com.finance_control.your.package: DEBUG
 ```
 
 ### Custom Appenders

@@ -23,23 +23,23 @@ public class ServerConfig {
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
         return factory -> {
-            AppProperties.Server server = appProperties.getServer();
-            
-            log.info("Configuring server - Port: {}, Context: {}, MaxHeaderSize: {}KB, MaxPostSize: {}KB", 
-                    server.getPort(),
-                    server.getContextPath(),
-                    server.getMaxHttpHeaderSize() / 1024,
-                    server.getMaxHttpPostSize() / 1024);
-            
-            factory.setPort(server.getPort());
-            factory.setContextPath(server.getContextPath());
-            
+            AppProperties.Server server = appProperties.server();
+
+            log.info("Configuring server - Port: {}, Context: {}, MaxHeaderSize: {}KB, MaxPostSize: {}KB",
+                    server.port(),
+                    server.contextPath(),
+                    server.maxHttpHeaderSize() / 1024,
+                    server.maxHttpPostSize() / 1024);
+
+            factory.setPort(server.port());
+            factory.setContextPath(server.contextPath());
+
             factory.addConnectorCustomizers(connector -> {
-                connector.setMaxPostSize(server.getMaxHttpPostSize());
-                connector.setProperty("maxHttpHeaderSize", String.valueOf(server.getMaxHttpHeaderSize()));
-                connector.setProperty("connectionTimeout", String.valueOf(server.getConnectionTimeout()));
-                connector.setProperty("readTimeout", String.valueOf(server.getReadTimeout()));
-                connector.setProperty("writeTimeout", String.valueOf(server.getWriteTimeout()));
+                connector.setMaxPostSize(server.maxHttpPostSize());
+                connector.setProperty("maxHttpHeaderSize", String.valueOf(server.maxHttpHeaderSize()));
+                connector.setProperty("connectionTimeout", String.valueOf(server.connectionTimeout()));
+                connector.setProperty("readTimeout", String.valueOf(server.readTimeout()));
+                connector.setProperty("writeTimeout", String.valueOf(server.writeTimeout()));
             });
         };
     }

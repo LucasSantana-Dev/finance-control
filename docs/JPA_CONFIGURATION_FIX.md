@@ -64,7 +64,7 @@ public class JpaConfig {
 Spring Boot's auto-configuration is highly sophisticated and handles JPA configuration automatically based on:
 
 - Dependencies in `build.gradle` (`spring-boot-starter-data-jpa`)
-- Properties in `application.properties` (`spring.jpa.*`)
+- Properties in `application.yml` (`spring.jpa.*`)
 - DataSource bean configuration
 
 By removing custom JPA configuration and clearing cached builds, we allowed Spring Boot's auto-configuration to work as intended.
@@ -81,7 +81,7 @@ By removing custom JPA configuration and clearing cached builds, we allowed Spri
 
 ## Configuration That Still Works
 
-The following Spring Boot properties in `application.properties` control JPA behavior:
+The following Spring Boot properties in `application.yml` control JPA behavior:
 
 ```properties
 # JPA Configuration

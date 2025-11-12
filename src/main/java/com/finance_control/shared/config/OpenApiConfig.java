@@ -25,26 +25,26 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI customOpenAPI() {
-        AppProperties.OpenApi openApi = appProperties.getOpenApi();
+        AppProperties.OpenApi openApi = appProperties.openApi();
 
         log.info("Configuring OpenAPI with title: {}, version: {}",
-                openApi.getTitle(), openApi.getVersion());
+                openApi.title(), openApi.version());
 
         return new OpenAPI()
                 .info(new Info()
-                        .title(openApi.getTitle())
-                        .description(openApi.getDescription())
-                        .version(openApi.getVersion())
+                        .title(openApi.title())
+                        .description(openApi.description())
+                        .version(openApi.version())
                         .contact(new Contact()
-                                .name(openApi.getContactName())
-                                .email(openApi.getContactEmail())
-                                .url(openApi.getContactUrl()))
+                                .name(openApi.contactName())
+                                .email(openApi.contactEmail())
+                                .url(openApi.contactUrl()))
                         .license(new License()
-                                .name(openApi.getLicenseName())
-                                .url(openApi.getLicenseUrl())))
+                                .name(openApi.licenseName())
+                                .url(openApi.licenseUrl())))
                 .addServersItem(new Server()
-                        .url(openApi.getServerUrl())
-                        .description(openApi.getServerDescription()))
+                        .url(openApi.serverUrl())
+                        .description(openApi.serverDescription()))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
                         .addSecuritySchemes("bearerAuth", new SecurityScheme()

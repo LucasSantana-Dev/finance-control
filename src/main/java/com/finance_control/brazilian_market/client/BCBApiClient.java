@@ -26,7 +26,6 @@ public class BCBApiClient {
 
     private final RestTemplate restTemplate;
     private final String bcbBaseUrl;
-    private final String bcbApiKey;
 
     // BCB SGS (Sistema Gerenciador de Séries Temporais) codes
     public static final String SELIC_CODE = "432";
@@ -36,80 +35,34 @@ public class BCBApiClient {
     public static final String EXCHANGE_RATE_CODE = "1";
 
     public BCBApiClient(RestTemplate restTemplate,
-                       @Value("${brazilian-market.bcb.base-url:https://api.bcb.gov.br/dados/serie/bcdata.sgs}") String bcbBaseUrl,
-                       @Value("${brazilian-market.bcb.api-key:}") String bcbApiKey) {
+                       @Value("${brazilian-market.bcb.base-url:https://api.bcb.gov.br/dados/serie/bcdata.sgs}") String bcbBaseUrl) {
         this.restTemplate = restTemplate;
         this.bcbBaseUrl = bcbBaseUrl;
-        this.bcbApiKey = bcbApiKey;
     }
 
     public BigDecimal getCurrentSelicRate() {
-        try {
-            log.debug("Fetching current Selic rate from BCB");
-            List<Map<String, Object>> data = fetchIndicatorData(SELIC_CODE, 1);
-
-            if (!data.isEmpty()) {
-                Map<String, Object> latestData = data.get(0);
-                Object value = latestData.get("valor");
-                if (value != null) {
-                    return new BigDecimal(value.toString());
-                }
-            }
-
-            log.warn("No Selic rate data found");
-            return BigDecimal.ZERO;
-        } catch (Exception e) {
-            log.error("Error fetching Selic rate from BCB", e);
-            return BigDecimal.ZERO;
-        }
+        log.debug("Fetching current Selic rate from BCB");
+        return getCurrentValue(SELIC_CODE, "Selic rate");
     }
 
     public BigDecimal getCurrentCDIRate() {
-        try {
-            log.debug("Fetching current CDI rate from BCB");
-            List<Map<String, Object>> data = fetchIndicatorData(CDI_CODE, 1);
-
-            if (!data.isEmpty()) {
-                Map<String, Object> latestData = data.get(0);
-                Object value = latestData.get("valor");
-                if (value != null) {
-                    return new BigDecimal(value.toString());
-                }
-            }
-
-            log.warn("No CDI rate data found");
-            return BigDecimal.ZERO;
-        } catch (Exception e) {
-            log.error("Error fetching CDI rate from BCB", e);
-            return BigDecimal.ZERO;
-        }
+        log.debug("Fetching current CDI rate from BCB");
+        return getCurrentValue(CDI_CODE, "CDI rate");
     }
 
     public BigDecimal getCurrentIPCA() {
-        try {
-            log.debug("Fetching current IPCA from BCB");
-            List<Map<String, Object>> data = fetchIndicatorData(IPCA_CODE, 1);
-
-            if (!data.isEmpty()) {
-                Map<String, Object> latestData = data.get(0);
-                Object value = latestData.get("valor");
-                if (value != null) {
-                    return new BigDecimal(value.toString());
-                }
-            }
-
-            log.warn("No IPCA data found");
-            return BigDecimal.ZERO;
-        } catch (Exception e) {
-            log.error("Error fetching IPCA from BCB", e);
-            return BigDecimal.ZERO;
-        }
+        log.debug("Fetching current IPCA from BCB");
+        return getCurrentValue(IPCA_CODE, "IPCA");
     }
 
     public BigDecimal getCurrentExchangeRate() {
+        log.debug("Fetching current USD/BRL exchange rate from BCB");
+        return getCurrentValue(EXCHANGE_RATE_CODE, "exchange rate");
+    }
+
+    private BigDecimal getCurrentValue(String indicatorCode, String indicatorName) {
         try {
-            log.debug("Fetching current USD/BRL exchange rate from BCB");
-            List<Map<String, Object>> data = fetchIndicatorData(EXCHANGE_RATE_CODE, 1);
+            List<Map<String, Object>> data = fetchIndicatorData(indicatorCode, 1);
 
             if (!data.isEmpty()) {
                 Map<String, Object> latestData = data.get(0);
@@ -119,10 +72,10 @@ public class BCBApiClient {
                 }
             }
 
-            log.warn("No exchange rate data found");
+            log.warn("No {} data found", indicatorName);
             return BigDecimal.ZERO;
         } catch (Exception e) {
-            log.error("Error fetching exchange rate from BCB", e);
+            log.error("Error fetching {} from BCB", indicatorName, e);
             return BigDecimal.ZERO;
         }
     }
@@ -144,7 +97,7 @@ public class BCBApiClient {
         try {
             log.debug("Fetching data for indicator {} from {} to {}", indicatorCode, startDate, endDate);
 
-            String url = UriComponentsBuilder.fromHttpUrl(bcbBaseUrl)
+            String url = UriComponentsBuilder.fromUriString(bcbBaseUrl)
                     .pathSegment(indicatorCode, "dados")
                     .queryParam("formato", "json")
                     .queryParam("dataInicial", startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
@@ -152,13 +105,18 @@ public class BCBApiClient {
                     .build()
                     .toUriString();
 
+            // Raw type necessary due to RestTemplate API design
+            @SuppressWarnings("rawtypes")
             ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                return response.getBody();
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> body = (List<Map<String, Object>>) response.getBody();
+                return body;
             }
 
-            log.warn("No data found for indicator {} in the specified range", indicatorCode);
+            log.warn("No data found for indicator {} in the specified range (status: {}, body: {})",
+                     indicatorCode, response.getStatusCode(), response.getBody() != null ? "present" : "null");
             return new ArrayList<>();
         } catch (Exception e) {
             log.error("Error fetching data in range for indicator {}", indicatorCode, e);
@@ -187,19 +145,25 @@ public class BCBApiClient {
     }
 
     private List<Map<String, Object>> fetchIndicatorData(String indicatorCode, int lastValues) {
-        String url = UriComponentsBuilder.fromHttpUrl(bcbBaseUrl)
+        String url = UriComponentsBuilder.fromUriString(bcbBaseUrl)
                 .pathSegment(indicatorCode, "dados")
                 .queryParam("formato", "json")
                 .queryParam("ultimos", lastValues)
                 .build()
                 .toUriString();
 
+        // Raw type necessary due to RestTemplate API design
+        @SuppressWarnings("rawtypes")
         ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
 
         if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-            return response.getBody();
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> body = (List<Map<String, Object>>) response.getBody();
+            return body;
         }
 
+        log.warn("API response not OK or body is null for indicator {} (status: {}, body: {})",
+                 indicatorCode, response.getStatusCode(), response.getBody() != null ? "present" : "null");
         return new ArrayList<>();
     }
 

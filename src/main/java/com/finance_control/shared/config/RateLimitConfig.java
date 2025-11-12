@@ -28,14 +28,14 @@ public class RateLimitConfig {
      */
     @Bean
     public Bucket rateLimitBucket() {
-        AppProperties.RateLimit rateLimit = appProperties.getRateLimit();
+        AppProperties.RateLimit rateLimit = appProperties.rateLimit();
 
         log.info("Configuring rate limiting - Requests per minute: {}, Burst capacity: {}, Refresh period: {}s",
-                rateLimit.getRequestsPerMinute(), rateLimit.getBurstCapacity(), rateLimit.getRefreshPeriod());
+                rateLimit.requestsPerMinute(), rateLimit.burstCapacity(), rateLimit.refreshPeriod());
 
         Bandwidth limit = Bandwidth.builder()
-                .capacity(rateLimit.getBurstCapacity())
-                .refillIntervally(rateLimit.getRequestsPerMinute(), Duration.ofSeconds(rateLimit.getRefreshPeriod()))
+                .capacity(rateLimit.burstCapacity())
+                .refillIntervally(rateLimit.requestsPerMinute(), Duration.ofSeconds(rateLimit.refreshPeriod()))
                 .build();
 
         return Bucket.builder()

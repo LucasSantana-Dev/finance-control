@@ -1,5 +1,6 @@
 package com.finance_control.unit.brazilian_market.controller;
 
+import com.finance_control.brazilian_market.controller.BrazilianMarketController;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.model.MarketIndicator;
 import com.finance_control.brazilian_market.service.BrazilianMarketDataService;
@@ -21,6 +22,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -37,17 +42,14 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.boot.test.context.TestConfiguration;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
     "app.security.publicEndpoints=/api/brazilian-market/indicators/**,/api/brazilian-market/summary"
 })
-@DisplayName("BrazilianMarketController Unit Tests")
+@DisplayName("BrazilianMarketController Integration Tests")
 class BrazilianMarketControllerTest {
 
     @Autowired
@@ -289,8 +291,10 @@ class BrazilianMarketControllerTest {
                 new AppProperties.Redis("localhost", 6379, "", 0, 2000, new AppProperties.RedisPool(8, 8, 0, -1)),
                 new AppProperties.Cache(true, 900000, 300000, 1800000),
                 new AppProperties.RateLimit(true, 100, 200, 60),
+                new AppProperties.Supabase(false, "", "", new AppProperties.Realtime(false, List.of("transactions", "dashboard", "goals"))),
                 new AppProperties.Monitoring(true, new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30, true))
             );
         }
     }
+
 }

@@ -1,0 +1,282 @@
+spring:
+  application:
+    name: finance-control
+
+  # JPA Configuration
+  data:
+    jpa:
+      repositories:
+        enabled: true
+    open-in-view: false
+    web:
+      pageable:
+        default-page-size: ${app.pagination.default-page-size}
+        max-page-size: ${app.pagination.max-page-size}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://db:5432/finance_control?sslmode=disable
+    username: finance_user
+    password: finance_password
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 300000
+      leak-detection-threshold: 60000
+
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: ${app.cache.ttl.dashboard}
+      cache-null-values: false
+      enable-statistics: true
+
+  flyway:
+    enabled: ${app.flyway.enabled}
+    locations: ${app.flyway.locations}
+
+  # Bean definition override to resolve JPA auditing handler conflict
+  main:
+    allow-bean-definition-overriding: true
+
+# Application Configuration
+app:
+  database:
+    url: ${DB_URL}
+    port: ${DB_PORT}
+    name: ${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    pool:
+      initial-size: ${DB_POOL_INITIAL_SIZE:5}
+      max-size: ${DB_POOL_MAX_SIZE:20}
+      min-idle: ${DB_POOL_MIN_IDLE:5}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:300000}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:20000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:300000}
+      leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_THRESHOLD:60000}
+
+  jpa:
+    hibernate-ddl-auto: ${JPA_DDL_AUTO:validate}
+    dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: ${JPA_SHOW_SQL:false}
+    format-sql: ${JPA_FORMAT_SQL:false}
+    use-sql-comments: ${JPA_USE_SQL_COMMENTS:false}
+    defer-datasource-initialization: ${JPA_DEFER_DATASOURCE_INIT:false}
+    properties:
+      hibernate-format-sql: ${HIBERNATE_FORMAT_SQL:false}
+      hibernate-use-sql-comments: ${HIBERNATE_USE_SQL_COMMENTS:false}
+      hibernate-jdbc-batch-size: ${HIBERNATE_JDBC_BATCH_SIZE:20}
+      hibernate-order-inserts: ${HIBERNATE_ORDER_INSERTS:true}
+      hibernate-order-updates: ${HIBERNATE_ORDER_UPDATES:true}
+      hibernate-batch-versioned-data: ${HIBERNATE_BATCH_VERSIONED_DATA:true}
+      hibernate-jdbc-fetch-size: ${HIBERNATE_JDBC_FETCH_SIZE:20}
+      hibernate-default-batch-fetch-size: ${HIBERNATE_DEFAULT_BATCH_FETCH_SIZE:16}
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET:defaultSecretKeyForDevelopmentOnlyChangeInProduction}
+      expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+      refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+      issuer: ${JWT_ISSUER:finance-control}
+      audience: ${JWT_AUDIENCE:finance-control-users}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+      allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+      allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+      allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+      max-age: ${CORS_MAX_AGE:3600}
+
+  server:
+    port: ${SERVER_PORT:8080}
+    context-path: ${SERVER_CONTEXT_PATH:}
+    servlet-path: ${SERVER_SERVLET_PATH:/}
+    max-http-header-size: ${SERVER_MAX_HTTP_HEADER_SIZE:8192}
+    max-http-post-size: ${SERVER_MAX_HTTP_POST_SIZE:2097152}
+    connection-timeout: ${SERVER_CONNECTION_TIMEOUT:20000}
+    read-timeout: ${SERVER_READ_TIMEOUT:30000}
+    write-timeout: ${SERVER_WRITE_TIMEOUT:30000}
+
+  logging:
+    level: ${LOGGING_LEVEL:INFO}
+    pattern: ${LOGGING_PATTERN:%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n}
+    file-path: ${LOGGING_FILE_PATH:logs}
+    file-name: ${LOGGING_FILE_NAME:finance-control.log}
+    error-file-name: ${LOGGING_ERROR_FILE_NAME:finance-control-error.log}
+    max-file-size: ${LOGGING_MAX_FILE_SIZE:10485760}
+    max-history: ${LOGGING_MAX_HISTORY:30}
+    queue-size: ${LOGGING_QUEUE_SIZE:512}
+    async: ${LOGGING_ASYNC:true}
+
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-version: ${FLYWAY_BASELINE_VERSION:0}
+    validate-on-migrate: ${FLYWAY_VALIDATE_ON_MIGRATE:true}
+    out-of-order: ${FLYWAY_OUT_OF_ORDER:false}
+    clean-disabled: ${FLYWAY_CLEAN_DISABLED:true}
+    clean-on-validation-error: ${FLYWAY_CLEAN_ON_VALIDATION_ERROR:false}
+
+  actuator:
+    enabled: ${ACTUATOR_ENABLED:true}
+    endpoints: ${ACTUATOR_ENDPOINTS:health,info,metrics,env}
+    base-path: ${ACTUATOR_BASE_PATH:/actuator}
+    expose-health-details: ${ACTUATOR_EXPOSE_HEALTH_DETAILS:true}
+
+  open-api:
+    title: ${OPENAPI_TITLE:Finance Control API}
+    description: ${OPENAPI_DESCRIPTION:API for managing personal finances}
+    version: ${OPENAPI_VERSION:1.0.0}
+    contact-name: ${OPENAPI_CONTACT_NAME:Finance Control Team}
+    contact-email: ${OPENAPI_CONTACT_EMAIL:support@finance-control.com}
+    contact-url: ${OPENAPI_CONTACT_URL:https://github.com/LucasSantana/finance-control}
+    license-name: ${OPENAPI_LICENSE_NAME:MIT License}
+    license-url: ${OPENAPI_LICENSE_URL:https://opensource.org/licenses/MIT}
+    server-url: ${OPENAPI_SERVER_URL:http://localhost:8080}
+    server-description: ${OPENAPI_SERVER_DESCRIPTION:Development server}
+
+  pagination:
+    default-page-size: ${PAGINATION_DEFAULT_PAGE_SIZE:10}
+    max-page-size: ${PAGINATION_MAX_PAGE_SIZE:100}
+    default-sort: ${PAGINATION_DEFAULT_SORT:id}
+    default-direction: ${PAGINATION_DEFAULT_DIRECTION:ASC}
+
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    timeout: ${REDIS_TIMEOUT:2000}
+    pool:
+      max-active: ${REDIS_POOL_MAX_ACTIVE:8}
+      max-idle: ${REDIS_POOL_MAX_IDLE:8}
+      min-idle: ${REDIS_POOL_MIN_IDLE:0}
+      max-wait: ${REDIS_POOL_MAX_WAIT:-1}
+
+  cache:
+    enabled: ${CACHE_ENABLED:true}
+    ttl:
+      dashboard: ${CACHE_TTL_DASHBOARD:900000}
+      market-data: ${CACHE_TTL_MARKET_DATA:300000}
+      user-data: ${CACHE_TTL_USER_DATA:1800000}
+
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    requests-per-minute: ${RATE_LIMIT_REQUESTS_PER_MINUTE:100}
+    burst-capacity: ${RATE_LIMIT_BURST_CAPACITY:200}
+    refresh-period: ${RATE_LIMIT_REFRESH_PERIOD:60}
+
+  monitoring:
+    enabled: ${MONITORING_ENABLED:true}
+    sentry:
+      enabled: ${SENTRY_ENABLED:true}
+    health-check:
+      interval: ${HEALTH_CHECK_INTERVAL:30}
+
+  supabase:
+    enabled: ${SUPABASE_ENABLED:true}
+    url: ${SUPABASE_URL:}
+    anon-key: ${SUPABASE_ANON_KEY:}
+    realtime:
+      enabled: ${SUPABASE_REALTIME_ENABLED:true}
+
+  dashboard:
+    cache:
+      enabled: ${DASHBOARD_CACHE_ENABLED:true}
+      ttl: ${DASHBOARD_CACHE_TTL:900000}
+    default-period-months: ${DASHBOARD_DEFAULT_PERIOD_MONTHS:12}
+    refresh-interval: ${DASHBOARD_REFRESH_INTERVAL:900000}
+    max-categories: ${DASHBOARD_MAX_CATEGORIES:10}
+    chart-colors: ${DASHBOARD_CHART_COLORS:#FF6384,#36A2EB,#FFCE56,#4BC0C0,#9966FF,#FF9F40}
+
+  market-data:
+    alpha-vantage:
+      api-key: ${ALPHA_VANTAGE_API_KEY:demo}
+      base-url: ${ALPHA_VANTAGE_BASE_URL:https://www.alphavantage.co/query}
+    update-interval-minutes: ${MARKET_DATA_UPDATE_INTERVAL_MINUTES:15}
+    rate-limit-delay-ms: ${MARKET_DATA_RATE_LIMIT_DELAY_MS:100}
+
+# Brazilian Market Data Configuration
+brazilian-market:
+  bcb:
+    base-url: ${BCB_BASE_URL:https://api.bcb.gov.br/dados/serie/bcdata.sgs}
+  stocks:
+    base-url: ${BRAZILIAN_STOCKS_API_URL:https://api.brazilianstocks.com}
+  alpha-vantage:
+    api-key: ${ALPHA_VANTAGE_API_KEY:}
+  update-interval: ${MARKET_DATA_UPDATE_INTERVAL:3600000}
+  cache:
+    enabled: ${MARKET_DATA_CACHE_ENABLED:true}
+    ttl: ${MARKET_DATA_CACHE_TTL:300000}
+
+# Logging Configuration
+logging:
+  level:
+    root: ${app.logging.level}
+    com.finance_control: DEBUG
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+
+# Server Configuration
+server:
+  port: ${app.server.port}
+  servlet:
+    context-path: ${app.server.context-path}
+
+# Management (Actuator) Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${app.actuator.endpoints}
+      base-path: ${app.actuator.base-path}
+  endpoint:
+    health:
+      show-details: WHEN_AUTHORIZED
+      show-components: always
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+  metrics:
+    tags:
+      application: finance-control
+      environment: ${SPRING_PROFILES_ACTIVE:dev}
+
+# JWT Configuration (legacy)
+jwt:
+  secret: ${app.security.jwt.secret}
+  expiration: ${app.security.jwt.expiration-ms}
+
+# Sentry Configuration
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:${SPRING_PROFILES_ACTIVE:dev}}
+  release: ${SENTRY_RELEASE:1.0.0}
+  sample-rate: ${SENTRY_SAMPLE_RATE:0.1}
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.1}
+  profiles-sample-rate: ${SENTRY_PROFILES_SAMPLE_RATE:0.1}
+  send-default-pii: ${SENTRY_SEND_DEFAULT_PII:false}
+  attach-stacktrace: ${SENTRY_ATTACH_STACKTRACE:true}
+  enable-tracing: ${SENTRY_ENABLE_TRACING:true}
+  debug: ${SENTRY_DEBUG:false}
+  server-name: ${SENTRY_SERVER_NAME:finance-control}
+  tags: ${SENTRY_TAGS:environment:dev,service:finance-control}

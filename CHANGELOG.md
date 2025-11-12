@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Security Audit**: Comprehensive repository security scan completed - zero hardcoded secrets found
 - **Environment Configuration**: Complete `docker.env` file with all configurable environment variables
+- **Configuration Migration**: Converted `application.properties` to `application.yml` for better hierarchical configuration structure
 
 ### Fixed
 - **AppProperties Architecture**: Refactored to immutable Java records with constructor binding for better security and performance
+- **BCBApiClient**: Fixed deprecated UriComponentsBuilder.fromHttpUrl(), raw type warnings, code duplication, improved error logging, and removed unused bcbApiKey field
 - **Code Quality**: Resolved all SpotBugs (104 warnings), Checkstyle (45 warnings), and PMD (34 warnings) issues
 - **JWT Security**: Fixed WeakKeyException by upgrading test keys to minimum 256-bit strength
 - **Test Configuration**: Fixed @ConfigurationProperties binding issues with record-based configuration

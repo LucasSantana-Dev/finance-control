@@ -21,16 +21,16 @@ public class PaginationConfig {
     
     @Bean
     public PageableHandlerMethodArgumentResolverCustomizer paginationCustomizer() {
-        AppProperties.Pagination pagination = appProperties.getPagination();
-        
-        log.info("Configuring pagination - DefaultSize: {}, MaxSize: {}, DefaultSort: {}, DefaultDirection: {}", 
-                pagination.getDefaultPageSize(),
-                pagination.getMaxPageSize(),
-                pagination.getDefaultSort(),
-                pagination.getDefaultDirection());
-        
+        AppProperties.Pagination pagination = appProperties.pagination();
+
+        log.info("Configuring pagination - DefaultSize: {}, MaxSize: {}, DefaultSort: {}, DefaultDirection: {}",
+                pagination.defaultPageSize(),
+                pagination.maxPageSize(),
+                pagination.defaultSort(),
+                pagination.defaultDirection());
+
         return pageableResolver -> {
-            pageableResolver.setMaxPageSize(pagination.getMaxPageSize());
+            pageableResolver.setMaxPageSize(pagination.maxPageSize());
             pageableResolver.setPageParameterName("page");
             pageableResolver.setSizeParameterName("size");
         };

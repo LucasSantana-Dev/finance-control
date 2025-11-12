@@ -1,15 +1,16 @@
 package com.finance_control.shared.service;
 
 import com.finance_control.shared.config.AppProperties;
-import com.harium.supabase.SupabaseClient;
-import lombok.RequiredArgsConstructor;
+// Temporarily disabled until Supabase dependency is available
+// import com.harium.supabase.SupabaseClient;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+// import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -22,13 +23,20 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
-@ConditionalOnProperty(value = "app.supabase.realtime.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(value = "app.supabase.realtime.enabled", havingValue = "true", matchIfMissing = false) // Disabled by default
 public class SupabaseRealtimeService {
 
-    private final SupabaseClient supabaseClient;
-    private final AppProperties appProperties;
-    private final SimpMessagingTemplate messagingTemplate;
+    // Temporarily disabled until Supabase dependency is available
+    // @Autowired
+    // private SupabaseClient supabaseClient;
+    private Object supabaseClient; // Temporarily Object
+
+    @Autowired
+    private AppProperties appProperties;
+
+    // @Autowired
+    // private SimpMessagingTemplate messagingTemplate;
+    private Object messagingTemplate; // Temporarily Object
 
     // Active subscriptions: channel -> Set of user IDs
     private final Map<String, Set<Long>> activeSubscriptions = new ConcurrentHashMap<>();
@@ -161,8 +169,9 @@ public class SupabaseRealtimeService {
     public void broadcastToUser(String channelName, Long userId, Object message) {
         try {
             String destination = "/topic/" + channelName + "/user/" + userId;
-            messagingTemplate.convertAndSend(destination, message);
-            log.debug("Sent message to user {} on channel {}", userId, channelName);
+            // Temporarily disabled until messaging template is available
+            // messagingTemplate.convertAndSend(destination, message);
+            log.debug("Message to user {} on channel {} would be sent: {} - TEMPORARILY DISABLED", userId, channelName, message);
         } catch (Exception e) {
             log.error("Failed to send message to user {} on channel {}: {}", userId, channelName, e.getMessage(), e);
         }
@@ -242,7 +251,7 @@ public class SupabaseRealtimeService {
      * Sets up default realtime channels based on configuration.
      */
     private void setupDefaultChannels() {
-        String[] channels = appProperties.getSupabase().getRealtime().getChannels();
+        String[] channels = appProperties.supabase().realtime().channels().toArray(new String[0]);
         log.info("Setting up realtime channels: {}", String.join(", ", channels));
 
         // Note: Actual channel setup would depend on the Supabase Java client
@@ -259,7 +268,7 @@ public class SupabaseRealtimeService {
      * @return true if the channel is valid
      */
     private boolean isValidChannel(String channelName) {
-        String[] allowedChannels = appProperties.getSupabase().getRealtime().getChannels();
+        String[] allowedChannels = appProperties.supabase().realtime().channels().toArray(new String[0]);
         for (String allowedChannel : allowedChannels) {
             if (allowedChannel.equals(channelName)) {
                 return true;

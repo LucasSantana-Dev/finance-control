@@ -38,7 +38,7 @@ class BCBApiClientTest {
 
     @BeforeEach
     void setUp() {
-        bcbApiClient = new BCBApiClient(restTemplate, "https://api.bcb.gov.br/dados/serie/bcdata.sgs", "");
+        bcbApiClient = new BCBApiClient(restTemplate, "https://api.bcb.gov.br/dados/serie/bcdata.sgs");
 
         // Mock response data
         mockResponseData = List.of(
@@ -49,7 +49,7 @@ class BCBApiClientTest {
     @Test
     void getCurrentSelicRate_WithValidResponse_ShouldReturnSelicRate() {
         // Given
-        ResponseEntity<List> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         // When
@@ -63,7 +63,7 @@ class BCBApiClientTest {
     @Test
     void getCurrentSelicRate_WithEmptyResponse_ShouldReturnZero() {
         // Given
-        ResponseEntity<List> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         // When
@@ -80,7 +80,7 @@ class BCBApiClientTest {
         responseMap.put("data", "2024-01-15");
         responseMap.put("valor", null);
         List<Map<String, Object>> responseData = List.of(responseMap);
-        ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(responseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         // When
@@ -106,7 +106,7 @@ class BCBApiClientTest {
     @Test
     void getCurrentCDIRate_WithValidResponse_ShouldReturnCDIRate() {
         // Given
-        ResponseEntity<List> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         // When
@@ -120,7 +120,7 @@ class BCBApiClientTest {
     @Test
     void getCurrentIPCA_WithValidResponse_ShouldReturnIPCA() {
         // Given
-        ResponseEntity<List> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         // When
@@ -134,7 +134,7 @@ class BCBApiClientTest {
     @Test
     void getCurrentExchangeRate_WithValidResponse_ShouldReturnExchangeRate() {
         // Given
-        ResponseEntity<List> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         // When
@@ -153,7 +153,7 @@ class BCBApiClientTest {
             Map.of("data", "2024-01-14", "valor", "13.50"),
             Map.of("data", "2024-01-13", "valor", "13.25")
         );
-        ResponseEntity<List> response = new ResponseEntity<>(historicalData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(historicalData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         // When
@@ -174,7 +174,7 @@ class BCBApiClientTest {
             Map.of("data", "2024-01-15", "valor", "13.75"),
             Map.of("data", "2024-01-10", "valor", "13.50")
         );
-        ResponseEntity<List> response = new ResponseEntity<>(rangeData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(rangeData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         // When
@@ -203,7 +203,7 @@ class BCBApiClientTest {
     @Test
     void createMarketIndicator_ShouldCreateIndicatorWithCurrentValue() {
         // Given
-        ResponseEntity<List> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         // When
@@ -262,7 +262,7 @@ class BCBApiClientTest {
 
     @Test
     void getCurrentCDIRate_WithEmptyResponse_ShouldReturnZero() {
-        ResponseEntity<List> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         BigDecimal result = bcbApiClient.getCurrentCDIRate();
@@ -276,7 +276,7 @@ class BCBApiClientTest {
         responseMap.put("data", "2024-01-15");
         responseMap.put("valor", null);
         List<Map<String, Object>> responseData = List.of(responseMap);
-        ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(responseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         BigDecimal result = bcbApiClient.getCurrentCDIRate();
@@ -296,7 +296,7 @@ class BCBApiClientTest {
 
     @Test
     void getCurrentIPCA_WithEmptyResponse_ShouldReturnZero() {
-        ResponseEntity<List> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         BigDecimal result = bcbApiClient.getCurrentIPCA();
@@ -310,7 +310,7 @@ class BCBApiClientTest {
         responseMap.put("data", "2024-01-15");
         responseMap.put("valor", null);
         List<Map<String, Object>> responseData = List.of(responseMap);
-        ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(responseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         BigDecimal result = bcbApiClient.getCurrentIPCA();
@@ -330,7 +330,7 @@ class BCBApiClientTest {
 
     @Test
     void getCurrentExchangeRate_WithEmptyResponse_ShouldReturnZero() {
-        ResponseEntity<List> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         BigDecimal result = bcbApiClient.getCurrentExchangeRate();
@@ -344,7 +344,7 @@ class BCBApiClientTest {
         responseMap.put("data", "2024-01-15");
         responseMap.put("valor", null);
         List<Map<String, Object>> responseData = List.of(responseMap);
-        ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
+        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(responseData, HttpStatus.OK);
         when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
 
         BigDecimal result = bcbApiClient.getCurrentExchangeRate();

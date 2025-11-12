@@ -33,6 +33,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.postgresql:postgresql'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
@@ -46,6 +47,9 @@ dependencies {
     implementation 'io.sentry:sentry-spring-boot-starter:7.15.0'
     implementation 'io.sentry:sentry-logback:7.15.0'
     implementation 'org.apache.commons:commons-lang3:3.19.0'
+    implementation 'jakarta.annotation:jakarta.annotation-api:3.0.0'
+    // Supabase Java client - temporarily commented out until correct coordinates are found
+    // implementation 'com.harium:supabase-java:1.0.0'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

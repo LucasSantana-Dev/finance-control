@@ -21,23 +21,23 @@ public class LoggingConfig {
     
     @PostConstruct
     public void configureLogging() {
-        AppProperties.Logging logging = appProperties.getLogging();
-        
-        log.info("Configuring logging - Level: {}, File: {}, MaxSize: {}MB, History: {} days", 
-                logging.getLevel(),
-                logging.getFileName(),
-                logging.getMaxFileSize() / (1024 * 1024),
-                logging.getMaxHistory());
-        
+        AppProperties.Logging logging = appProperties.logging();
+
+        log.info("Configuring logging - Level: {}, File: {}, MaxSize: {}MB, History: {} days",
+                logging.level(),
+                logging.fileName(),
+                logging.maxFileSize() / (1024 * 1024),
+                logging.maxHistory());
+
         // Set system properties for logback configuration
-        System.setProperty("LOG_PATH", logging.getFilePath());
-        System.setProperty("LOG_FILE", logging.getFileName());
-        System.setProperty("LOG_FILE_ERROR", logging.getErrorFileName());
-        System.setProperty("LOG_PATTERN", logging.getPattern());
-        System.setProperty("LOG_MAX_FILE_SIZE", String.valueOf(logging.getMaxFileSize()));
-        System.setProperty("LOG_MAX_HISTORY", String.valueOf(logging.getMaxHistory()));
-        System.setProperty("LOG_QUEUE_SIZE", String.valueOf(logging.getQueueSize()));
-        System.setProperty("LOG_ASYNC", String.valueOf(logging.isAsync()));
+        System.setProperty("LOG_PATH", logging.filePath());
+        System.setProperty("LOG_FILE", logging.fileName());
+        System.setProperty("LOG_FILE_ERROR", logging.errorFileName());
+        System.setProperty("LOG_PATTERN", logging.pattern());
+        System.setProperty("LOG_MAX_FILE_SIZE", String.valueOf(logging.maxFileSize()));
+        System.setProperty("LOG_MAX_HISTORY", String.valueOf(logging.maxHistory()));
+        System.setProperty("LOG_QUEUE_SIZE", String.valueOf(logging.queueSize()));
+        System.setProperty("LOG_ASYNC", String.valueOf(logging.async()));
         
         log.info("Logging system properties configured successfully");
     }

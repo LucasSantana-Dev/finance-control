@@ -27,13 +27,14 @@ public record AppProperties(
     Redis redis,
     Cache cache,
     RateLimit rateLimit,
+    Supabase supabase,
     Monitoring monitoring
 ) {
 
     public AppProperties() {
         this(new Database(), new Security(), new Server(), new Logging(), new Jpa(),
              new Flyway(), new Actuator(), new OpenApi(), new Pagination(),
-             new Redis(), new Cache(), new RateLimit(), new Monitoring());
+             new Redis(), new Cache(), new RateLimit(), new Supabase(), new Monitoring());
     }
 
     public record Database(
@@ -298,6 +299,26 @@ public record AppProperties(
     ) {
         public RateLimit() {
             this(true, 100, 200, 60);
+        }
+    }
+
+    public record Supabase(
+        boolean enabled,
+        String url,
+        String anonKey,
+        Realtime realtime
+    ) {
+        public Supabase() {
+            this(false, "", "", new Realtime());
+        }
+    }
+
+    public record Realtime(
+        boolean enabled,
+        List<String> channels
+    ) {
+        public Realtime() {
+            this(false, List.of("transactions", "dashboard", "goals"));
         }
     }
 

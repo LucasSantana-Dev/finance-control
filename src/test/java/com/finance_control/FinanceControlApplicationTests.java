@@ -48,6 +48,7 @@ class FinanceControlApplicationTests {
 				new AppProperties.Redis("localhost", 6379, "", 0, 2000, new AppProperties.RedisPool(8, 8, 0, -1)),
 				new AppProperties.Cache(true, 3600L, 1800L, 900L),
 				new AppProperties.RateLimit(true, 100, 200, 60),
+				new AppProperties.Supabase(false, "", "", new AppProperties.Realtime(false, java.util.List.of("transactions", "dashboard", "goals"))),
 				new AppProperties.Monitoring(true, new AppProperties.Sentry(false, "test-dsn", "ERROR", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30000, true))
 			);
 		}

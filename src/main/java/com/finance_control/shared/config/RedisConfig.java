@@ -39,22 +39,22 @@ public class RedisConfig {
      */
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
-        AppProperties.Redis redis = appProperties.getRedis();
+        AppProperties.Redis redis = appProperties.redis();
 
         log.info("Configuring Redis connection - Host: {}, Port: {}, Database: {}",
-                redis.getHost(), redis.getPort(), redis.getDatabase());
+                redis.host(), redis.port(), redis.database());
 
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-        config.setHostName(redis.getHost());
-        config.setPort(redis.getPort());
-        config.setDatabase(redis.getDatabase());
+        config.setHostName(redis.host());
+        config.setPort(redis.port());
+        config.setDatabase(redis.database());
 
-        if (redis.getPassword() != null && !redis.getPassword().isEmpty()) {
-            config.setPassword(redis.getPassword());
+        if (redis.password() != null && !redis.password().isEmpty()) {
+            config.setPassword(redis.password());
         }
 
         LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
-        factory.setTimeout(redis.getTimeout());
+        factory.setTimeout(redis.timeout());
 
         return factory;
     }
@@ -84,14 +84,14 @@ public class RedisConfig {
      */
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        AppProperties.Cache cache = appProperties.getCache();
+        AppProperties.Cache cache = appProperties.cache();
 
         log.info("Configuring cache manager - Dashboard TTL: {}ms, Market Data TTL: {}ms, User Data TTL: {}ms",
-                cache.getTtlDashboard(), cache.getTtlMarketData(), cache.getTtlUserData());
+                cache.ttlDashboard(), cache.ttlMarketData(), cache.ttlUserData());
 
         // Default cache configuration
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMillis(cache.getTtlDashboard()))
+                .entryTtl(Duration.ofMillis(cache.ttlDashboard()))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
@@ -101,13 +101,13 @@ public class RedisConfig {
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
 
         // Dashboard cache - 15 minutes
-        cacheConfigurations.put("dashboard", defaultConfig.entryTtl(Duration.ofMillis(cache.getTtlDashboard())));
+        cacheConfigurations.put("dashboard", defaultConfig.entryTtl(Duration.ofMillis(cache.ttlDashboard())));
 
         // Market data cache - 5 minutes
-        cacheConfigurations.put("market-data", defaultConfig.entryTtl(Duration.ofMillis(cache.getTtlMarketData())));
+        cacheConfigurations.put("market-data", defaultConfig.entryTtl(Duration.ofMillis(cache.ttlMarketData())));
 
         // User data cache - 30 minutes
-        cacheConfigurations.put("user-data", defaultConfig.entryTtl(Duration.ofMillis(cache.getTtlUserData())));
+        cacheConfigurations.put("user-data", defaultConfig.entryTtl(Duration.ofMillis(cache.ttlUserData())));
 
         // Transaction cache - 10 minutes
         cacheConfigurations.put("transactions", defaultConfig.entryTtl(Duration.ofMinutes(10)));
