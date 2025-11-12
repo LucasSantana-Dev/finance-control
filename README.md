@@ -65,6 +65,14 @@ A comprehensive financial management system built with Spring Boot, designed to 
   - ✅ **NEW**: Performance monitoring with slow operation detection
   - ✅ **NEW**: Custom business metrics and system resource monitoring
 
+### ☁️ Supabase Integration
+- **Realtime Messaging**: Supabase Realtime for live updates and notifications
+  - ✅ **NEW**: WebSocket-based realtime subscriptions (transactions, dashboard, goals)
+  - ✅ **NEW**: Real-time dashboard updates and transaction notifications
+  - ✅ **NEW**: Goal progress realtime updates
+  - ✅ **NEW**: REST API for subscription management
+  - ✅ **NEW**: Spring WebSocket integration for client-side updates
+
 ## 🏗️ Architecture
 
 ### Technology Stack
@@ -73,6 +81,7 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Cache**: Redis 7 with Spring Cache abstraction
 - **Security**: Spring Security with JWT authentication
 - **Rate Limiting**: Bucket4j with Redis backend
+- **Realtime Messaging**: Supabase Realtime for live updates and notifications
 - **Monitoring**: Sentry for error tracking and performance monitoring
 - **Health Checks**: Custom health indicators for database, Redis, and configuration
 - **Metrics**: Application metrics with performance monitoring and alerting
@@ -676,3 +685,29 @@ export TB_TOKEN="<your-tinybird-token>"
 
 ### Security note
 Do not commit real tokens to `.cursor/mcp.json`. Use environment variables as shown above. Keep any local overrides in untracked files or your shell profile.
+
+#### Application Secrets
+The application follows security best practices for handling sensitive configuration:
+
+- **Environment Variables**: All secrets (database passwords, JWT keys, API tokens) are externalized via environment variables
+- **No Hardcoded Secrets**: Repository scanning confirmed zero hardcoded secrets in committed code
+- **Gitignore Protection**: Sensitive files like `docker.env` are properly excluded from version control
+- **Development Defaults**: Safe development defaults with clear production override requirements
+
+**Required Environment Variables for Production:**
+```bash
+# Database
+DB_URL=jdbc:postgresql://host:5432/dbname
+DB_USERNAME=your_db_user
+DB_PASSWORD=your_secure_db_password
+
+# JWT Security
+JWT_SECRET=your-super-secure-jwt-key-min-256-bits
+
+# External APIs (if used)
+ALPHA_VANTAGE_API_KEY=your_api_key
+BCB_API_KEY=your_api_key
+REDIS_PASSWORD=your_redis_password
+```
+
+See `docker.env` for complete list of configurable environment variables.

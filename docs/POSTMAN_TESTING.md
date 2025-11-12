@@ -280,14 +280,90 @@ For issues or questions:
 3. Verify environment configuration
 4. Test individual endpoints manually
 
+## Supabase Integration Testing
+
+### Supabase Realtime Endpoints
+
+1. **Get Realtime Service Status**
+   - Checks if Supabase Realtime service is connected
+   - Returns subscription counts and connection status
+
+2. **Subscribe to Channel**
+   - Subscribes a user to a realtime channel
+   - Tests channel subscription functionality
+
+3. **Unsubscribe from Channel**
+   - Removes user subscription from a realtime channel
+   - Tests channel unsubscription
+
+4. **Broadcast Message**
+   - Sends a message to all subscribers of a channel
+   - Tests broadcasting functionality
+
+5. **Notify Transaction Update**
+   - Sends transaction update notifications
+   - Tests realtime transaction updates
+
+6. **Notify Dashboard Update**
+   - Sends dashboard update notifications
+   - Tests realtime dashboard updates
+
+7. **Notify Goal Update**
+   - Sends financial goal update notifications
+   - Tests realtime goal progress updates
+
 ## Collection Statistics
 
-- **Total Requests**: 24
+- **Total Requests**: 32
 - **Authentication**: 3 requests
 - **Investments**: 10 requests
 - **Market Data**: 3 requests
 - **Transactions**: 3 requests
 - **Financial Goals**: 2 requests
 - **Dashboard**: 3 requests
+- **Supabase Realtime**: 8 requests
 
-This comprehensive test suite ensures all major functionality of the Finance Control API is properly tested and validated.
+## Supabase Testing Prerequisites
+
+### Environment Setup
+
+1. **Supabase Project**: Ensure you have a Supabase project configured
+2. **API Keys**: Configure `SUPABASE_URL` and `SUPABASE_ANON_KEY` in your `.env` file
+
+### Testing Workflow
+
+#### Test Realtime Operations
+
+1. **Check service status** using "Supabase Realtime - Get Status"
+   - Verify realtime service is connected
+   - Note initial subscription counts
+
+2. **Subscribe to channels** using "Supabase Realtime - Subscribe to Channel"
+   - Subscribe to "transactions", "dashboard", and "goals" channels
+   - Verify subscription confirmations
+
+3. **Broadcast messages** using "Supabase Realtime - Broadcast Message"
+   - Send test messages to different channels
+   - Test message broadcasting functionality
+
+4. **Send notifications** using transaction/dashboard/goal notify endpoints
+   - Test specific notification types
+   - Verify message delivery to subscribers
+
+5. **Unsubscribe from channels** using "Supabase Realtime - Unsubscribe from Channel"
+   - Remove subscriptions
+   - Verify cleanup
+
+### Expected Response Codes
+
+| Endpoint Category | Success Codes | Error Codes |
+|------------------|---------------|-------------|
+| Supabase Realtime | 200 | 400, 401, 403, 503 |
+
+### Supabase Testing Tips
+
+1. **Realtime Connection**: Check browser console for WebSocket connection status
+2. **Subscription Management**: Test with multiple users if possible
+3. **Message Broadcasting**: Test message delivery to all subscribers
+
+This comprehensive test suite ensures all major functionality of the Finance Control API, including the new Supabase Realtime features, is properly tested and validated.
