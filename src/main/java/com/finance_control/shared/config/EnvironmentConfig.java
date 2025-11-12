@@ -29,49 +29,49 @@ public class EnvironmentConfig {
 
         // Database Configuration
         log.info("Database URL: {}:{}/{}",
-                appProperties.getDatabase().getUrl(),
-                appProperties.getDatabase().getPort(),
-                appProperties.getDatabase().getName());
-        log.info("Database Username: {}", appProperties.getDatabase().getUsername());
+                appProperties.database().url(),
+                appProperties.database().port(),
+                appProperties.database().name());
+        log.info("Database Username: {}", appProperties.database().username());
         log.info("Database Pool - Max: {}, Min: {}, Timeout: {}ms",
-                appProperties.getDatabase().getPool().getMaxSize(),
-                appProperties.getDatabase().getPool().getMinIdle(),
-                appProperties.getDatabase().getPool().getConnectionTimeout());
+                appProperties.database().pool().maxSize(),
+                appProperties.database().pool().minIdle(),
+                appProperties.database().pool().connectionTimeout());
 
         // Server Configuration
-        log.info("Server Port: {}", appProperties.getServer().getPort());
-        log.info("Server Context Path: '{}'", appProperties.getServer().getContextPath());
+        log.info("Server Port: {}", appProperties.server().port());
+        log.info("Server Context Path: '{}'", appProperties.server().contextPath());
 
         // Security Configuration
         log.info("JWT Secret configured: {}",
-                appProperties.getSecurity().getJwt().getSecret() != null ? "YES" : "NO");
-        log.info("JWT Expiration: {}ms", appProperties.getSecurity().getJwt().getExpirationMs());
-        log.info("CORS Origins: {}", String.join(", ", appProperties.getSecurity().getCors().getAllowedOrigins()));
+                appProperties.security().jwt().secret() != null ? "YES" : "NO");
+        log.info("JWT Expiration: {}ms", appProperties.security().jwt().expirationMs());
+        log.info("CORS Origins: {}", String.join(", ", appProperties.security().cors().allowedOrigins()));
 
         // Logging Configuration
-        log.info("Logging Level: {}", appProperties.getLogging().getLevel());
-        log.info("Log File: {}/{}", appProperties.getLogging().getFilePath(), appProperties.getLogging().getFileName());
+        log.info("Logging Level: {}", appProperties.logging().level());
+        log.info("Log File: {}/{}", appProperties.logging().filePath(), appProperties.logging().fileName());
 
         // JPA Configuration
-        log.info("JPA DDL Auto: {}", appProperties.getJpa().getHibernateDdlAuto());
-        log.info("JPA Show SQL: {}", appProperties.getJpa().isShowSql());
+        log.info("JPA DDL Auto: {}", appProperties.jpa().hibernateDdlAuto());
+        log.info("JPA Show SQL: {}", appProperties.jpa().showSql());
 
         // Flyway Configuration
-        log.info("Flyway Enabled: {}", appProperties.getFlyway().isEnabled());
-        log.info("Flyway Locations: {}", String.join(", ", appProperties.getFlyway().getLocations()));
+        log.info("Flyway Enabled: {}", appProperties.flyway().enabled());
+        log.info("Flyway Locations: {}", String.join(", ", appProperties.flyway().locations()));
 
         // Actuator Configuration
-        log.info("Actuator Enabled: {}", appProperties.getActuator().isEnabled());
-        log.info("Actuator Endpoints: {}", String.join(", ", appProperties.getActuator().getEndpoints()));
+        log.info("Actuator Enabled: {}", appProperties.actuator().enabled());
+        log.info("Actuator Endpoints: {}", String.join(", ", appProperties.actuator().endpoints()));
 
         // OpenAPI Configuration
-        log.info("OpenAPI Title: {}", appProperties.getOpenApi().getTitle());
-        log.info("OpenAPI Version: {}", appProperties.getOpenApi().getVersion());
+        log.info("OpenAPI Title: {}", appProperties.openApi().title());
+        log.info("OpenAPI Version: {}", appProperties.openApi().version());
 
         // Pagination Configuration
         log.info("Pagination - Default: {}, Max: {}",
-                appProperties.getPagination().getDefaultPageSize(),
-                appProperties.getPagination().getMaxPageSize());
+                appProperties.pagination().defaultPageSize(),
+                appProperties.pagination().maxPageSize());
 
         // Environment Information
         log.info("Active Profiles: {}", String.join(", ", environment.getActiveProfiles()));
@@ -118,17 +118,17 @@ public class EnvironmentConfig {
         }
 
         public String getDatabaseUrl() {
-            return appProperties.getDatabase().getUrl() + ":" +
-                   appProperties.getDatabase().getPort() + "/" +
-                   appProperties.getDatabase().getName();
+            return appProperties.database().url() + ":" +
+                   appProperties.database().port() + "/" +
+                   appProperties.database().name();
         }
 
         public String getJwtSecret() {
-            return appProperties.getSecurity().getJwt().getSecret();
+            return appProperties.security().jwt().secret();
         }
 
         public int getServerPort() {
-            return appProperties.getServer().getPort();
+            return appProperties.server().port();
         }
     }
 }

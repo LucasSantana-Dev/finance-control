@@ -27,26 +27,26 @@ public class DatabaseConfig {
     @Primary
     public DataSource dataSource() {
         log.info("Configuring datasource with URL: {}",
-                appProperties.getDatabase().getUrl() + ":" +
-                appProperties.getDatabase().getPort() + "/" +
-                appProperties.getDatabase().getName());
+                appProperties.database().url() + ":" +
+                appProperties.database().port() + "/" +
+                appProperties.database().name());
 
         HikariConfig config = new HikariConfig();
 
         // Basic datasource configuration
         config.setJdbcUrl(buildJdbcUrl());
-        config.setUsername(appProperties.getDatabase().getUsername());
-        config.setPassword(appProperties.getDatabase().getPassword());
-        config.setDriverClassName(appProperties.getDatabase().getDriverClassName());
+        config.setUsername(appProperties.database().username());
+        config.setPassword(appProperties.database().password());
+        config.setDriverClassName(appProperties.database().driverClassName());
 
         // Connection pool configuration
-        AppProperties.Database.Pool pool = appProperties.getDatabase().getPool();
-        config.setMaximumPoolSize(pool.getMaxSize());
-        config.setMinimumIdle(pool.getMinIdle());
-        config.setConnectionTimeout(pool.getConnectionTimeout());
-        config.setIdleTimeout(pool.getIdleTimeout());
-        config.setMaxLifetime(pool.getMaxLifetime());
-        config.setLeakDetectionThreshold(pool.getLeakDetectionThreshold());
+        AppProperties.Pool pool = appProperties.database().pool();
+        config.setMaximumPoolSize(pool.maxSize());
+        config.setMinimumIdle(pool.minIdle());
+        config.setConnectionTimeout(pool.connectionTimeout());
+        config.setIdleTimeout(pool.idleTimeout());
+        config.setMaxLifetime(pool.maxLifetime());
+        config.setLeakDetectionThreshold(pool.leakDetectionThreshold());
 
         // Connection pool name for monitoring
         config.setPoolName("FinanceControlHikariPool");
@@ -56,16 +56,16 @@ public class DatabaseConfig {
         config.setValidationTimeout(5000);
 
         log.info("Database pool configured - Max: {}, Min: {}, Timeout: {}ms",
-                pool.getMaxSize(), pool.getMinIdle(), pool.getConnectionTimeout());
+                pool.maxSize(), pool.minIdle(), pool.connectionTimeout());
 
         return new HikariDataSource(config);
     }
 
 
     private String buildJdbcUrl() {
-        String url = appProperties.getDatabase().getUrl();
-        String port = appProperties.getDatabase().getPort();
-        String dbName = appProperties.getDatabase().getName();
+        String url = appProperties.database().url();
+        String port = appProperties.database().port();
+        String dbName = appProperties.database().name();
 
         // For H2 databases, use the URL as-is (it already contains all necessary parameters)
         if (url.startsWith("jdbc:h2:")) {

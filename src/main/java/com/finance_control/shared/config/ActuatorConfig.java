@@ -19,18 +19,18 @@ import org.springframework.security.config.Customizer;
 @RequiredArgsConstructor
 @EnableConfigurationProperties(AppProperties.class)
 public class ActuatorConfig {
-    
+
     private final AppProperties appProperties;
-    
+
     @Bean
     public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
-        AppProperties.Actuator actuator = appProperties.getActuator();
-        
-        log.info("Configuring actuator security - Endpoints: {}, BasePath: {}, ShowDetails: {}", 
-                String.join(",", actuator.getEndpoints()),
-                actuator.getBasePath(),
-                actuator.isShowDetails());
-        
+        AppProperties.Actuator actuator = appProperties.actuator();
+
+        log.info("Configuring actuator security - Endpoints: {}, BasePath: {}, ShowDetails: {}",
+                String.join(",", actuator.endpoints()),
+                actuator.basePath(),
+                actuator.showDetails());
+
         http
             .securityMatcher(EndpointRequest.toAnyEndpoint())
             .authorizeHttpRequests(auth -> auth
@@ -38,7 +38,7 @@ public class ActuatorConfig {
                 .requestMatchers(EndpointRequest.toAnyEndpoint()).authenticated()
             )
             .httpBasic(Customizer.withDefaults());
-        
+
         return http.build();
     }
-} 
+}

@@ -3,6 +3,7 @@ package com.finance_control.shared.config;
 import com.finance_control.shared.security.CustomUserDetailsService;
 import com.finance_control.shared.security.JwtAuthenticationFilter;
 import com.finance_control.shared.security.RateLimitFilter;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +39,7 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@SuppressFBWarnings("EI_EXPOSE_REP2") // False positive: Spring dependency injection is safe
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -48,7 +50,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         log.info("Configuring security with public endpoints: {}",
-                Arrays.toString(appProperties.getSecurity().getPublicEndpoints()));
+                appProperties.security().publicEndpoints());
 
         http
             .csrf(AbstractHttpConfigurer::disable)
@@ -62,9 +64,9 @@ public class SecurityConfig {
                 .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).preload(true))
             )
             .authorizeHttpRequests(auth -> {
-                String[] publicEndpoints = appProperties.getSecurity().getPublicEndpoints();
-                if (publicEndpoints != null && publicEndpoints.length > 0) {
-                    auth.requestMatchers(publicEndpoints).permitAll();
+                List<String> publicEndpoints = appProperties.security().publicEndpoints();
+                if (publicEndpoints != null && !publicEndpoints.isEmpty()) {
+                    auth.requestMatchers(publicEndpoints.toArray(new String[0])).permitAll();
                 } else {
                     // Fallback to hardcoded endpoints
                     auth.requestMatchers("/api/auth/**").permitAll()
@@ -91,16 +93,16 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        AppProperties.Security.Cors cors = appProperties.getSecurity().getCors();
+        AppProperties.Cors cors = appProperties.security().cors();
 
         // Parse allowed origins from comma-separated string
-        List<String> allowedOrigins = Arrays.asList(cors.getAllowedOrigins());
+        List<String> allowedOrigins = cors.allowedOrigins();
         configuration.setAllowedOriginPatterns(allowedOrigins);
 
-        configuration.setAllowedMethods(Arrays.asList(cors.getAllowedMethods()));
+        configuration.setAllowedMethods(cors.allowedMethods());
 
         // Avoid permissive wildcard headers; use a conservative default set when '*' is present
-        List<String> requestedHeaders = Arrays.asList(cors.getAllowedHeaders());
+        List<String> requestedHeaders = cors.allowedHeaders();
         if (requestedHeaders.size() == 1 && "*".equals(requestedHeaders.get(0))) {
             requestedHeaders = Arrays.asList(
                 "Authorization",
@@ -111,11 +113,11 @@ public class SecurityConfig {
             );
         }
         configuration.setAllowedHeaders(requestedHeaders);
-        configuration.setAllowCredentials(cors.isAllowCredentials());
-        configuration.setMaxAge(cors.getMaxAge());
+        configuration.setAllowCredentials(cors.allowCredentials());
+        configuration.setMaxAge(cors.maxAge());
 
         log.info("CORS configured - Origins: {}, Methods: {}, Credentials: {}",
-                allowedOrigins, Arrays.toString(cors.getAllowedMethods()), cors.isAllowCredentials());
+                allowedOrigins, cors.allowedMethods(), cors.allowCredentials());
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
