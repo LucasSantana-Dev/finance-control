@@ -64,6 +64,7 @@ dependencies {
 
     // SpotBugs security rules via FindSecBugs
     spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.13.0'
+    compileOnly 'com.github.spotbugs:spotbugs-annotations:4.8.3'
 }
 
 checkstyle {
