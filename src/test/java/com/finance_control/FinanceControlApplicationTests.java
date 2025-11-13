@@ -24,6 +24,7 @@ class FinanceControlApplicationTests {
 		@Primary
 		public AppProperties appProperties() {
 			return new AppProperties(
+				false,
 				new AppProperties.Database(
 					"jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
 					"sa",

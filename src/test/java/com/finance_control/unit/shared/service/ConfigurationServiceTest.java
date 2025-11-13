@@ -44,6 +44,7 @@ class ConfigurationServiceTest {
     void setUp() {
         // Create AppProperties instance using constructor binding
         appPropertiesInstance = new AppProperties(
+            false,
             new AppProperties.Database(
                 "jdbc:postgresql://localhost:5432/testdb",
                 "testuser",
@@ -417,6 +418,7 @@ class ConfigurationServiceTest {
 
         // Create new AppProperties with the null secret security
         AppProperties nullSecretAppProperties = new AppProperties(
+            appPropertiesInstance.supabaseDatabaseEnabled(),
             appPropertiesInstance.database(),
             nullSecretSecurity,
             appPropertiesInstance.server(),

@@ -23,19 +23,19 @@ spring:
         format_sql: false
         physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
 
-  # Database Configuration
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: ${app.database.driver-class-name}
-    hikari:
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
-      minimum-idle: ${DB_POOL_MIN_IDLE:5}
-      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:20000}
-      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:300000}
-      max-lifetime: ${DB_POOL_MAX_LIFETIME:300000}
-      leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_THRESHOLD:60000}
+      # Database Configuration - Using local PostgreSQL for testing
+      datasource:
+        url: ${DB_URL:jdbc:h2:mem:testdb}
+        username: ${DB_USERNAME:sa}
+        password: ${DB_PASSWORD:}
+        driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:${app.database.driver-class-name:org.h2.Driver}}
+        hikari:
+          maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+          minimum-idle: ${DB_POOL_MIN_IDLE:5}
+          connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:20000}
+          idle-timeout: ${DB_POOL_IDLE_TIMEOUT:300000}
+          max-lifetime: ${DB_POOL_MAX_LIFETIME:300000}
+          leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_THRESHOLD:60000}
 
   # Cache Configuration
   cache:
@@ -199,8 +199,8 @@ app:
       enabled: ${SUPABASE_DATABASE_ENABLED:false}
       host: ${SUPABASE_DATABASE_HOST:}
       port: ${SUPABASE_DATABASE_PORT:5432}
-      database: ${SUPABASE_DATABASE_NAME:postgres}
-      username: ${SUPABASE_DATABASE_USERNAME:postgres}
+      database: ${SUPABASE_DATABASE_NAME:}
+      username: ${SUPABASE_DATABASE_USERNAME:}
       password: ${SUPABASE_DATABASE_PASSWORD:}
       ssl-enabled: ${SUPABASE_DATABASE_SSL_ENABLED:true}
       ssl-mode: ${SUPABASE_DATABASE_SSL_MODE:require}

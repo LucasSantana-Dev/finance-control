@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -21,11 +22,13 @@ import reactor.core.publisher.Mono;
 /**
  * REST controller for Supabase Authentication operations.
  * Provides endpoints for user signup, login, password reset, and token management.
+ * Only loads when app.supabase.enabled=true
  */
 @RestController
 @RequestMapping("/auth/supabase")
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(value = "app.supabase.enabled", havingValue = "true", matchIfMissing = false)
 @Tag(name = "Supabase Authentication", description = "Endpoints for Supabase authentication operations")
 public class SupabaseAuthController {
 

@@ -4,21 +4,29 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
+import java.util.Properties;
 
 /**
  * Database configuration that uses environment variables through AppProperties.
  * Configures the datasource and connection pool with settings from environment variables.
+ * Only loads when Supabase database is disabled (app.supabase.database.enabled != true).
  */
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
 @EnableConfigurationProperties(AppProperties.class)
+@ConditionalOnProperty(value = "app.supabase.database.enabled", havingValue = "false", matchIfMissing = true)
 public class DatabaseConfig {
 
     private final AppProperties appProperties;
@@ -26,15 +34,13 @@ public class DatabaseConfig {
     @Bean
     @Primary
     public DataSource dataSource() {
-        log.info("Configuring datasource with URL: {}",
-                appProperties.database().url() + ":" +
-                appProperties.database().port() + "/" +
-                appProperties.database().name());
+        String jdbcUrl = buildJdbcUrl();
+        log.info("Configuring datasource with URL: {}", jdbcUrl);
 
         HikariConfig config = new HikariConfig();
 
-        // Basic datasource configuration
-        config.setJdbcUrl(buildJdbcUrl());
+                // Basic datasource configuration
+                config.setJdbcUrl(jdbcUrl);
         config.setUsername(appProperties.database().username());
         config.setPassword(appProperties.database().password());
         config.setDriverClassName(appProperties.database().driverClassName());
@@ -90,6 +96,47 @@ public class DatabaseConfig {
 
         // Otherwise, build the URL from components
         return url + ":" + port + "/" + dbName + "?sslmode=disable";
+    }
+
+    /**
+     * Creates the EntityManagerFactory bean for JPA when using default database.
+     */
+    @Bean(name = "entityManagerFactory")
+    @Primary
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource dataSource) {
+        LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
+        factory.setDataSource(dataSource);
+        factory.setPackagesToScan("com.finance_control");
+        factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+
+        Properties jpaProperties = new Properties();
+        String databasePlatform = appProperties.database().url().startsWith("jdbc:h2:")
+            ? "org.hibernate.dialect.H2Dialect"
+            : "org.hibernate.dialect.PostgreSQLDialect";
+        // Use Spring property for ddl-auto, default to create-drop for H2, validate for PostgreSQL
+        String ddlAuto = appProperties.database().url().startsWith("jdbc:h2:")
+            ? "create-drop"
+            : "validate";
+        jpaProperties.setProperty("hibernate.hbm2ddl.auto", ddlAuto);
+        jpaProperties.setProperty("hibernate.dialect", databasePlatform);
+        jpaProperties.setProperty("hibernate.show_sql", "false");
+        jpaProperties.setProperty("hibernate.format_sql", "false");
+
+        factory.setJpaProperties(jpaProperties);
+
+        log.info("Created EntityManagerFactory for database: {}", databasePlatform);
+        return factory;
+    }
+
+    /**
+     * Creates the TransactionManager bean for JPA when using default database.
+     */
+    @Bean(name = "transactionManager")
+    @Primary
+    public PlatformTransactionManager transactionManager(LocalContainerEntityManagerFactoryBean entityManagerFactory) {
+        JpaTransactionManager transactionManager = new JpaTransactionManager();
+        transactionManager.setEntityManagerFactory(entityManagerFactory.getObject());
+        return transactionManager;
     }
 
 }

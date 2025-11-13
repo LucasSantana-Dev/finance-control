@@ -129,6 +129,7 @@ curl -X POST "https://api.yourdomain.com/transactions/import" \
   - ✅ **REAL-TIME**: Database change detection and notifications
   - ✅ **CONFIGURED**: Environment variables set for Supabase connection
   - 📋 **STATUS**: See `POSTGRESQL_INTEGRATION_STATUS.md` for details
+  - 🧪 **TESTING**: See `TESTING_GUIDE.md` for comprehensive API testing
 
 ## 🏗️ Architecture
 

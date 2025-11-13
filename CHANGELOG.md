@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Configuration Migration**: Converted `application.properties` to `application.yml` for better hierarchical configuration structure
 - **Supabase Integration**: Complete and working PostgreSQL database integration with Supabase
 - **Database Switching**: Successfully implemented dynamic switching to Supabase PostgreSQL
+- **API Testing**: Comprehensive testing guide created for all endpoints (TESTING_GUIDE.md)
+- **Security Fix**: Removed hardcoded database credentials from application.yml
 - **Build Configuration**: Gradle configuration cache compatibility fixes for buildDir references
 - **Financial Predictions**: AI-powered forecasting endpoint (`POST /dashboard/predictions`) backed by the new `FinancialPredictionService`, `OpenAIPredictionClient`, and configurable `app.ai.openai.*` properties
 - **AI Configuration**: `.env` and README updates documenting `APP_AI_OPENAI_*` variables and OpenAI setup workflow

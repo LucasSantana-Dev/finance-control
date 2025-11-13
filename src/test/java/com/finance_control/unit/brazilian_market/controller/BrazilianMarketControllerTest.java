@@ -262,6 +262,7 @@ class BrazilianMarketControllerTest {
         @Primary
         public AppProperties appProperties() {
             return new AppProperties(
+                false,
                 new AppProperties.Database("jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE", "sa", "", "org.h2.Driver", "", "testdb", new AppProperties.Pool(2, 5, 1, 300000, 10000, 300000, 60000)),
                 new AppProperties.Security(
                     new AppProperties.Jwt("testSecretKeyWithMinimumLengthOf256BitsForJWT", 86400000L, 604800000L, "test-issuer", "test-audience"),

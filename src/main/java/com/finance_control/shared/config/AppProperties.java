@@ -1,6 +1,8 @@
 package com.finance_control.shared.config;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -11,10 +13,13 @@ import java.util.List;
  * This centralizes all application configuration and provides type-safe access to environment variables.
  * Uses immutable records with constructor binding for thread safety and no EI_EXPOSE_REP warnings.
  */
+@Slf4j
 @Component
 @ConfigurationProperties(prefix = "app")
 @SuppressFBWarnings("EI_EXPOSE_REP2") // False positive: Spring Boot handles List injection safely in @ConfigurationProperties
 public record AppProperties(
+    @org.springframework.beans.factory.annotation.Value("${app.supabase.database.enabled:false}")
+    boolean supabaseDatabaseEnabled,
     Database database,
     Security security,
     Server server,
@@ -33,7 +38,7 @@ public record AppProperties(
 ) {
 
     public AppProperties() {
-        this(new Database(), new Security(), new Server(), new Logging(), new Jpa(),
+        this(false, new Database(), new Security(), new Server(), new Logging(), new Jpa(),
              new Flyway(), new Actuator(), new OpenApi(), new Pagination(),
              new Redis(), new Cache(), new RateLimit(), new Ai(), new Supabase(), new Monitoring());
     }

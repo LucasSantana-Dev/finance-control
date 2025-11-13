@@ -67,6 +67,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'io.projectreactor:reactor-test'
+    runtimeOnly 'com.h2database:h2'
     testImplementation 'com.h2database:h2'
     testImplementation 'org.seleniumhq.selenium:selenium-java'
     testImplementation 'org.seleniumhq.selenium:selenium-chrome-driver'

@@ -39,7 +39,7 @@ public class SupabaseRealtimeService {
     @Autowired
     private AppProperties appProperties;
 
-    @Autowired
+    @Autowired(required = false)
     private SimpMessagingTemplate messagingTemplate;
 
     // WebSocket client and session
