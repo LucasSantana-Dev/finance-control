@@ -32,10 +32,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mockStatic;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class FinancialGoalServiceTest {
 
     @Mock
@@ -156,10 +158,11 @@ class FinancialGoalServiceTest {
             activeGoal.setIsActive(true);
             activeGoal.setUser(testUser);
 
-            Page<FinancialGoal> goalPage = new PageImpl<>(List.of(activeGoal));
+            List<FinancialGoal> goals = List.of(activeGoal);
+            Page<FinancialGoal> goalPage = new PageImpl<>(goals);
 
-            when(goalRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                    .thenReturn(goalPage);
+            // Mock the service's findAll method call with specification
+            doReturn(goalPage).when(goalRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
             List<FinancialGoalDTO> result = goalService.findActiveGoals();
 
@@ -180,10 +183,11 @@ class FinancialGoalServiceTest {
             completedGoal.setIsActive(false);
             completedGoal.setUser(testUser);
 
-            Page<FinancialGoal> goalPage = new PageImpl<>(List.of(completedGoal));
+            List<FinancialGoal> goals = List.of(completedGoal);
+            Page<FinancialGoal> goalPage = new PageImpl<>(goals);
 
-            when(goalRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                    .thenReturn(goalPage);
+            // Mock the service's findAll method call with specification
+            doReturn(goalPage).when(goalRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
             List<FinancialGoalDTO> result = goalService.findCompletedGoals();
 
@@ -420,6 +424,249 @@ class FinancialGoalServiceTest {
             assertThat(result).isNotNull();
             assertThat(goal.getCurrentAmount()).isEqualByComparingTo(BigDecimal.valueOf(100.00));
             assertThat(goal.getIsActive()).isTrue();
+        }
+    }
+
+    @Test
+    void shouldCreateGoal_WithNullCurrentAmount_SetsToZero() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            FinancialGoalDTO dto = new FinancialGoalDTO();
+            dto.setName("Test Goal");
+            dto.setGoalType(GoalType.SAVINGS);
+            dto.setTargetAmount(BigDecimal.valueOf(1000.00));
+            dto.setCurrentAmount(null); // Test null current amount
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(goalRepository.save(any(FinancialGoal.class))).thenAnswer(invocation -> {
+                FinancialGoal saved = invocation.getArgument(0);
+                saved.setId(1L);
+                return saved;
+            });
+
+            FinancialGoalDTO result = goalService.create(dto);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getCurrentAmount()).isEqualTo(BigDecimal.ZERO);
+        }
+    }
+
+    @Test
+    void shouldCreateGoal_WithAccountId_WhenAccountExists() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            FinancialGoalDTO dto = new FinancialGoalDTO();
+            dto.setName("Test Goal");
+            dto.setGoalType(GoalType.SAVINGS);
+            dto.setTargetAmount(BigDecimal.valueOf(1000.00));
+            dto.setAccountId(1L);
+
+            var account = new com.finance_control.transactions.model.source.TransactionSourceEntity();
+            account.setId(1L);
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(transactionSourceRepository.findById(1L)).thenReturn(Optional.of(account));
+            when(goalRepository.save(any(FinancialGoal.class))).thenAnswer(invocation -> {
+                FinancialGoal saved = invocation.getArgument(0);
+                saved.setId(1L);
+                return saved;
+            });
+
+            FinancialGoalDTO result = goalService.create(dto);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getAccountId()).isEqualTo(1L);
+        }
+    }
+
+    @Test
+    void shouldUpdateGoal_WithAllFields() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            // Create entity in repository
+            FinancialGoal existingGoal = new FinancialGoal();
+            existingGoal.setId(1L);
+            existingGoal.setName("Old Name");
+            existingGoal.setDescription("Old Description");
+            existingGoal.setGoalType(GoalType.INVESTMENT);
+            existingGoal.setTargetAmount(BigDecimal.valueOf(500.00));
+            existingGoal.setCurrentAmount(BigDecimal.valueOf(200.00));
+            existingGoal.setDeadline(LocalDate.now().plusMonths(3));
+            existingGoal.setAutoCalculate(false);
+            existingGoal.setUser(testUser);
+            existingGoal.setIsActive(true);
+
+            FinancialGoalDTO updateDTO = new FinancialGoalDTO();
+            updateDTO.setId(1L);
+            updateDTO.setName("New Name");
+            updateDTO.setDescription("New Description");
+            updateDTO.setGoalType(GoalType.SAVINGS);
+            updateDTO.setTargetAmount(BigDecimal.valueOf(2000.00));
+            updateDTO.setCurrentAmount(BigDecimal.valueOf(800.00));
+            updateDTO.setDeadline(LocalDateTime.now().plusMonths(12));
+            updateDTO.setAutoCalculate(true);
+            updateDTO.setAccountId(1L);
+
+            var account = new com.finance_control.transactions.model.source.TransactionSourceEntity();
+            account.setId(1L);
+
+            when(goalRepository.findById(1L)).thenReturn(Optional.of(existingGoal));
+            when(transactionSourceRepository.findById(1L)).thenReturn(Optional.of(account));
+            when(goalRepository.save(any(FinancialGoal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            FinancialGoalDTO result = goalService.update(1L, updateDTO);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getName()).isEqualTo("New Name");
+            assertThat(result.getDescription()).isEqualTo("New Description");
+            assertThat(result.getGoalType()).isEqualTo(GoalType.SAVINGS);
+            assertThat(result.getTargetAmount()).isEqualTo(BigDecimal.valueOf(2000.00));
+            assertThat(result.getCurrentAmount()).isEqualTo(BigDecimal.valueOf(800.00));
+            assertThat(result.getAutoCalculate()).isTrue();
+            assertThat(result.getAccountId()).isEqualTo(1L);
+        }
+    }
+
+    @Test
+    void shouldUpdateGoal_WithNullFields() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            // Create entity in repository
+            FinancialGoal existingGoal = new FinancialGoal();
+            existingGoal.setId(1L);
+            existingGoal.setName("Original Name");
+            existingGoal.setDescription("Original Description");
+            existingGoal.setGoalType(GoalType.SAVINGS);
+            existingGoal.setTargetAmount(BigDecimal.valueOf(1000.00));
+            existingGoal.setCurrentAmount(BigDecimal.ZERO);
+            existingGoal.setAutoCalculate(false);
+            existingGoal.setUser(testUser);
+            existingGoal.setIsActive(true);
+
+            FinancialGoalDTO updateDTO = new FinancialGoalDTO();
+            updateDTO.setId(1L);
+            updateDTO.setName(null);
+            updateDTO.setDescription(null);
+            updateDTO.setGoalType(null);
+            updateDTO.setTargetAmount(null);
+            updateDTO.setCurrentAmount(null);
+            updateDTO.setDeadline(null);
+            updateDTO.setAutoCalculate(null);
+            updateDTO.setAccountId(null);
+
+            when(goalRepository.findById(1L)).thenReturn(Optional.of(existingGoal));
+            when(goalRepository.save(any(FinancialGoal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            FinancialGoalDTO result = goalService.update(1L, updateDTO);
+
+            assertThat(result).isNotNull();
+            // When null values are passed in update DTO, existing values should be preserved
+            assertThat(result.getName()).isEqualTo("Original Name");
+            assertThat(result.getDescription()).isEqualTo("Original Description");
+            assertThat(result.getGoalType()).isEqualTo(GoalType.SAVINGS);
+            assertThat(result.getTargetAmount()).isEqualTo(BigDecimal.valueOf(1000.00));
+            assertThat(result.getCurrentAmount()).isEqualTo(BigDecimal.ZERO);
+            assertThat(result.getDeadline()).isNull();
+            assertThat(result.getAutoCalculate()).isFalse();
+            assertThat(result.getAccountId()).isNull();
+        }
+    }
+
+    @Test
+    void shouldFindGoalById_WithAccount() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            var account = new com.finance_control.transactions.model.source.TransactionSourceEntity();
+            account.setId(2L);
+            testGoal.setAccount(account);
+
+            when(goalRepository.findById(1L)).thenReturn(Optional.of(testGoal));
+
+            Optional<FinancialGoalDTO> result = goalService.findById(1L);
+
+            assertThat(result).isPresent();
+            assertThat(result.get().getAccountId()).isEqualTo(2L);
+        }
+    }
+
+    @Test
+    void shouldFindGoalById_WithoutAccount() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            testGoal.setAccount(null);
+
+            when(goalRepository.findById(1L)).thenReturn(Optional.of(testGoal));
+
+            Optional<FinancialGoalDTO> result = goalService.findById(1L);
+
+            assertThat(result).isPresent();
+            assertThat(result.get().getAccountId()).isNull();
+        }
+    }
+
+    @Test
+    void shouldFindAllGoals_WithFilters() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            List<FinancialGoal> goals = List.of(testGoal);
+            Page<FinancialGoal> goalPage = new PageImpl<>(goals);
+
+            Map<String, Object> filters = new HashMap<>();
+            filters.put("isActive", true);
+            filters.put("goalType", "SAVINGS");
+            filters.put("name", "Test Goal");
+
+            // Mock the service's findAll method call with specification
+            doReturn(goalPage).when(goalRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+
+            Page<FinancialGoalDTO> result = goalService.findAll("search", filters, null, null, Pageable.ofSize(10));
+
+            assertThat(result.getContent()).hasSize(1);
+        }
+    }
+
+    @Test
+    void shouldFindAllGoals_WithEmptyNameFilter() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            List<FinancialGoal> goals = List.of(testGoal);
+            Page<FinancialGoal> goalPage = new PageImpl<>(goals);
+
+            Map<String, Object> filters = new HashMap<>();
+            filters.put("name", ""); // Empty name
+
+            doReturn(goalPage).when(goalRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+
+            Page<FinancialGoalDTO> result = goalService.findAll(null, filters, null, null, Pageable.ofSize(10));
+
+            assertThat(result.getContent()).hasSize(1);
+        }
+    }
+
+    @Test
+    void shouldFindAllGoals_WithBlankNameFilter() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            List<FinancialGoal> goals = List.of(testGoal);
+            Page<FinancialGoal> goalPage = new PageImpl<>(goals);
+
+            Map<String, Object> filters = new HashMap<>();
+            filters.put("name", "   "); // Blank name
+
+            doReturn(goalPage).when(goalRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+
+            Page<FinancialGoalDTO> result = goalService.findAll(null, filters, null, null, Pageable.ofSize(10));
+
+            assertThat(result.getContent()).hasSize(1);
         }
     }
 }

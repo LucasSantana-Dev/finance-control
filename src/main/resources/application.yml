@@ -25,17 +25,17 @@ spring:
 
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://db:5432/finance_control?sslmode=disable
-    username: finance_user
-    password: finance_password
-    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: ${app.database.driver-class-name}
     hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
-      connection-timeout: 20000
-      idle-timeout: 300000
-      max-lifetime: 300000
-      leak-detection-threshold: 60000
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:20000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:300000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:300000}
+      leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_THRESHOLD:60000}
 
   # Cache Configuration
   cache:
@@ -193,6 +193,22 @@ app:
     enabled: ${SUPABASE_ENABLED:true}
     url: ${SUPABASE_URL:}
     anon-key: ${SUPABASE_ANON_KEY:}
+    jwt-signer: ${SUPABASE_JWT_SIGNER:}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    database:
+      enabled: ${SUPABASE_DATABASE_ENABLED:false}
+      host: ${SUPABASE_DATABASE_HOST:}
+      port: ${SUPABASE_DATABASE_PORT:5432}
+      database: ${SUPABASE_DATABASE_NAME:postgres}
+      username: ${SUPABASE_DATABASE_USERNAME:postgres}
+      password: ${SUPABASE_DATABASE_PASSWORD:}
+      ssl-enabled: ${SUPABASE_DATABASE_SSL_ENABLED:true}
+      ssl-mode: ${SUPABASE_DATABASE_SSL_MODE:require}
+    storage:
+      enabled: ${SUPABASE_STORAGE_ENABLED:true}
+      avatars-bucket: ${SUPABASE_STORAGE_AVATARS_BUCKET:avatars}
+      documents-bucket: ${SUPABASE_STORAGE_DOCUMENTS_BUCKET:documents}
+      transactions-bucket: ${SUPABASE_STORAGE_TRANSACTIONS_BUCKET:transactions}
     realtime:
       enabled: ${SUPABASE_REALTIME_ENABLED:true}
 

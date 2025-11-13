@@ -17,6 +17,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -36,6 +37,8 @@ class JwtUtilsTest {
     private SecretKey testKey;
     private Long testUserId;
     private Date testNow;
+    private String testSupabaseSecret;
+    private String testSupabaseUserId;
 
     @BeforeEach
     void setUp() {
@@ -43,6 +46,8 @@ class JwtUtilsTest {
         testKey = Keys.hmacShaKeyFor(testSecret.getBytes(StandardCharsets.UTF_8));
         testUserId = 1L;
         testNow = new Date();
+        testSupabaseSecret = "testSupabaseSecretKeyMustBeAtLeast32CharactersLongForHS256Algorithm";
+        testSupabaseUserId = UUID.randomUUID().toString();
 
         AppProperties.Jwt jwtRecord = new AppProperties.Jwt(
             testSecret, 86400000L, 604800000L, "finance-control", "finance-control-users"
@@ -53,7 +58,15 @@ class JwtUtilsTest {
             List.of()
         );
 
+        AppProperties.Supabase supabaseRecord = new AppProperties.Supabase(
+            true, "https://test.supabase.co", "test-anon-key", testSupabaseSecret, "test-service-role-key",
+            new AppProperties.SupabaseDatabase(),
+            new AppProperties.Storage(true, "avatars", "documents", "transactions"),
+            new AppProperties.Realtime(true, List.of("transactions", "dashboard", "goals"))
+        );
+
         when(appProperties.security()).thenReturn(securityRecord);
+        when(appProperties.supabase()).thenReturn(supabaseRecord);
     }
 
     @Test
@@ -306,11 +319,203 @@ class JwtUtilsTest {
         assertThat(claims1.getIssuedAt().getTime()).isLessThan(claims2.getIssuedAt().getTime());
     }
 
+    // Supabase JWT Tests
+
+    @Test
+    void validateSupabaseToken_WithValidSupabaseToken_ShouldReturnTrue() {
+        String supabaseToken = generateSupabaseToken(testSupabaseUserId, "authenticated");
+
+        boolean isValid = jwtUtils.validateSupabaseToken(supabaseToken);
+
+        assertThat(isValid).isTrue();
+    }
+
+    @Test
+    void validateSupabaseToken_WithInvalidSignature_ShouldReturnFalse() {
+        String validToken = generateSupabaseToken(testSupabaseUserId, "authenticated");
+
+        String invalidToken = validToken.substring(0, validToken.length() - 5) + "xxxxx";
+
+        boolean isValid = jwtUtils.validateSupabaseToken(invalidToken);
+
+        assertThat(isValid).isFalse();
+    }
+
+    @Test
+    void validateSupabaseToken_WithExpiredToken_ShouldReturnFalse() {
+        Date pastDate = new Date(System.currentTimeMillis() - 3600000); // 1 hour ago
+        String expiredToken = generateSupabaseToken(testSupabaseUserId, "authenticated", pastDate);
+
+        boolean isValid = jwtUtils.validateSupabaseToken(expiredToken);
+
+        assertThat(isValid).isFalse();
+    }
+
+    @Test
+    void validateSupabaseToken_WithInvalidRole_ShouldReturnFalse() {
+        String tokenWithInvalidRole = generateSupabaseToken(testSupabaseUserId, "invalid_role");
+
+        boolean isValid = jwtUtils.validateSupabaseToken(tokenWithInvalidRole);
+
+        assertThat(isValid).isFalse();
+    }
+
+    @Test
+    void validateSupabaseToken_WithInvalidUUID_ShouldReturnFalse() {
+        String tokenWithInvalidUUID = generateSupabaseToken("not-a-uuid", "authenticated");
+
+        boolean isValid = jwtUtils.validateSupabaseToken(tokenWithInvalidUUID);
+
+        assertThat(isValid).isFalse();
+    }
+
+    @Test
+    void validateSupabaseToken_WithNullToken_ShouldReturnFalse() {
+        boolean isValid = jwtUtils.validateSupabaseToken(null);
+
+        assertThat(isValid).isFalse();
+    }
+
+    @Test
+    void validateSupabaseToken_WithEmptyToken_ShouldReturnFalse() {
+        boolean isValid = jwtUtils.validateSupabaseToken("");
+
+        assertThat(isValid).isFalse();
+    }
+
+    @Test
+    void getSupabaseUserIdFromToken_WithValidToken_ShouldReturnUUID() {
+        String token = generateSupabaseToken(testSupabaseUserId, "authenticated");
+
+        String userId = jwtUtils.getSupabaseUserIdFromToken(token);
+
+        assertThat(userId).isEqualTo(testSupabaseUserId);
+    }
+
+    @Test
+    void getSupabaseUserIdFromToken_WithInvalidToken_ShouldReturnNull() {
+        String invalidToken = "invalid.supabase.token";
+
+        String userId = jwtUtils.getSupabaseUserIdFromToken(invalidToken);
+
+        assertThat(userId).isNull();
+    }
+
+    @Test
+    void getSupabaseRoleFromToken_WithValidToken_ShouldReturnRole() {
+        String token = generateSupabaseToken(testSupabaseUserId, "authenticated");
+
+        String role = jwtUtils.getSupabaseRoleFromToken(token);
+
+        assertThat(role).isEqualTo("authenticated");
+    }
+
+    @Test
+    void getSupabaseRoleFromToken_WithInvalidToken_ShouldReturnNull() {
+        String invalidToken = "invalid.supabase.token";
+
+        String role = jwtUtils.getSupabaseRoleFromToken(invalidToken);
+
+        assertThat(role).isNull();
+    }
+
+    @Test
+    void isSupabaseToken_WithValidSupabaseToken_ShouldReturnTrue() {
+        String supabaseToken = generateSupabaseToken(testSupabaseUserId, "authenticated");
+
+        boolean isSupabaseToken = jwtUtils.isSupabaseToken(supabaseToken);
+
+        assertThat(isSupabaseToken).isTrue();
+    }
+
+    @Test
+    void isSupabaseToken_WithAppToken_ShouldReturnFalse() {
+        String appToken = jwtUtils.generateToken(testUserId);
+
+        boolean isSupabaseToken = jwtUtils.isSupabaseToken(appToken);
+
+        assertThat(isSupabaseToken).isFalse();
+    }
+
+    @Test
+    void validateTokenUniversal_WithAppToken_ShouldReturnTrue() {
+        String appToken = jwtUtils.generateToken(testUserId);
+
+        boolean isValid = jwtUtils.validateTokenUniversal(appToken);
+
+        assertThat(isValid).isTrue();
+    }
+
+    @Test
+    void validateTokenUniversal_WithSupabaseToken_ShouldReturnTrue() {
+        String supabaseToken = generateSupabaseToken(testSupabaseUserId, "authenticated");
+
+        boolean isValid = jwtUtils.validateTokenUniversal(supabaseToken);
+
+        assertThat(isValid).isTrue();
+    }
+
+    @Test
+    void validateTokenUniversal_WithInvalidToken_ShouldReturnFalse() {
+        String invalidToken = "invalid.token";
+
+        boolean isValid = jwtUtils.validateTokenUniversal(invalidToken);
+
+        assertThat(isValid).isFalse();
+    }
+
+    @Test
+    void getUserIdFromTokenUniversal_WithAppToken_ShouldReturnLong() {
+        String appToken = jwtUtils.generateToken(testUserId);
+
+        Object userId = jwtUtils.getUserIdFromTokenUniversal(appToken);
+
+        assertThat(userId).isInstanceOf(Long.class);
+        assertThat(userId).isEqualTo(testUserId);
+    }
+
+    @Test
+    void getUserIdFromTokenUniversal_WithSupabaseToken_ShouldReturnString() {
+        String supabaseToken = generateSupabaseToken(testSupabaseUserId, "authenticated");
+
+        Object userId = jwtUtils.getUserIdFromTokenUniversal(supabaseToken);
+
+        assertThat(userId).isInstanceOf(String.class);
+        assertThat(userId).isEqualTo(testSupabaseUserId);
+    }
+
+    @Test
+    void getUserIdFromTokenUniversal_WithInvalidToken_ShouldReturnNull() {
+        String invalidToken = "invalid.token";
+
+        Object userId = jwtUtils.getUserIdFromTokenUniversal(invalidToken);
+
+        assertThat(userId).isNull();
+    }
+
     private Claims parseToken(String token) {
         return Jwts.parser()
                 .verifyWith(testKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    private String generateSupabaseToken(String userId, String role) {
+        return generateSupabaseToken(userId, role, new Date(System.currentTimeMillis() + 3600000)); // 1 hour from now
+    }
+
+    private String generateSupabaseToken(String userId, String role, Date expiration) {
+        SecretKey supabaseKey = Keys.hmacShaKeyFor(testSupabaseSecret.getBytes(StandardCharsets.UTF_8));
+
+        return Jwts.builder()
+                .subject(userId)
+                .issuer("https://test.supabase.co")
+                .audience().add("authenticated").and()
+                .claim("role", role)
+                .issuedAt(new Date())
+                .expiration(expiration)
+                .signWith(supabaseKey)
+                .compact();
     }
 }

@@ -20,6 +20,12 @@ The project uses GitHub Actions for automated CI/CD with comprehensive quality a
   - `ci-summary`: Aggregates results
 - **Duration**: ~3-8 minutes (optimized with caching and parallelization)
 - **Artifacts**: Quality reports, test results, coverage reports
+- **Coverage Verification**: Automatic JaCoCo verification with thresholds:
+  - Lines: 75% minimum
+  - Branches: 60% minimum
+  - Methods: 60% minimum
+  - Excludes: config, DTOs, models, exceptions, enums, utils, validation, mappers, repositories
+- **PR Reports**: Coverage reports published to pull requests using `dorny/test-reporter`
 - **Optimizations**:
   - Advanced Gradle dependency caching
   - Build cache enabled for faster rebuilds
@@ -216,7 +222,10 @@ Workflows use concurrency groups to:
 ./gradlew qualityCheck
 
 # Run tests with coverage
-./gradlew test jacocoTestReport
+./gradlew test jacocoTestReport jacocoTestCoverageVerification
+
+# View coverage report in browser
+open build/reports/jacoco/test/html/index.html
 
 # Run SonarQube Cloud analysis (requires SONAR_TOKEN environment variable)
 export SONAR_TOKEN=your-token-here
@@ -250,7 +259,7 @@ export SONAR_TOKEN=your-token-here
 - **Checkstyle**: No violations (coding standards)
 - **PMD**: No violations (code quality rules)
 - **SpotBugs**: No high/critical violations (bug detection)
-- **Test Coverage**: Minimum 80% required
+- **Test Coverage**: Minimum thresholds (75% lines, 60% branches, 60% methods)
 - **SonarQube**: Quality gate must pass
 
 ### Security Requirements

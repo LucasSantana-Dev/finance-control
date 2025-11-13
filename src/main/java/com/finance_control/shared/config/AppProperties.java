@@ -27,6 +27,7 @@ public record AppProperties(
     Redis redis,
     Cache cache,
     RateLimit rateLimit,
+    Ai ai,
     Supabase supabase,
     Monitoring monitoring
 ) {
@@ -34,7 +35,7 @@ public record AppProperties(
     public AppProperties() {
         this(new Database(), new Security(), new Server(), new Logging(), new Jpa(),
              new Flyway(), new Actuator(), new OpenApi(), new Pagination(),
-             new Redis(), new Cache(), new RateLimit(), new Supabase(), new Monitoring());
+             new Redis(), new Cache(), new RateLimit(), new Ai(), new Supabase(), new Monitoring());
     }
 
     public record Database(
@@ -302,14 +303,77 @@ public record AppProperties(
         }
     }
 
+    public record Ai(
+        boolean enabled,
+        OpenAI openai
+    ) {
+        public Ai() {
+            this(false, new OpenAI());
+        }
+    }
+
+    public record OpenAI(
+        boolean enabled,
+        String apiKey,
+        String model,
+        Integer maxTokens,
+        Double temperature,
+        String baseUrl
+    ) {
+        public OpenAI() {
+            this(false, "", "gpt-4o-mini", 800, 0.2, "https://api.openai.com/v1");
+        }
+    }
+
     public record Supabase(
         boolean enabled,
         String url,
         String anonKey,
+        String jwtSigner,
+        String serviceRoleKey,
+        SupabaseDatabase database,
+        Storage storage,
         Realtime realtime
     ) {
         public Supabase() {
-            this(false, "", "", new Realtime());
+            this(false, "", "", "", "", new SupabaseDatabase(), new Storage(), new Realtime());
+        }
+    }
+
+    public record SupabaseDatabase(
+        boolean enabled,
+        String host,
+        int port,
+        String database,
+        String username,
+        String password,
+        boolean sslEnabled,
+        String sslMode
+    ) {
+        public SupabaseDatabase() {
+            this(false, "", 5432, "", "", "", true, "require");
+        }
+
+        public String getJdbcUrl() {
+            StringBuilder url = new StringBuilder("jdbc:postgresql://");
+            url.append(host).append(":").append(port).append("/").append(database);
+
+            if (sslEnabled) {
+                url.append("?sslmode=").append(sslMode);
+            }
+
+            return url.toString();
+        }
+    }
+
+    public record Storage(
+        boolean enabled,
+        String avatarsBucket,
+        String documentsBucket,
+        String transactionsBucket
+    ) {
+        public Storage() {
+            this(true, "avatars", "documents", "transactions");
         }
     }
 

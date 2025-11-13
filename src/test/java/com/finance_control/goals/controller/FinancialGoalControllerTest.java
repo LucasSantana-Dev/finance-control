@@ -107,7 +107,7 @@ class FinancialGoalControllerTest {
     @Test
     void getFinancialGoals_WithValidParameters_ShouldReturnOk() throws Exception {
         // Mock the service to return our sample data
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -133,7 +133,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void getFinancialGoals_WithSearchParameter_ShouldReturnFilteredResults() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -149,7 +149,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void getFinancialGoals_WithAmountRange_ShouldReturnFilteredResults() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -166,7 +166,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void getFinancialGoals_WithDeadlineRange_ShouldReturnFilteredResults() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -183,7 +183,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void getFinancialGoals_WithDefaultParameters_ShouldReturnOk() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -338,7 +338,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAllFiltered_WithValidParameters_ShouldReturnOk() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals/filtered")
@@ -361,7 +361,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAllFiltered_WithStatusCompleted_ShouldReturnOk() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals/filtered")
@@ -373,7 +373,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAll_WithInvalidMinTargetAmount_ShouldHandleGracefully() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -385,7 +385,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAll_WithInvalidMaxTargetAmount_ShouldHandleGracefully() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -397,7 +397,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAll_WithInvalidDeadlineStart_ShouldHandleGracefully() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -409,7 +409,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAll_WithInvalidDeadlineEnd_ShouldHandleGracefully() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -421,7 +421,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAll_WithEmptyStatus_ShouldNotAddFilter() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -433,7 +433,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAll_WithWhitespaceStatus_ShouldNotAddFilter() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals")
@@ -524,7 +524,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAllFiltered_WithAllFiltersCombined_ShouldReturnOk() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals/filtered")
@@ -548,7 +548,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAllFiltered_WithPartialFilters_ShouldReturnOk() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals/filtered")
@@ -563,7 +563,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAllFiltered_WithOnlyAmountFilters_ShouldReturnOk() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals/filtered")
@@ -577,7 +577,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAllFiltered_WithOnlyDeadlineFilters_ShouldReturnOk() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals/filtered")
@@ -591,7 +591,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAllFiltered_WithEmptyStringFilters_ShouldNotAddFilters() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals/filtered")
@@ -605,7 +605,7 @@ class FinancialGoalControllerTest {
 
     @Test
     void findAllFiltered_WithNullSortBy_ShouldUseDefaultSort() throws Exception {
-        when(financialGoalService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(financialGoalService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/api/financial-goals/filtered")

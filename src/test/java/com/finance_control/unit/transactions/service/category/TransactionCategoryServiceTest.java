@@ -23,9 +23,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class TransactionCategoryServiceTest {
 
     @Mock
@@ -270,8 +272,7 @@ class TransactionCategoryServiceTest {
         Page<TransactionCategory> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
         Map<String, Object> filters = Map.of("isActive", true);
 
-        when(transactionCategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionCategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionCategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         Page<TransactionCategoryDTO> result = transactionCategoryService.findAll(null, filters, null, null, PageRequest.of(0, 10));
@@ -279,7 +280,7 @@ class TransactionCategoryServiceTest {
         // Then
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionCategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionCategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionCategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -352,8 +353,7 @@ class TransactionCategoryServiceTest {
         Page<TransactionCategory> page = new PageImpl<>(categories, PageRequest.of(0, 10), 1);
         Map<String, Object> filters = Map.of("name", "test");
 
-        when(transactionCategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionCategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionCategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         Page<TransactionCategoryDTO> result = transactionCategoryService.findAll("test", filters, null, null, PageRequest.of(0, 10));
@@ -361,7 +361,7 @@ class TransactionCategoryServiceTest {
         // Then
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionCategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionCategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionCategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test

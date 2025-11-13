@@ -1,15 +1,12 @@
 package com.finance_control.unit.brazilian_market.controller;
 
-import com.finance_control.brazilian_market.controller.BrazilianMarketController;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.model.MarketIndicator;
 import com.finance_control.brazilian_market.service.BrazilianMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.shared.config.AppProperties;
-import com.finance_control.shared.security.CustomUserDetails;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +21,6 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 import java.math.BigDecimal;
@@ -33,12 +29,9 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -64,11 +57,7 @@ class BrazilianMarketControllerTest {
     @MockitoBean
     private UserRepository userRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
     private User testUser;
-    private CustomUserDetails testUserDetails;
     private Investment testInvestment;
     private MarketIndicator selicIndicator;
     private MarketIndicator cdiIndicator;
@@ -81,8 +70,6 @@ class BrazilianMarketControllerTest {
         testUser.setEmail("test@example.com");
         testUser.setPassword("password");
         testUser.setIsActive(true);
-
-        testUserDetails = new CustomUserDetails(testUser);
 
         testInvestment = new Investment();
         testInvestment.setId(1L);
@@ -291,7 +278,8 @@ class BrazilianMarketControllerTest {
                 new AppProperties.Redis("localhost", 6379, "", 0, 2000, new AppProperties.RedisPool(8, 8, 0, -1)),
                 new AppProperties.Cache(true, 900000, 300000, 1800000),
                 new AppProperties.RateLimit(true, 100, 200, 60),
-                new AppProperties.Supabase(false, "", "", new AppProperties.Realtime(false, List.of("transactions", "dashboard", "goals"))),
+                new AppProperties.Ai(),
+                new AppProperties.Supabase(false, "", "", "", "", new AppProperties.SupabaseDatabase(), new AppProperties.Storage(), new AppProperties.Realtime(false, List.of("transactions", "dashboard", "goals"))),
                 new AppProperties.Monitoring(true, new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30, true))
             );
         }

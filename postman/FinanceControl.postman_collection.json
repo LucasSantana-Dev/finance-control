@@ -1,0 +1,429 @@
+{
+  "info": {
+    "_postman_id": "7ffbe0f7-4f47-43cf-a310-2c26f301cb21",
+    "name": "Finance Control API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection covering the Finance Control REST API, including Supabase-backed flows and AI financial predictions."
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "Core authentication endpoints backed by Supabase PostgreSQL tables.",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"P@ssw0rd!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticates a user using the Supabase-backed `users` table and returns a JWT managed by the application."
+          },
+          "response": []
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"P@ssw0rd!\",\n  \"fullName\": \"Finance Tester\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Creates a new user record. Flyway migrations make sure the `users` table exists in Supabase."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "validate"
+              ]
+            },
+            "description": "Checks whether the provided JWT is still valid against the Supabase-backed credential store."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Supabase Authentication (Reactive)",
+      "description": "Reactive Supabase Auth endpoints proxying the Supabase REST API.",
+      "item": [
+        {
+          "name": "Supabase Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"P@ssw0rd!\",\n  \"metadata\": {\n    \"full_name\": \"Finance Tester\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/supabase/signup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "supabase",
+                "signup"
+              ]
+            },
+            "description": "Creates a new Supabase Auth user and persists the row in Supabase-managed auth tables."
+          },
+          "response": []
+        },
+        {
+          "name": "Supabase Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"P@ssw0rd!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/supabase/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "supabase",
+                "login"
+              ]
+            },
+            "description": "Delegates authentication to Supabase Auth and returns Supabase-issued access/refresh tokens."
+          },
+          "response": []
+        },
+        {
+          "name": "Supabase Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{supabaseRefreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/supabase/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "supabase",
+                "refresh"
+              ]
+            },
+            "description": "Uses Supabase refresh token flow to obtain a new access token."
+          },
+          "response": []
+        },
+        {
+          "name": "Supabase Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{supabaseToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/supabase/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "supabase",
+                "me"
+              ]
+            },
+            "description": "Fetches the current Supabase identity payload. The table `auth.users` is managed by Supabase automatically."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Generate Financial Predictions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forecastMonths\": 3,\n  \"historyMonths\": 12,\n  \"goals\": [\n    {\n      \"name\": \"Emergency Fund\",\n      \"targetAmount\": 5000,\n      \"deadline\": \"2025-12-31\"\n    }\n  ],\n  \"additionalContext\": \"Focus on recurring subscriptions and marketplace sales.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/predictions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "predictions"
+              ]
+            },
+            "description": "Calls the AI-powered prediction service. Historical data is read from Supabase tables `transactions`, `transaction_categories`, and related aggregates."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Import Statement (CSV/OFX)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/absolute/path/to/statement.csv"
+                },
+                {
+                  "key": "request",
+                  "type": "text",
+                  "value": "{\n  \"userId\": 1,\n  \"duplicateStrategy\": \"SKIP\",\n  \"format\": \"CSV\",\n  \"dryRun\": true,\n  \"csv\": {\n    \"dateColumn\": \"date\",\n    \"descriptionColumn\": \"description\",\n    \"amountColumn\": \"amount\",\n    \"delimiter\": \";\",\n    \"decimalSeparator\": \",\",\n    \"dateFormat\": \"dd/MM/yyyy\",\n    \"hasHeader\": true\n  }\n}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "import"
+              ]
+            },
+            "description": "Uploads a bank statement and persists rows into Supabase PostgreSQL tables `transactions`, `transaction_categories`, `transaction_responsibilities`, etc."
+          },
+          "response": []
+        },
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Returns paginated transactions fetched from Supabase PostgreSQL."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Supabase Storage",
+      "item": [
+        {
+          "name": "Upload Avatar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/absolute/path/to/avatar.png"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/storage/avatar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "storage",
+                "avatar"
+              ]
+            },
+            "description": "Uploads an avatar to the Supabase storage bucket configured in `.env`."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Public URL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/storage/url/{{bucketName}}/{{fileName}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "storage",
+                "url",
+                "{{bucketName}}",
+                "{{fileName}}"
+              ]
+            },
+            "description": "Generates a signed public URL for files stored in Supabase Storage."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "supabaseToken",
+      "value": ""
+    },
+    {
+      "key": "supabaseRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "bucketName",
+      "value": "avatars"
+    },
+    {
+      "key": "fileName",
+      "value": "profile.png"
+    }
+  ]
+}

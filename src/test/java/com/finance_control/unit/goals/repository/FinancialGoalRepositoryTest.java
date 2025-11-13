@@ -4,7 +4,6 @@ import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.goals.repository.FinancialGoalRepository;
 import com.finance_control.shared.enums.GoalType;
 import com.finance_control.users.model.User;
-import com.finance_control.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,9 +38,6 @@ class FinancialGoalRepositoryTest {
 
     @Autowired
     private FinancialGoalRepository goalRepository;
-
-    @Autowired
-    private UserRepository userRepository;
 
     private User testUser;
     private FinancialGoal testGoal;

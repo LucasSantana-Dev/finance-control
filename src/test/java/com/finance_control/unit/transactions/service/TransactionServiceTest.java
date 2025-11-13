@@ -20,6 +20,8 @@ import com.finance_control.transactions.repository.responsibles.TransactionRespo
 import com.finance_control.transactions.repository.source.TransactionSourceRepository;
 import com.finance_control.transactions.repository.subcategory.TransactionSubcategoryRepository;
 import com.finance_control.transactions.service.TransactionService;
+import com.finance_control.dashboard.service.DashboardService;
+import com.finance_control.shared.service.SupabaseRealtimeService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -50,11 +52,14 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class TransactionServiceTest {
 
     @Mock
@@ -77,6 +82,12 @@ class TransactionServiceTest {
 
     @Mock
     private MetricsService metricsService;
+
+    @Mock
+    private SupabaseRealtimeService realtimeService;
+
+    @Mock
+    private DashboardService dashboardService;
 
     @InjectMocks
     private TransactionService transactionService;
@@ -927,7 +938,7 @@ class TransactionServiceTest {
         Map<String, Object> filters = new HashMap<>();
         filters.put("type", TransactionType.INCOME);
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         // When
         Page<TransactionDTO> result = transactionService.findAll("test", filters, "description", "asc", PageRequest.of(0, 10));
@@ -936,7 +947,7 @@ class TransactionServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
 
-        verify(transactionRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -1168,7 +1179,7 @@ class TransactionServiceTest {
         filters.put("userId", 1L);
         Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
@@ -1181,7 +1192,7 @@ class TransactionServiceTest {
         filters.put("categoryId", 1L);
         Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
@@ -1194,7 +1205,7 @@ class TransactionServiceTest {
         filters.put("subcategoryId", 1L);
         Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
@@ -1207,7 +1218,7 @@ class TransactionServiceTest {
         filters.put("sourceEntityId", 1L);
         Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
@@ -1220,7 +1231,7 @@ class TransactionServiceTest {
         filters.put("description", "test");
         Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
@@ -1233,7 +1244,7 @@ class TransactionServiceTest {
         filters.put("unknownKey", "value");
         Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
@@ -1429,12 +1440,12 @@ class TransactionServiceTest {
         filters.setDescription("test");
         Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         Page<TransactionDTO> result = transactionService.findAll(null, null, null, PageRequest.of(0, 10), filters);
 
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -1474,12 +1485,12 @@ class TransactionServiceTest {
         filters.put("subcategoryId", null);
         Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -1493,12 +1504,279 @@ class TransactionServiceTest {
         filters.put("description", "test");
         Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
 
-        when(transactionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        doReturn(page).when(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
 
         Page<TransactionDTO> result = transactionService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(transactionRepository).findAll((Specification<Transaction>) any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void create_WithRealtimeAndDashboardServices_ShouldNotifyBothServices() {
+        // Given
+        TransactionDTO createDTO = new TransactionDTO();
+        createDTO.setDescription("New Transaction");
+        createDTO.setAmount(BigDecimal.valueOf(50.00));
+        createDTO.setType(TransactionType.INCOME);
+        createDTO.setSubtype(TransactionSubtype.FIXED);
+        createDTO.setSource(TransactionSource.CASH);
+        createDTO.setCategoryId(1L);
+        createDTO.setUserId(1L);
+
+        List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>();
+        TransactionResponsiblesDTO responsible = new TransactionResponsiblesDTO();
+        responsible.setResponsibleId(1L);
+        responsible.setPercentage(new BigDecimal("100.00"));
+        responsibilities.add(responsible);
+        createDTO.setResponsibilities(responsibilities);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+            TransactionResponsibles freshResponsible = new TransactionResponsibles();
+            freshResponsible.setId(1L);
+            freshResponsible.setName("Test Responsible");
+            return Optional.of(freshResponsible);
+        });
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction savedTransaction = invocation.getArgument(0);
+            savedTransaction.setId(1L);
+            return savedTransaction;
+        });
+
+        // Set optional services
+        transactionService.setRealtimeService(realtimeService);
+        transactionService.setDashboardService(dashboardService);
+
+        // When
+        TransactionDTO result = transactionService.create(createDTO);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(realtimeService).notifyTransactionUpdate(1L, result);
+        verify(dashboardService).notifyDashboardUpdate(1L);
+        verify(metricsService).incrementTransactionCreated();
+    }
+
+    @Test
+    void create_WithRealtimeServiceThrowingException_ShouldContinueAndLogWarning() {
+        // Given
+        TransactionDTO createDTO = new TransactionDTO();
+        createDTO.setDescription("New Transaction");
+        createDTO.setAmount(BigDecimal.valueOf(50.00));
+        createDTO.setType(TransactionType.INCOME);
+        createDTO.setSubtype(TransactionSubtype.FIXED);
+        createDTO.setSource(TransactionSource.CASH);
+        createDTO.setCategoryId(1L);
+        createDTO.setUserId(1L);
+
+        List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>();
+        TransactionResponsiblesDTO responsible = new TransactionResponsiblesDTO();
+        responsible.setResponsibleId(1L);
+        responsible.setPercentage(new BigDecimal("100.00"));
+        responsibilities.add(responsible);
+        createDTO.setResponsibilities(responsibilities);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+            TransactionResponsibles freshResponsible = new TransactionResponsibles();
+            freshResponsible.setId(1L);
+            freshResponsible.setName("Test Responsible");
+            return Optional.of(freshResponsible);
+        });
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction savedTransaction = invocation.getArgument(0);
+            savedTransaction.setId(1L);
+            return savedTransaction;
+        });
+
+        // Set optional services
+        transactionService.setRealtimeService(realtimeService);
+        transactionService.setDashboardService(dashboardService);
+
+        doThrow(new RuntimeException("Realtime service error"))
+                .when(realtimeService).notifyTransactionUpdate(anyLong(), any(TransactionDTO.class));
+        doThrow(new RuntimeException("Dashboard service error"))
+                .when(dashboardService).notifyDashboardUpdate(anyLong());
+
+        // When
+        TransactionDTO result = transactionService.create(createDTO);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(realtimeService).notifyTransactionUpdate(1L, result);
+        verify(dashboardService).notifyDashboardUpdate(1L);
+        verify(metricsService).incrementTransactionCreated();
+    }
+
+    @Test
+    void create_WithOnlyRealtimeService_ShouldNotifyOnlyRealtime() {
+        // Given
+        TransactionDTO createDTO = new TransactionDTO();
+        createDTO.setDescription("New Transaction");
+        createDTO.setAmount(BigDecimal.valueOf(50.00));
+        createDTO.setType(TransactionType.INCOME);
+        createDTO.setSubtype(TransactionSubtype.FIXED);
+        createDTO.setSource(TransactionSource.CASH);
+        createDTO.setCategoryId(1L);
+        createDTO.setUserId(1L);
+
+        List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>();
+        TransactionResponsiblesDTO responsible = new TransactionResponsiblesDTO();
+        responsible.setResponsibleId(1L);
+        responsible.setPercentage(new BigDecimal("100.00"));
+        responsibilities.add(responsible);
+        createDTO.setResponsibilities(responsibilities);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+            TransactionResponsibles freshResponsible = new TransactionResponsibles();
+            freshResponsible.setId(1L);
+            freshResponsible.setName("Test Responsible");
+            return Optional.of(freshResponsible);
+        });
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction savedTransaction = invocation.getArgument(0);
+            savedTransaction.setId(1L);
+            return savedTransaction;
+        });
+
+        // Set only realtime service
+        transactionService.setRealtimeService(realtimeService);
+        // dashboardService remains null
+
+        // When
+        TransactionDTO result = transactionService.create(createDTO);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(realtimeService).notifyTransactionUpdate(1L, result);
+        verify(dashboardService, never()).notifyDashboardUpdate(anyLong());
+        verify(metricsService).incrementTransactionCreated();
+    }
+
+    @Test
+    void create_WithOnlyDashboardService_ShouldNotifyOnlyDashboard() {
+        // Given
+        TransactionDTO createDTO = new TransactionDTO();
+        createDTO.setDescription("New Transaction");
+        createDTO.setAmount(BigDecimal.valueOf(50.00));
+        createDTO.setType(TransactionType.INCOME);
+        createDTO.setSubtype(TransactionSubtype.FIXED);
+        createDTO.setSource(TransactionSource.CASH);
+        createDTO.setCategoryId(1L);
+        createDTO.setUserId(1L);
+
+        List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>();
+        TransactionResponsiblesDTO responsible = new TransactionResponsiblesDTO();
+        responsible.setResponsibleId(1L);
+        responsible.setPercentage(new BigDecimal("100.00"));
+        responsibilities.add(responsible);
+        createDTO.setResponsibilities(responsibilities);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
+        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+            TransactionResponsibles freshResponsible = new TransactionResponsibles();
+            freshResponsible.setId(1L);
+            freshResponsible.setName("Test Responsible");
+            return Optional.of(freshResponsible);
+        });
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction savedTransaction = invocation.getArgument(0);
+            savedTransaction.setId(1L);
+            return savedTransaction;
+        });
+
+        // Set only dashboard service
+        // realtimeService remains null
+        transactionService.setDashboardService(dashboardService);
+
+        // When
+        TransactionDTO result = transactionService.create(createDTO);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(realtimeService, never()).notifyTransactionUpdate(anyLong(), any(TransactionDTO.class));
+        verify(dashboardService).notifyDashboardUpdate(1L);
+        verify(metricsService).incrementTransactionCreated();
+    }
+
+    @Test
+    void update_WithRealtimeAndDashboardServices_ShouldNotifyBothServices() {
+        // Given
+        TransactionDTO updateDTO = new TransactionDTO();
+        updateDTO.setDescription("Updated Transaction");
+        updateDTO.setAmount(BigDecimal.valueOf(200.00));
+
+        List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>();
+        TransactionResponsiblesDTO responsible = new TransactionResponsiblesDTO();
+        responsible.setResponsibleId(1L);
+        responsible.setPercentage(new BigDecimal("100.00"));
+        responsibilities.add(responsible);
+        updateDTO.setResponsibilities(responsibilities);
+
+        Transaction existingTransaction = createFreshTransaction();
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(existingTransaction));
+        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+            TransactionResponsibles freshResponsible = new TransactionResponsibles();
+            freshResponsible.setId(1L);
+            freshResponsible.setName("Test Responsible");
+            return Optional.of(freshResponsible);
+        });
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(existingTransaction);
+
+        // Set optional services
+        transactionService.setRealtimeService(realtimeService);
+        transactionService.setDashboardService(dashboardService);
+
+        // When
+        TransactionDTO result = transactionService.update(1L, updateDTO);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(realtimeService).notifyTransactionUpdate(1L, result);
+        verify(dashboardService).notifyDashboardUpdate(1L);
+        verify(metricsService).incrementTransactionUpdated();
+    }
+
+    @Test
+    void update_WithNoOptionalServices_ShouldNotNotifyAnyServices() {
+        // Given
+        TransactionDTO updateDTO = new TransactionDTO();
+        updateDTO.setDescription("Updated Transaction");
+        updateDTO.setAmount(BigDecimal.valueOf(200.00));
+
+        List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>();
+        TransactionResponsiblesDTO responsible = new TransactionResponsiblesDTO();
+        responsible.setResponsibleId(1L);
+        responsible.setPercentage(new BigDecimal("100.00"));
+        responsibilities.add(responsible);
+        updateDTO.setResponsibilities(responsibilities);
+
+        Transaction existingTransaction = createFreshTransaction();
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(existingTransaction));
+        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+            TransactionResponsibles freshResponsible = new TransactionResponsibles();
+            freshResponsible.setId(1L);
+            freshResponsible.setName("Test Responsible");
+            return Optional.of(freshResponsible);
+        });
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(existingTransaction);
+
+        // Optional services remain null
+
+        // When
+        TransactionDTO result = transactionService.update(1L, updateDTO);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(realtimeService, never()).notifyTransactionUpdate(anyLong(), any(TransactionDTO.class));
+        verify(dashboardService, never()).notifyDashboardUpdate(anyLong());
+        verify(metricsService).incrementTransactionUpdated();
     }
 
 }

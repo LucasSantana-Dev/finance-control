@@ -6,11 +6,14 @@ import com.finance_control.profile.model.Profile;
 import com.finance_control.profile.repository.ProfileRepository;
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.service.BaseService;
+import com.finance_control.shared.service.SupabaseStorageService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Slf4j
@@ -18,6 +21,9 @@ public class ProfileService extends BaseService<Profile, Long, ProfileDTO> {
 
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
+
+    @Autowired(required = false)
+    private SupabaseStorageService storageService;
 
     public ProfileService(ProfileRepository profileRepository, UserRepository userRepository) {
         super(profileRepository);
@@ -131,6 +137,135 @@ public class ProfileService extends BaseService<Profile, Long, ProfileDTO> {
 
         log.info("Profile updated successfully (user present: {})", currentUserId != null);
         return convertToResponseDTO(savedProfile);
+    }
+
+    /**
+     * Uploads and updates the user's avatar image.
+     *
+     * @param avatarFile the avatar image file
+     * @return the updated profile with new avatar URL
+     * @throws IllegalStateException if Supabase Storage is not configured
+     * @throws RuntimeException if upload fails
+     */
+    @Transactional
+    public ProfileDTO uploadAvatar(MultipartFile avatarFile) {
+        Long currentUserId = UserContext.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new IllegalStateException("No authenticated user found");
+        }
+
+        // Check if Supabase Storage is available
+        if (storageService == null) {
+            throw new IllegalStateException("Supabase Storage service is not available. Avatar upload is disabled.");
+        }
+
+        // Validate file
+        validateAvatarFile(avatarFile);
+
+        try {
+            // Upload avatar to Supabase Storage
+            String avatarUrl = storageService.uploadAvatar(currentUserId, avatarFile);
+
+            // Update profile with new avatar URL
+            Profile profile = profileRepository.findByUserId(currentUserId).orElse(null);
+            if (profile == null) {
+                throw new IllegalStateException("Profile not found for user: " + currentUserId);
+            }
+
+            // Delete old avatar if it exists and is a Supabase URL
+            if (profile.getAvatarUrl() != null && isSupabaseUrl(profile.getAvatarUrl())) {
+                try {
+                    deleteOldAvatar(profile.getAvatarUrl());
+                } catch (Exception e) {
+                    log.warn("Failed to delete old avatar, continuing with upload: {}", e.getMessage());
+                }
+            }
+
+            profile.setAvatarUrl(avatarUrl);
+            Profile updatedProfile = profileRepository.save(profile);
+
+            log.info("Avatar updated successfully for user {}: {}", currentUserId, avatarUrl);
+
+            return convertToResponseDTO(updatedProfile);
+
+        } catch (Exception e) {
+            log.error("Failed to upload avatar for user {}", currentUserId, e);
+            throw new RuntimeException("Failed to upload avatar: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Validates avatar file constraints.
+     *
+     * @param file the avatar file to validate
+     * @throws IllegalArgumentException if validation fails
+     */
+    private void validateAvatarFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Avatar file cannot be empty");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !isValidImageType(contentType)) {
+            throw new IllegalArgumentException("Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.");
+        }
+
+        long maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException("File size exceeds maximum allowed size of 5MB");
+        }
+    }
+
+    /**
+     * Checks if the content type is a valid image type.
+     *
+     * @param contentType the content type to check
+     * @return true if valid image type
+     */
+    private boolean isValidImageType(String contentType) {
+        return contentType.equals("image/jpeg") ||
+               contentType.equals("image/png") ||
+               contentType.equals("image/gif") ||
+               contentType.equals("image/webp");
+    }
+
+    /**
+     * Checks if the URL is a Supabase Storage URL.
+     *
+     * @param url the URL to check
+     * @return true if it's a Supabase URL
+     */
+    private boolean isSupabaseUrl(String url) {
+        return url != null && url.contains("supabase.co/storage/v1/object/public");
+    }
+
+    /**
+     * Attempts to delete the old avatar file from Supabase Storage.
+     *
+     * @param avatarUrl the old avatar URL
+     */
+    private void deleteOldAvatar(String avatarUrl) {
+        try {
+            // Extract bucket and file name from Supabase URL
+            // URL format: https://project.supabase.co/storage/v1/object/public/bucket/file
+            String[] parts = avatarUrl.split("/storage/v1/object/public/");
+            if (parts.length == 2) {
+                String[] pathParts = parts[1].split("/");
+                if (pathParts.length >= 2) {
+                    String bucket = pathParts[0];
+                    String fileName = String.join("/", java.util.Arrays.copyOfRange(pathParts, 1, pathParts.length));
+
+                    boolean deleted = storageService.deleteFile(bucket, fileName);
+                    if (deleted) {
+                        log.info("Old avatar deleted successfully: {}", fileName);
+                    } else {
+                        log.warn("Failed to delete old avatar: {}", fileName);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error while trying to delete old avatar: {}", e.getMessage());
+        }
     }
 
 }

@@ -80,7 +80,7 @@ public final class ValidationUtils {
 
     public static void validateLength(String value, int minLength, int maxLength, String fieldName) {
         if (value != null && (value.length() < minLength || value.length() > maxLength)) {
-            throw new IllegalArgumentException(fieldName + " must be between " + minLength + 
+            throw new IllegalArgumentException(fieldName + " must be between " + minLength +
                     " and " + maxLength + " characters");
         }
     }
@@ -88,7 +88,7 @@ public final class ValidationUtils {
     public static void validateUrl(String url, String fieldName) {
         if (url != null && !url.trim().isEmpty()) {
             try {
-                new java.net.URL(url);
+                java.net.URI.create(url).toURL();
             } catch (Exception e) {
                 throw new IllegalArgumentException(fieldName + " must be a valid URL");
             }

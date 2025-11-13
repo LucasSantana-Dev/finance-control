@@ -3,324 +3,371 @@ package com.finance_control.unit.shared.controller;
 import com.finance_control.shared.controller.MonitoringController;
 import com.finance_control.shared.monitoring.AlertingService;
 import com.finance_control.shared.monitoring.HealthCheckService;
-import com.finance_control.shared.monitoring.MetricsService;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for MonitoringController.
+ * Tests health status, alerts management, and metrics endpoints.
+ */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("MonitoringController Unit Tests")
 class MonitoringControllerTest {
-
-    @Mock
-    private HealthCheckService healthCheckService;
-
-    @Mock
-    private MetricsService metricsService;
 
     @Mock
     private AlertingService alertingService;
 
+    @Mock
+    private HealthCheckService healthCheckService;
+
+    @InjectMocks
     private MonitoringController monitoringController;
+
+    private Map<String, Object> mockHealthStatus;
+    private List<AlertingService.Alert> mockAlerts;
 
     @BeforeEach
     void setUp() {
-        monitoringController = new MonitoringController(metricsService, alertingService, healthCheckService);
+        mockHealthStatus = new HashMap<>();
+        mockHealthStatus.put("status", "UP");
+        mockHealthStatus.put("overallStatus", "HEALTHY");
+        mockHealthStatus.put("timestamp", "2024-01-01T12:00:00");
+
+        mockAlerts = new ArrayList<>();
+        mockAlerts.add(new AlertingService.Alert("alert1", "SYSTEM", "HIGH", "Test alert", null));
+        mockAlerts.add(new AlertingService.Alert("alert2", "PERFORMANCE", "MEDIUM", "Performance alert", Map.of("value", 1000)));
     }
 
     @Test
-    @DisplayName("Should return health status successfully")
-    void getHealthStatus_WithHealthySystem_ShouldReturnOk() {
+    void getHealthStatus_ShouldReturnHealthStatus() {
         // Given
-        Map<String, Object> healthStatus = new HashMap<>();
-        healthStatus.put("overallStatus", "HEALTHY");
-        healthStatus.put("database", Map.of("status", "UP"));
-        healthStatus.put("redis", Map.of("status", "UP"));
-
-        when(healthCheckService.getDetailedHealthStatus()).thenReturn(healthStatus);
+        when(healthCheckService.getDetailedHealthStatus()).thenReturn(mockHealthStatus);
 
         // When
-        ResponseEntity<Map<String, Object>> response = monitoringController.getHealthStatus();
+        ResponseEntity<Map<String, Object>> result = monitoringController.getHealthStatus();
 
         // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("HEALTHY", response.getBody().get("overallStatus"));
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isEqualTo(mockHealthStatus);
     }
 
     @Test
-    @DisplayName("Should return service unavailable when system is unhealthy")
-    void getHealthStatus_WithUnhealthySystem_ShouldReturnServiceUnavailable() {
+    void getHealthStatus_WhenServiceThrowsException_ShouldReturn503WithError() {
         // Given
-        when(healthCheckService.getDetailedHealthStatus()).thenThrow(new RuntimeException("System error"));
+        RuntimeException exception = new RuntimeException("Health check failed");
+        when(healthCheckService.getDetailedHealthStatus()).thenThrow(exception);
 
         // When
-        ResponseEntity<Map<String, Object>> response = monitoringController.getHealthStatus();
+        ResponseEntity<Map<String, Object>> result = monitoringController.getHealthStatus();
 
         // Then
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("ERROR", response.getBody().get("status"));
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().get("status")).isEqualTo("ERROR");
+        assertThat(result.getBody().get("message")).isEqualTo("Health check failed");
     }
 
     @Test
-    @DisplayName("Should return active alerts successfully")
-    void getActiveAlerts_ShouldReturnAlerts() {
+    void getActiveAlerts_ShouldReturnActiveAlerts() {
         // Given
-        List<AlertingService.Alert> alerts = new ArrayList<>();
-        AlertingService.Alert alert = new AlertingService.Alert(
-            "test_alert", "SYSTEM", "HIGH", "Test alert message", null
-        );
-        alerts.add(alert);
-
-        when(alertingService.getActiveAlerts()).thenReturn(alerts);
+        when(alertingService.getActiveAlerts()).thenReturn(mockAlerts);
 
         // When
-        ResponseEntity<List<AlertingService.Alert>> response = monitoringController.getActiveAlerts();
+        ResponseEntity<List<AlertingService.Alert>> result = monitoringController.getActiveAlerts();
 
         // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
-        assertEquals("test_alert", response.getBody().get(0).getId());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isEqualTo(mockAlerts);
     }
 
     @Test
-    @DisplayName("Should return empty list when no active alerts")
-    void getActiveAlerts_WithNoAlerts_ShouldReturnEmptyList() {
+    void getActiveAlerts_WhenServiceThrowsException_ShouldReturn500() {
         // Given
-        when(alertingService.getActiveAlerts()).thenReturn(new ArrayList<>());
+        RuntimeException exception = new RuntimeException("Alert service error");
+        when(alertingService.getActiveAlerts()).thenThrow(exception);
 
         // When
-        ResponseEntity<List<AlertingService.Alert>> response = monitoringController.getActiveAlerts();
+        ResponseEntity<List<AlertingService.Alert>> result = monitoringController.getActiveAlerts();
 
         // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertTrue(response.getBody().isEmpty());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result.getBody()).isNull();
     }
 
     @Test
-    @DisplayName("Should handle exception when getting alerts")
-    void getActiveAlerts_WithException_ShouldReturnInternalServerError() {
+    void clearAlert_WithValidAlertId_ShouldClearAlertAndReturnSuccess() {
         // Given
-        when(alertingService.getActiveAlerts()).thenThrow(new RuntimeException("Alert service error"));
+        String alertId = "test-alert-123";
 
         // When
-        ResponseEntity<List<AlertingService.Alert>> response = monitoringController.getActiveAlerts();
+        ResponseEntity<Map<String, String>> result = monitoringController.clearAlert(alertId);
 
         // Then
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-    }
-
-    @Test
-    @DisplayName("Should clear alert successfully")
-    void clearAlert_WithValidId_ShouldReturnOk() {
-        // Given
-        String alertId = "test_alert";
-
-        // When
-        ResponseEntity<Map<String, String>> response = monitoringController.clearAlert(alertId);
-
-        // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("Alert cleared successfully", response.getBody().get("message"));
-        assertEquals(alertId, response.getBody().get("alertId"));
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().get("message")).isEqualTo("Alert cleared successfully");
+        assertThat(result.getBody().get("alertId")).isEqualTo(alertId);
 
         verify(alertingService).clearAlert(alertId);
     }
 
     @Test
-    @DisplayName("Should handle exception when clearing alert")
-    void clearAlert_WithException_ShouldReturnInternalServerError() {
-        // Given
-        String alertId = "test_alert";
-        doThrow(new RuntimeException("Clear alert error")).when(alertingService).clearAlert(alertId);
-
+    void clearAlert_WithNullAlertId_ShouldReturnBadRequest() {
         // When
-        ResponseEntity<Map<String, String>> response = monitoringController.clearAlert(alertId);
+        ResponseEntity<Map<String, String>> result = monitoringController.clearAlert(null);
 
         // Then
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(alertingService, never()).clearAlert(anyString());
     }
 
     @Test
-    @DisplayName("Should clear all alerts successfully")
-    void clearAllAlerts_ShouldReturnOk() {
-        // Given
-        List<AlertingService.Alert> alerts = new ArrayList<>();
-        AlertingService.Alert alert1 = new AlertingService.Alert("alert1", "SYSTEM", "HIGH", "Message 1", null);
-        AlertingService.Alert alert2 = new AlertingService.Alert("alert2", "SYSTEM", "MEDIUM", "Message 2", null);
-        alerts.add(alert1);
-        alerts.add(alert2);
-
-        when(alertingService.getActiveAlerts()).thenReturn(alerts);
-
+    void clearAlert_WithEmptyAlertId_ShouldReturnBadRequest() {
         // When
-        ResponseEntity<Map<String, String>> response = monitoringController.clearAllAlerts();
+        ResponseEntity<Map<String, String>> result = monitoringController.clearAlert("");
 
         // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("All alerts cleared successfully", response.getBody().get("message"));
-        assertEquals("2", response.getBody().get("clearedCount"));
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(alertingService, never()).clearAlert(anyString());
+    }
+
+    @Test
+    void clearAlert_WithWhitespaceOnlyAlertId_ShouldReturnBadRequest() {
+        // When
+        ResponseEntity<Map<String, String>> result = monitoringController.clearAlert("   ");
+
+        // Then
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(alertingService, never()).clearAlert(anyString());
+    }
+
+    @Test
+    void clearAlert_WhenServiceThrowsException_ShouldReturn500() {
+        // Given
+        String alertId = "test-alert-123";
+        RuntimeException exception = new RuntimeException("Clear alert failed");
+        doThrow(exception).when(alertingService).clearAlert(alertId);
+
+        // When
+        ResponseEntity<Map<String, String>> result = monitoringController.clearAlert(alertId);
+
+        // Then
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result.getBody()).isNull();
+    }
+
+    @Test
+    void clearAllAlerts_WithActiveAlerts_ShouldClearAllAndReturnSuccess() {
+        // Given
+        when(alertingService.getActiveAlerts()).thenReturn(mockAlerts);
+
+        // When
+        ResponseEntity<Map<String, String>> result = monitoringController.clearAllAlerts();
+
+        // Then
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().get("message")).isEqualTo("All alerts cleared successfully");
+        assertThat(result.getBody().get("clearedCount")).isEqualTo("2");
 
         verify(alertingService).clearAlert("alert1");
         verify(alertingService).clearAlert("alert2");
     }
 
     @Test
-    @DisplayName("Should handle exception when clearing all alerts")
-    void clearAllAlerts_WithException_ShouldReturnInternalServerError() {
+    void clearAllAlerts_WithNoActiveAlerts_ShouldReturnSuccessWithZeroCount() {
         // Given
-        when(alertingService.getActiveAlerts()).thenThrow(new RuntimeException("Get alerts error"));
+        when(alertingService.getActiveAlerts()).thenReturn(new ArrayList<>());
 
         // When
-        ResponseEntity<Map<String, String>> response = monitoringController.clearAllAlerts();
+        ResponseEntity<Map<String, String>> result = monitoringController.clearAllAlerts();
 
         // Then
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().get("message")).isEqualTo("All alerts cleared successfully");
+        assertThat(result.getBody().get("clearedCount")).isEqualTo("0");
+
+        verify(alertingService, never()).clearAlert(anyString());
     }
 
     @Test
-    @DisplayName("Should return metrics summary successfully")
-    void getMetricsSummary_ShouldReturnSummary() {
+    void clearAllAlerts_WhenServiceThrowsException_ShouldReturn500() {
+        // Given
+        RuntimeException exception = new RuntimeException("Clear all alerts failed");
+        when(alertingService.getActiveAlerts()).thenThrow(exception);
+
         // When
-        ResponseEntity<Map<String, Object>> response = monitoringController.getMetricsSummary();
+        ResponseEntity<Map<String, String>> result = monitoringController.clearAllAlerts();
 
         // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertTrue(response.getBody().containsKey("system"));
-        assertTrue(response.getBody().containsKey("application"));
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> system = (Map<String, Object>) response.getBody().get("system");
-        assertTrue(system.containsKey("memoryUsed"));
-        assertTrue(system.containsKey("memoryTotal"));
-        assertTrue(system.containsKey("memoryMax"));
-        assertTrue(system.containsKey("processors"));
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result.getBody()).isNull();
     }
 
     @Test
-    @DisplayName("Should handle exception when getting metrics summary")
-    void getMetricsSummary_WithException_ShouldReturnInternalServerError() {
-        // Given - This would require mocking Runtime.getRuntime() which is complex
-        // For now, we'll test the basic structure
-
+    void getMetricsSummary_ShouldReturnMetricsSummary() {
         // When
-        ResponseEntity<Map<String, Object>> response = monitoringController.getMetricsSummary();
+        ResponseEntity<Map<String, Object>> result = monitoringController.getMetricsSummary();
 
         // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+
+        Map<String, Object> body = result.getBody();
+        assertThat(body).containsKey("system");
+        assertThat(body).containsKey("application");
+
+        Map<String, Object> systemMetrics = (Map<String, Object>) body.get("system");
+        assertThat(systemMetrics).containsKey("memoryUsed");
+        assertThat(systemMetrics).containsKey("memoryTotal");
+        assertThat(systemMetrics).containsKey("memoryMax");
+        assertThat(systemMetrics).containsKey("processors");
+        assertThat(systemMetrics).containsKey("uptime");
+
+        Map<String, Object> appMetrics = (Map<String, Object>) body.get("application");
+        assertThat(appMetrics).containsKey("activeUsers");
+        assertThat(appMetrics).containsKey("totalTransactions");
+        assertThat(appMetrics).containsKey("activeGoals");
+        assertThat(appMetrics).containsKey("cacheHitRate");
     }
 
     @Test
-    @DisplayName("Should trigger test alert successfully")
-    void triggerTestAlert_ShouldReturnOk() {
+    void getMetricsSummary_WhenRuntimeThrowsException_ShouldReturn500() {
+        // Given
+        MonitoringController controllerWithFaultyRuntime = new MonitoringController(alertingService, healthCheckService) {
+            @Override
+            public ResponseEntity<Map<String, Object>> getMetricsSummary() {
+                throw new RuntimeException("Runtime access failed");
+            }
+        };
+
         // When
-        ResponseEntity<Map<String, String>> response = monitoringController.triggerTestAlert();
+        assertThatThrownBy(controllerWithFaultyRuntime::getMetricsSummary)
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Runtime access failed");
+    }
+
+    @Test
+    void triggerTestAlert_ShouldTriggerHighTransactionVolumeAlertAndReturnSuccess() {
+        // When
+        ResponseEntity<Map<String, String>> result = monitoringController.triggerTestAlert();
 
         // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("Test alert triggered successfully", response.getBody().get("message"));
-        assertEquals("high_transaction_volume", response.getBody().get("alertType"));
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
+        assertThat(result.getBody().get("message")).isEqualTo("Test alert triggered successfully");
+        assertThat(result.getBody().get("alertType")).isEqualTo("high_transaction_volume");
 
         verify(alertingService).alertHighTransactionVolume(1500L);
     }
 
     @Test
-    @DisplayName("Should handle exception when triggering test alert")
-    void triggerTestAlert_WithException_ShouldReturnInternalServerError() {
+    void triggerTestAlert_WhenServiceThrowsException_ShouldReturn500() {
         // Given
-        doThrow(new RuntimeException("Test alert error")).when(alertingService).alertHighTransactionVolume(anyLong());
+        RuntimeException exception = new RuntimeException("Alert trigger failed");
+        doThrow(exception).when(alertingService).alertHighTransactionVolume(1500L);
 
         // When
-        ResponseEntity<Map<String, String>> response = monitoringController.triggerTestAlert();
+        ResponseEntity<Map<String, String>> result = monitoringController.triggerTestAlert();
 
         // Then
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result.getBody()).isNull();
     }
 
     @Test
-    @DisplayName("Should return monitoring status successfully")
-    void getMonitoringStatus_ShouldReturnStatus() {
+    void getMonitoringStatus_WithHealthyServices_ShouldReturnCompleteStatus() {
         // Given
-        List<AlertingService.Alert> alerts = new ArrayList<>();
-        Map<String, Object> healthStatus = new HashMap<>();
-        healthStatus.put("overallStatus", "HEALTHY");
-
-        when(alertingService.getActiveAlerts()).thenReturn(alerts);
-        when(healthCheckService.getDetailedHealthStatus()).thenReturn(healthStatus);
+        when(alertingService.getActiveAlerts()).thenReturn(mockAlerts);
+        when(healthCheckService.getDetailedHealthStatus()).thenReturn(mockHealthStatus);
 
         // When
-        ResponseEntity<Map<String, Object>> response = monitoringController.getMonitoringStatus();
+        ResponseEntity<Map<String, Object>> result = monitoringController.getMonitoringStatus();
 
         // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertTrue(response.getBody().containsKey("alerting"));
-        assertTrue(response.getBody().containsKey("healthCheck"));
-        assertTrue(response.getBody().containsKey("timestamp"));
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isNotNull();
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> alerting = (Map<String, Object>) response.getBody().get("alerting");
-        assertEquals(true, alerting.get("active"));
-        assertEquals(0, alerting.get("activeAlerts"));
-        assertEquals("HEALTHY", alerting.get("status"));
+        Map<String, Object> body = result.getBody();
+        assertThat(body).containsKey("alerting");
+        assertThat(body).containsKey("healthCheck");
+        assertThat(body).containsKey("timestamp");
+
+        Map<String, Object> alertingStatus = (Map<String, Object>) body.get("alerting");
+        assertThat(alertingStatus.get("active")).isEqualTo(true);
+        assertThat(alertingStatus.get("activeAlerts")).isEqualTo(2);
+        assertThat(alertingStatus.get("status")).isEqualTo("ALERTS_ACTIVE");
+
+        Map<String, Object> healthCheckStatus = (Map<String, Object>) body.get("healthCheck");
+        assertThat(healthCheckStatus.get("active")).isEqualTo(true);
+        assertThat(healthCheckStatus.get("status")).isEqualTo("HEALTHY");
+        assertThat(healthCheckStatus.get("message")).isEqualTo("Health checks active");
     }
 
     @Test
-    @DisplayName("Should handle exception when getting monitoring status")
-    void getMonitoringStatus_WithException_ShouldReturnInternalServerError() {
+    void getMonitoringStatus_WithNoActiveAlerts_ShouldReturnHealthyStatus() {
         // Given
-        when(alertingService.getActiveAlerts()).thenThrow(new RuntimeException("Status error"));
+        when(alertingService.getActiveAlerts()).thenReturn(new ArrayList<>());
+        when(healthCheckService.getDetailedHealthStatus()).thenReturn(mockHealthStatus);
 
         // When
-        ResponseEntity<Map<String, Object>> response = monitoringController.getMonitoringStatus();
+        ResponseEntity<Map<String, Object>> result = monitoringController.getMonitoringStatus();
 
         // Then
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        Map<String, Object> body = result.getBody();
+        Map<String, Object> alertingStatus = (Map<String, Object>) body.get("alerting");
+        assertThat(alertingStatus.get("activeAlerts")).isEqualTo(0);
+        assertThat(alertingStatus.get("status")).isEqualTo("HEALTHY");
     }
 
     @Test
-    @DisplayName("Should handle health check exception in monitoring status")
-    void getMonitoringStatus_WithHealthCheckException_ShouldHandleGracefully() {
+    void getMonitoringStatus_WithHealthCheckFailure_ShouldReturnErrorStatus() {
         // Given
-        List<AlertingService.Alert> alerts = new ArrayList<>();
-        when(alertingService.getActiveAlerts()).thenReturn(alerts);
-        when(healthCheckService.getDetailedHealthStatus()).thenThrow(new RuntimeException("Health check error"));
+        when(alertingService.getActiveAlerts()).thenReturn(new ArrayList<>());
+        RuntimeException healthCheckException = new RuntimeException("Health check failed");
+        when(healthCheckService.getDetailedHealthStatus()).thenThrow(healthCheckException);
 
         // When
-        ResponseEntity<Map<String, Object>> response = monitoringController.getMonitoringStatus();
+        ResponseEntity<Map<String, Object>> result = monitoringController.getMonitoringStatus();
 
         // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
+        Map<String, Object> body = result.getBody();
+        Map<String, Object> healthCheckStatus = (Map<String, Object>) body.get("healthCheck");
+        assertThat(healthCheckStatus.get("active")).isEqualTo(false);
+        assertThat(healthCheckStatus.get("status")).isEqualTo("ERROR");
+        assertThat(healthCheckStatus.get("message")).isEqualTo("Health checks failed: Health check failed");
+    }
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> healthCheck = (Map<String, Object>) response.getBody().get("healthCheck");
-        assertEquals(false, healthCheck.get("active"));
-        assertEquals("ERROR", healthCheck.get("status"));
-        assertTrue(healthCheck.containsKey("message"));
-        assertTrue(((String)healthCheck.get("message")).contains("Health check error"));
+    @Test
+    void getMonitoringStatus_WhenAlertingServiceThrowsException_ShouldReturn500() {
+        // Given
+        RuntimeException exception = new RuntimeException("Alerting service error");
+        when(alertingService.getActiveAlerts()).thenThrow(exception);
+
+        // When
+        ResponseEntity<Map<String, Object>> result = monitoringController.getMonitoringStatus();
+
+        // Then
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result.getBody()).isNull();
     }
 }

@@ -46,7 +46,7 @@ class MarketDataProviderTest {
     @Test
     void brazilianMarketDataProvider_ShouldReturnQuoteWhenApiCallSucceeds() {
         // Given
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(createMockBrapiResponse());
 
         // When
@@ -61,7 +61,7 @@ class MarketDataProviderTest {
     @Test
     void brazilianMarketDataProvider_ShouldReturnEmptyWhenApiCallFails() {
         // Given
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenThrow(new RuntimeException("API Error"));
 
         // When
@@ -74,7 +74,7 @@ class MarketDataProviderTest {
     @Test
     void usMarketDataProvider_ShouldReturnQuoteWhenApiCallSucceeds() {
         // Given
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(createMockYahooResponse());
 
         // When
@@ -89,7 +89,7 @@ class MarketDataProviderTest {
     @Test
     void usMarketDataProvider_ShouldReturnEmptyWhenApiCallFails() {
         // Given
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenThrow(new RuntimeException("API Error"));
 
         // When
@@ -102,7 +102,7 @@ class MarketDataProviderTest {
     @Test
     void brazilianMarketDataProvider_ShouldHandleNullResponse() {
         // Given
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(null);
 
         // When
@@ -115,7 +115,7 @@ class MarketDataProviderTest {
     @Test
     void usMarketDataProvider_ShouldHandleNullResponse() {
         // Given
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(null);
 
         // When
@@ -128,7 +128,7 @@ class MarketDataProviderTest {
     @Test
     void brazilianMarketDataProvider_ShouldHandleEmptyResponse() {
         // Given
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(createEmptyBrapiResponse());
 
         // When
@@ -141,7 +141,7 @@ class MarketDataProviderTest {
     @Test
     void usMarketDataProvider_ShouldHandleEmptyResponse() {
         // Given
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(createEmptyYahooResponse());
 
         // When
@@ -205,7 +205,7 @@ class MarketDataProviderTest {
 
     @Test
     void brazilianMarketDataProvider_GetQuotes_ShouldReturnMultipleQuotes() {
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(createMockBrapiMultiResponse());
 
         List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4", "VALE3"));
@@ -217,7 +217,7 @@ class MarketDataProviderTest {
 
     @Test
     void brazilianMarketDataProvider_GetQuotes_WithNullResponse_ShouldReturnEmptyList() {
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(null);
 
         List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4"));
@@ -229,7 +229,7 @@ class MarketDataProviderTest {
     void brazilianMarketDataProvider_GetQuotes_WithNullResults_ShouldReturnEmptyList() {
         BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
         response.setResults(null);
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(response);
 
         List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4"));
@@ -239,7 +239,7 @@ class MarketDataProviderTest {
 
     @Test
     void brazilianMarketDataProvider_GetQuotes_WithEmptyResults_ShouldReturnEmptyList() {
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(createEmptyBrapiResponse());
 
         List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4"));
@@ -249,7 +249,7 @@ class MarketDataProviderTest {
 
     @Test
     void brazilianMarketDataProvider_GetQuotes_WithException_ShouldReturnEmptyList() {
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenThrow(new RuntimeException("API Error"));
 
         List<MarketQuote> result = brazilianMarketDataProvider.getQuotes(List.of("PETR4"));
@@ -310,7 +310,7 @@ class MarketDataProviderTest {
         results.add(quote);
         response.setResults(results);
 
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(response);
 
         Optional<MarketQuote> result = brazilianMarketDataProvider.getQuote("PETR4");
@@ -329,7 +329,7 @@ class MarketDataProviderTest {
         results.add(quote);
         response.setResults(results);
 
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(response);
 
         Optional<MarketQuote> result = brazilianMarketDataProvider.getQuote("PETR4");
@@ -349,7 +349,7 @@ class MarketDataProviderTest {
         results.add(quote);
         response.setResults(results);
 
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(response);
 
         Optional<MarketQuote> result = brazilianMarketDataProvider.getQuote("PETR4");
@@ -385,7 +385,7 @@ class MarketDataProviderTest {
     void brazilianMarketDataProvider_GetQuote_WithNullResults_ShouldReturnEmpty() {
         BrazilianMarketDataProvider.ApiResponse response = new BrazilianMarketDataProvider.ApiResponse();
         response.setResults(null);
-        when(restTemplate.getForObject(anyString(), any(Class.class)))
+        when(restTemplate.getForObject(anyString(), any()))
                 .thenReturn(response);
 
         Optional<MarketQuote> result = brazilianMarketDataProvider.getQuote("PETR4");

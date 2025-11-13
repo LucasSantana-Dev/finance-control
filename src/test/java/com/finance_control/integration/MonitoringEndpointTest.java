@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,7 +28,7 @@ class MonitoringEndpointTest {
     @Test
     @DisplayName("Should return 200 for health endpoint")
     void healthEndpoint_ShouldReturn200() {
-        ResponseEntity<Map> response = restTemplate.getForEntity("/api/monitoring/health", Map.class);
+        ResponseEntity<Object> response = restTemplate.getForEntity("/api/monitoring/health", Object.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -38,7 +37,7 @@ class MonitoringEndpointTest {
     @Test
     @DisplayName("Should return 200 for status endpoint")
     void statusEndpoint_ShouldReturn200() {
-        ResponseEntity<Map> response = restTemplate.getForEntity("/api/monitoring/status", Map.class);
+        ResponseEntity<Object> response = restTemplate.getForEntity("/api/monitoring/status", Object.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -47,7 +46,7 @@ class MonitoringEndpointTest {
     @Test
     @DisplayName("Should return 200 for metrics summary endpoint")
     void metricsSummaryEndpoint_ShouldReturn200() {
-        ResponseEntity<Map> response = restTemplate.getForEntity("/api/monitoring/metrics/summary", Map.class);
+        ResponseEntity<Object> response = restTemplate.getForEntity("/api/monitoring/metrics/summary", Object.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());

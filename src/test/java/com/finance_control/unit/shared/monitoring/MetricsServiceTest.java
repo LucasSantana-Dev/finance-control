@@ -2,19 +2,15 @@ package com.finance_control.unit.shared.monitoring;
 
 import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.monitoring.SentryService;
-import io.sentry.Sentry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -337,7 +333,7 @@ class MetricsServiceTest {
 
         // Then
         verify(sentryService).captureException(exception);
-        verify(sentryService).setTags(any(Map.class));
+        verify(sentryService).setTags(any());
     }
 
     @Test

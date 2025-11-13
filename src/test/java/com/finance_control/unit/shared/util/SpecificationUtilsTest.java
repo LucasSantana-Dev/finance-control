@@ -48,23 +48,24 @@ class SpecificationUtilsTest {
     @Mock
     private Predicate predicate;
 
+    @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp() {
         lenient().when(root.get(anyString())).thenReturn(path);
         lenient().when(criteriaBuilder.equal(any(), any())).thenReturn(predicate);
-        lenient().when(criteriaBuilder.like(any(Expression.class), anyString())).thenReturn(predicate);
-        lenient().when(criteriaBuilder.lower(any(Expression.class))).thenReturn(stringExpression);
-        lenient().when(criteriaBuilder.isTrue(any(Expression.class))).thenReturn(predicate);
-        lenient().when(criteriaBuilder.isFalse(any(Expression.class))).thenReturn(predicate);
-        lenient().when(criteriaBuilder.isNull(any(Expression.class))).thenReturn(predicate);
-        lenient().when(criteriaBuilder.isNotNull(any(Expression.class))).thenReturn(predicate);
+        lenient().when(criteriaBuilder.like(any(), anyString())).thenReturn(predicate);
+        lenient().when(criteriaBuilder.lower(any())).thenReturn(stringExpression);
+        lenient().when(criteriaBuilder.isTrue(any())).thenReturn(predicate);
+        lenient().when(criteriaBuilder.isFalse(any())).thenReturn(predicate);
+        lenient().when(criteriaBuilder.isNull(any())).thenReturn(predicate);
+        lenient().when(criteriaBuilder.isNotNull(any())).thenReturn(predicate);
         lenient().when(path.in(anyCollection())).thenReturn(predicate);
-        lenient().when(criteriaBuilder.between(any(Expression.class), any(Comparable.class), any(Comparable.class))).thenReturn(predicate);
-        lenient().when(criteriaBuilder.greaterThanOrEqualTo(any(Expression.class), any(Comparable.class))).thenReturn(predicate);
-        lenient().when(criteriaBuilder.lessThanOrEqualTo(any(Expression.class), any(Comparable.class))).thenReturn(predicate);
-        lenient().when(criteriaBuilder.between(any(Expression.class), anyDouble(), anyDouble())).thenReturn(predicate);
-        lenient().when(criteriaBuilder.greaterThanOrEqualTo(any(Expression.class), anyDouble())).thenReturn(predicate);
-        lenient().when(criteriaBuilder.lessThanOrEqualTo(any(Expression.class), anyDouble())).thenReturn(predicate);
+        lenient().when(criteriaBuilder.between(any(), any(Comparable.class), any(Comparable.class))).thenReturn(predicate);
+        lenient().when(criteriaBuilder.greaterThanOrEqualTo(any(), any(Comparable.class))).thenReturn(predicate);
+        lenient().when(criteriaBuilder.lessThanOrEqualTo(any(), any(Comparable.class))).thenReturn(predicate);
+        lenient().when(criteriaBuilder.between(any(), anyDouble(), anyDouble())).thenReturn(predicate);
+        lenient().when(criteriaBuilder.greaterThanOrEqualTo(any(), anyDouble())).thenReturn(predicate);
+        lenient().when(criteriaBuilder.lessThanOrEqualTo(any(), anyDouble())).thenReturn(predicate);
     }
 
     @Test
@@ -100,7 +101,8 @@ class SpecificationUtilsTest {
     @Test
     void fieldEqualNested_WithNonNullValue_ShouldCreatePredicate() {
         String value = "testValue";
-        Path nestedPath = mock(Path.class);
+        @SuppressWarnings("unchecked")
+        Path<Object> nestedPath = mock(Path.class);
         lenient().when(root.get("fieldName")).thenReturn(path);
         lenient().when(path.get("nestedField")).thenReturn(nestedPath);
         lenient().when(criteriaBuilder.equal(nestedPath, value)).thenReturn(predicate);
@@ -360,8 +362,10 @@ class SpecificationUtilsTest {
     @Test
     void joinFieldEqual_WithNonNullValue_ShouldCreatePredicate() {
         String value = "testValue";
+        @SuppressWarnings("unchecked")
         Join<Object, Object> join = mock(Join.class);
-        Path nestedPath = mock(Path.class);
+        @SuppressWarnings("unchecked")
+        Path<Object> nestedPath = mock(Path.class);
         lenient().when(root.join("joinField")).thenReturn(join);
         lenient().when(join.get("nestedField")).thenReturn(nestedPath);
         lenient().when(criteriaBuilder.equal(nestedPath, value)).thenReturn(predicate);

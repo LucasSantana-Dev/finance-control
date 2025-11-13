@@ -56,6 +56,15 @@ public interface TransactionRepository extends BaseRepository<Transaction, Long>
     @Query("SELECT t.type, COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user.id = :userId GROUP BY t.type")
     Map<String, BigDecimal> getAmountByType(@Param("userId") Long userId);
 
+    @Query("SELECT t FROM Transaction t WHERE t.user.id = :userId " +
+            "AND t.amount = :amount AND LOWER(t.description) = LOWER(:description) " +
+            "AND t.date BETWEEN :startDate AND :endDate")
+    List<Transaction> findPotentialDuplicates(@Param("userId") Long userId,
+            @Param("amount") BigDecimal amount,
+            @Param("description") String description,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
     @Query("SELECT c.name, COALESCE(SUM(t.amount), 0) FROM Transaction t JOIN t.category c WHERE t.user.id = :userId GROUP BY c.name")
     Map<String, BigDecimal> getAmountByCategory(@Param("userId") Long userId);
 

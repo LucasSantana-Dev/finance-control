@@ -32,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@SuppressWarnings("unchecked")
 class DefaultTransactionSourceServiceTest extends BaseUnitTest {
 
     private static final String SOURCE_NAME = "Nubank Credit Card";
@@ -246,14 +247,13 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
             Map<String, Object> filters = new java.util.HashMap<>();
             filters.put("isActive", true);
 
-            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
-                    .thenReturn(page);
+            doReturn(page).when(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
 
             Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
-            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+            verify(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
         }
     }
 
@@ -267,14 +267,13 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
             Map<String, Object> filters = new java.util.HashMap<>();
             filters.put("sourceType", TransactionSource.CREDIT_CARD);
 
-            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
-                    .thenReturn(page);
+            doReturn(page).when(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
 
             Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
-            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+            verify(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
         }
     }
 
@@ -288,14 +287,13 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
             Map<String, Object> filters = new java.util.HashMap<>();
             filters.put("name", "Nubank");
 
-            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
-                    .thenReturn(page);
+            doReturn(page).when(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
 
             Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
-            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+            verify(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
         }
     }
 
@@ -309,13 +307,12 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
             Map<String, Object> filters = new java.util.HashMap<>();
             filters.put("name", "");
 
-            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
-                    .thenReturn(page);
+            doReturn(page).when(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
 
             Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
             assertThat(result).isNotNull();
-            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+            verify(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
         }
     }
 
@@ -329,13 +326,12 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
             Map<String, Object> filters = new java.util.HashMap<>();
             filters.put("name", null);
 
-            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
-                    .thenReturn(page);
+            doReturn(page).when(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
 
             Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
             assertThat(result).isNotNull();
-            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+            verify(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
         }
     }
 
@@ -351,14 +347,13 @@ class DefaultTransactionSourceServiceTest extends BaseUnitTest {
             filters.put("sourceType", TransactionSource.CREDIT_CARD);
             filters.put("name", "Nubank");
 
-            when(transactionSourceRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
-                    .thenReturn(page);
+            doReturn(page).when(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
 
             Page<TransactionSourceDTO> result = transactionSourceService.findAll(null, filters, null, null, PageRequest.of(0, 10));
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
-            verify(transactionSourceRepository).findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class));
+            verify(transactionSourceRepository).findAll((Specification<TransactionSourceEntity>) any(Specification.class), any(org.springframework.data.domain.Pageable.class));
         }
     }
 }

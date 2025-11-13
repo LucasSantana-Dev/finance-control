@@ -1,6 +1,5 @@
 package com.finance_control.unit.shared.controller;
 
-import com.finance_control.shared.controller.DataExportController;
 import com.finance_control.shared.service.DataExportService;
 import com.finance_control.shared.security.CustomUserDetails;
 import com.finance_control.users.model.User;
@@ -10,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 

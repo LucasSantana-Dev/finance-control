@@ -2,7 +2,6 @@ package com.finance_control.unit.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
-import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.users.model.User;
 import org.springframework.context.annotation.Profile;
@@ -24,11 +23,9 @@ import java.util.Optional;
 public class TestInvestmentController {
 
     private final InvestmentService investmentService;
-    private final ExternalMarketDataService externalMarketDataService;
 
-    public TestInvestmentController(InvestmentService investmentService, ExternalMarketDataService externalMarketDataService) {
+    public TestInvestmentController(InvestmentService investmentService) {
         this.investmentService = investmentService;
-        this.externalMarketDataService = externalMarketDataService;
     }
 
     @PostMapping

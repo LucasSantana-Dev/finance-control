@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.HashMap;
@@ -27,9 +28,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockStatic;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class UserServiceTest {
 
     @Mock
@@ -137,8 +141,7 @@ class UserServiceTest {
         Pageable pageable = Pageable.ofSize(10);
         Page<User> userPage = new PageImpl<>(List.of(testUser));
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAllWithFilters("test", null, pageable);
 
@@ -151,8 +154,7 @@ class UserServiceTest {
         Pageable pageable = Pageable.ofSize(10);
         Page<User> userPage = new PageImpl<>(List.of(testUser));
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAllWithFilters(null, true, pageable);
 
@@ -165,8 +167,7 @@ class UserServiceTest {
         Pageable pageable = Pageable.ofSize(10);
         Page<User> userPage = new PageImpl<>(List.of(testUser));
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAllWithFilters("test", true, pageable);
 
@@ -180,8 +181,7 @@ class UserServiceTest {
         Pageable pageable = Pageable.ofSize(10);
         Page<User> userPage = new PageImpl<>(List.of(testUser));
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAllWithFilters(null, null, pageable);
 
@@ -193,8 +193,7 @@ class UserServiceTest {
         Pageable pageable = Pageable.ofSize(10);
         Page<User> userPage = new PageImpl<>(List.of(testUser));
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAllWithFilters("   ", null, pageable);
 
@@ -206,8 +205,7 @@ class UserServiceTest {
         Pageable unsortedPageable = PageRequest.of(0, 10);
         Page<User> userPage = new PageImpl<>(List.of(testUser));
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAllWithFilters(null, null, unsortedPageable);
 
@@ -290,8 +288,7 @@ class UserServiceTest {
         Pageable pageable = Pageable.ofSize(10);
         Page<User> userPage = new PageImpl<>(List.of(inactiveUser));
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAllWithFilters(null, false, pageable);
 
@@ -329,8 +326,7 @@ class UserServiceTest {
         Page<User> userPage = new PageImpl<>(List.of(testUser));
         Map<String, Object> filters = Map.of("email", "test");
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAll(null, filters, null, null, pageable);
 
@@ -343,8 +339,7 @@ class UserServiceTest {
         Page<User> userPage = new PageImpl<>(List.of(testUser));
         Map<String, Object> filters = Map.of("isActive", true);
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAll("test", filters, null, null, pageable);
 
@@ -357,8 +352,7 @@ class UserServiceTest {
         Page<User> userPage = new PageImpl<>(List.of(testUser));
         Map<String, Object> filters = Map.of("email", "test@example.com");
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAll(null, filters, null, null, pageable);
 
@@ -372,8 +366,7 @@ class UserServiceTest {
         Page<User> userPage = new PageImpl<>(List.of(testUser));
         Map<String, Object> filters = Map.of("isActive", true);
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAll(null, filters, null, null, pageable);
 
@@ -389,8 +382,7 @@ class UserServiceTest {
                 "isActive", true
         );
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAll(null, filters, null, null, pageable);
 
@@ -404,8 +396,7 @@ class UserServiceTest {
         Map<String, Object> filters = new HashMap<>();
         filters.put("email", null);
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAll(null, filters, null, null, pageable);
 
@@ -417,8 +408,7 @@ class UserServiceTest {
         Pageable pageable = Pageable.ofSize(10);
         Map<String, Object> filters = Map.of("invalidKey", "value");
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenThrow(new IllegalArgumentException("Invalid filter key: invalidKey"));
+        doThrow(new IllegalArgumentException("Invalid filter key: invalidKey")).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         assertThatThrownBy(() -> userService.findAll(null, filters, null, null, pageable))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -523,8 +513,7 @@ class UserServiceTest {
         Pageable pageable = Pageable.ofSize(10);
         Page<User> userPage = new PageImpl<>(List.of(testUser));
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAllWithFilters(null, null, pageable);
 
@@ -536,8 +525,7 @@ class UserServiceTest {
         Pageable pageable = Pageable.ofSize(10);
         Page<User> userPage = new PageImpl<>(List.of(testUser));
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAllWithFilters("", null, pageable);
 
@@ -550,8 +538,7 @@ class UserServiceTest {
         Page<User> userPage = new PageImpl<>(List.of(testUser));
         Map<String, Object> filters = Map.of("fullName", "John Doe");
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAll(null, filters, null, null, pageable);
 
@@ -578,8 +565,7 @@ class UserServiceTest {
         filters.put("email", "test");
         filters.put("isActive", null);
 
-        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(userPage);
+        doReturn(userPage).when(userRepository).findAll((Specification<User>) any(Specification.class), any(Pageable.class));
 
         Page<UserDTO> result = userService.findAll(null, filters, null, null, pageable);
 

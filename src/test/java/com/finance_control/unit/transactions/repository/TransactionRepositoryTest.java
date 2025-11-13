@@ -6,9 +6,7 @@ import com.finance_control.shared.enums.TransactionSource;
 import com.finance_control.transactions.model.Transaction;
 import com.finance_control.transactions.model.category.TransactionCategory;
 import com.finance_control.transactions.repository.TransactionRepository;
-import com.finance_control.transactions.repository.category.TransactionCategoryRepository;
 import com.finance_control.users.model.User;
-import com.finance_control.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,12 +40,6 @@ class TransactionRepositoryTest {
 
     @Autowired
     private TransactionRepository transactionRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private TransactionCategoryRepository categoryRepository;
 
     private User testUser;
     private TransactionCategory testCategory;

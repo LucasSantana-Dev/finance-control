@@ -1,8 +1,10 @@
 package com.finance_control.transactions.service;
 
+import com.finance_control.dashboard.service.DashboardService;
 import com.finance_control.shared.exception.EntityNotFoundException;
 import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.service.BaseService;
+import com.finance_control.shared.service.SupabaseRealtimeService;
 import com.finance_control.shared.util.EntityMapper;
 import com.finance_control.shared.util.ValidationUtils;
 import java.util.Collections;
@@ -22,6 +24,7 @@ import com.finance_control.transactions.repository.source.TransactionSourceRepos
 import com.finance_control.transactions.repository.subcategory.TransactionSubcategoryRepository;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -58,6 +61,21 @@ public class TransactionService
     private final TransactionSourceRepository sourceEntityRepository;
     private final TransactionResponsiblesRepository responsibleRepository;
     private final MetricsService metricsService;
+
+    private SupabaseRealtimeService realtimeService;
+    private DashboardService dashboardService;
+
+    // Setter for optional SupabaseRealtimeService injection
+    @Autowired(required = false)
+    public void setRealtimeService(SupabaseRealtimeService realtimeService) {
+        this.realtimeService = realtimeService;
+    }
+
+    // Setter for optional DashboardService injection
+    @Autowired(required = false)
+    public void setDashboardService(DashboardService dashboardService) {
+        this.dashboardService = dashboardService;
+    }
 
     public TransactionService(TransactionRepository transactionRepository,
             UserRepository userRepository,
@@ -451,6 +469,27 @@ public class TransactionService
             TransactionDTO result = super.create(createDTO);
             metricsService.incrementTransactionCreated();
             metricsService.recordTransactionAmount(createDTO.getAmount().doubleValue(), createDTO.getType().name());
+
+            // Send realtime notification for transaction creation
+            if (realtimeService != null) {
+                try {
+                    realtimeService.notifyTransactionUpdate(result.getUserId(), result);
+                    log.debug("Sent realtime notification for transaction creation: {}", result.getId());
+                } catch (Exception e) {
+                    log.warn("Failed to send realtime notification for transaction creation: {}", e.getMessage());
+                }
+            }
+
+            // Notify dashboard update
+            if (dashboardService != null) {
+                try {
+                    dashboardService.notifyDashboardUpdate(result.getUserId());
+                    log.debug("Sent dashboard update notification for transaction creation: {}", result.getId());
+                } catch (Exception e) {
+                    log.warn("Failed to send dashboard update notification for transaction creation: {}", e.getMessage());
+                }
+            }
+
             return result;
         } finally {
             metricsService.recordTransactionProcessingTime(sample);
@@ -463,6 +502,27 @@ public class TransactionService
         try {
             TransactionDTO result = super.update(id, updateDTO);
             metricsService.incrementTransactionUpdated();
+
+            // Send realtime notification for transaction update
+            if (realtimeService != null) {
+                try {
+                    realtimeService.notifyTransactionUpdate(result.getUserId(), result);
+                    log.debug("Sent realtime notification for transaction update: {}", result.getId());
+                } catch (Exception e) {
+                    log.warn("Failed to send realtime notification for transaction update: {}", e.getMessage());
+                }
+            }
+
+            // Notify dashboard update
+            if (dashboardService != null) {
+                try {
+                    dashboardService.notifyDashboardUpdate(result.getUserId());
+                    log.debug("Sent dashboard update notification for transaction update: {}", result.getId());
+                } catch (Exception e) {
+                    log.warn("Failed to send dashboard update notification for transaction update: {}", e.getMessage());
+                }
+            }
+
             return result;
         } finally {
             metricsService.recordTransactionProcessingTime(sample);

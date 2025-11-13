@@ -1,6 +1,5 @@
 package com.finance_control.unit.shared.controller;
 
-import com.finance_control.shared.controller.ConfigurationController;
 import com.finance_control.shared.service.ConfigurationService;
 import com.finance_control.shared.security.CustomUserDetails;
 import com.finance_control.users.model.User;

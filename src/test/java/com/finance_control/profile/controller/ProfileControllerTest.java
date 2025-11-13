@@ -197,3 +197,5 @@ class ProfileControllerTest {
         verify(profileService, never()).updateCurrentProfile(any(ProfileUpdateRequest.class));
     }
 }
+
+

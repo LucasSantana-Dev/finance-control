@@ -130,7 +130,8 @@ class ConfigurationServiceTest {
             new AppProperties.Redis("localhost", 6379, "", 0, 2000, new AppProperties.RedisPool(8, 8, 0, -1)),
             new AppProperties.Cache(true, 900000, 300000, 1800000),
             new AppProperties.RateLimit(true, 100, 200, 60),
-            new AppProperties.Supabase(false, "", "", new AppProperties.Realtime(false, List.of("transactions", "dashboard", "goals"))),
+            new AppProperties.Ai(),
+            new AppProperties.Supabase(false, "", "", "", "", new AppProperties.SupabaseDatabase(), new AppProperties.Storage(), new AppProperties.Realtime(false, List.of("transactions", "dashboard", "goals"))),
             new AppProperties.Monitoring(true, new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30, true))
         );
 
@@ -144,6 +145,12 @@ class ConfigurationServiceTest {
         when(appProperties.actuator()).thenReturn(appPropertiesInstance.actuator());
         when(appProperties.openApi()).thenReturn(appPropertiesInstance.openApi());
         when(appProperties.pagination()).thenReturn(appPropertiesInstance.pagination());
+        when(appProperties.redis()).thenReturn(appPropertiesInstance.redis());
+        when(appProperties.cache()).thenReturn(appPropertiesInstance.cache());
+        when(appProperties.rateLimit()).thenReturn(appPropertiesInstance.rateLimit());
+        when(appProperties.ai()).thenReturn(appPropertiesInstance.ai());
+        when(appProperties.supabase()).thenReturn(appPropertiesInstance.supabase());
+        when(appProperties.monitoring()).thenReturn(appPropertiesInstance.monitoring());
 
         // Mock EnvironmentInfo
         when(environmentInfo.isDevelopment()).thenReturn(false);
@@ -422,6 +429,7 @@ class ConfigurationServiceTest {
             appPropertiesInstance.redis(),
             appPropertiesInstance.cache(),
             appPropertiesInstance.rateLimit(),
+            appPropertiesInstance.ai(),
             appPropertiesInstance.supabase(),
             appPropertiesInstance.monitoring()
         );

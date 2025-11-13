@@ -10,6 +10,7 @@ This folder contains comprehensive documentation for the Finance Control applica
 - **[API_RESPONSE_IMPLEMENTATION.md](API_RESPONSE_IMPLEMENTATION.md)** - Standardized API response implementation guide
 - **[BASE_CLASSES_GUIDE.md](BASE_CLASSES_GUIDE.md)** - Base classes architecture and usage patterns
 - **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)** - System architecture diagrams and documentation
+- **[UNIFIED_ENDPOINTS_GUIDE.md](UNIFIED_ENDPOINTS_GUIDE.md)** - Unified API endpoints documentation
 
 ### 🛠️ Development Guidelines
 
@@ -32,7 +33,6 @@ This folder contains comprehensive documentation for the Finance Control applica
 ### 📋 Business Logic
 
 - **[TRANSACTION_CATEGORIES_MANAGEMENT.md](TRANSACTION_CATEGORIES_MANAGEMENT.md)** - Transaction categories management
-- **[JPA_CONFIGURATION_FIX.md](JPA_CONFIGURATION_FIX.md)** - JPA configuration fix documentation
 
 ## 🎯 Quick Start
 
@@ -63,6 +63,9 @@ All documentation follows these standards:
 
 ## 🔄 Recent Updates
 
+- **Documentation Cleanup** - Removed outdated progress files and irrelevant UI/UX documentation
+- **Testing Documentation Update** - Updated testing strategy with current coverage metrics (71% instructions)
+- **Removed Outdated Files** - Cleaned up files related to completed fixes and disabled features
 - **Consolidated Documentation** - Merged related files for better organization
 - **BASE_CLASSES_GUIDE.md** - Updated with latest base class implementations
 - **API_PATTERNS.md** - Added new response patterns and error handling

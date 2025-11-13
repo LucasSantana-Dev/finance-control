@@ -16,9 +16,9 @@ import org.springframework.data.web.config.PageableHandlerMethodArgumentResolver
 @RequiredArgsConstructor
 @EnableConfigurationProperties(AppProperties.class)
 public class PaginationConfig {
-    
+
     private final AppProperties appProperties;
-    
+
     @Bean
     public PageableHandlerMethodArgumentResolverCustomizer paginationCustomizer() {
         AppProperties.Pagination pagination = appProperties.pagination();
@@ -35,4 +35,4 @@ public class PaginationConfig {
             pageableResolver.setSizeParameterName("size");
         };
     }
-} 
+}

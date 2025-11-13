@@ -16,9 +16,9 @@ import jakarta.annotation.PostConstruct;
 @RequiredArgsConstructor
 @EnableConfigurationProperties(AppProperties.class)
 public class LoggingConfig {
-    
+
     private final AppProperties appProperties;
-    
+
     @PostConstruct
     public void configureLogging() {
         AppProperties.Logging logging = appProperties.logging();
@@ -38,7 +38,7 @@ public class LoggingConfig {
         System.setProperty("LOG_MAX_HISTORY", String.valueOf(logging.maxHistory()));
         System.setProperty("LOG_QUEUE_SIZE", String.valueOf(logging.queueSize()));
         System.setProperty("LOG_ASYNC", String.valueOf(logging.async()));
-        
+
         log.info("Logging system properties configured successfully");
     }
-} 
+}

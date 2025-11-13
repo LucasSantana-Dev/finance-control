@@ -60,6 +60,11 @@ jobs:
         GRADLE_OPTS: -Dorg.gradle.unsafe.configuration-cache=false
       run: ./gradlew jacocoTestReport --no-daemon
 
+    - name: Verify test coverage
+      env:
+        GRADLE_OPTS: -Dorg.gradle.unsafe.configuration-cache=false
+      run: ./gradlew jacocoTestCoverageVerification --no-daemon
+
     - name: Prepare artifact directories on failure
       if: failure()
       run: |
@@ -97,6 +102,15 @@ jobs:
           build/reports/jacoco/
           build/jacoco/
         retention-days: 30
+
+    - name: Publish coverage report to PR
+      uses: dorny/test-reporter@v1
+      if: github.event_name == 'pull_request'
+      with:
+        name: JaCoCo Coverage Report
+        path: 'build/reports/jacoco/test/jacocoTestReport.xml'
+        reporter: java-jacoco
+        fail-on-error: false
 
   quality-checks:
     name: Quality Checks

@@ -24,6 +24,12 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Financial Metrics**: Detailed metrics including average transaction amounts and largest/smallest transactions
 - **Dashboard API**: Complete REST API for dashboard data with caching support
 
+### 🤖 Financial Predictions
+- ✅ **NEW**: AI-assisted financial forecasts powered by the OpenAI Responses API
+- **Configurable insights**: Tailor forecast horizon, goals, and additional context to refine guidance
+- **Structured output**: Deterministic JSON responses with month-by-month projections and recommendations
+- **Endpoint**: `POST /dashboard/predictions` (requires `app.ai.openai.enabled=true` and a valid `OPENAI_API_KEY`)
+
 ### 💰 Transaction Management
 - **Multi-source tracking**: Credit cards, bank accounts, cash, and more
 - **Categorization system**: Hierarchical categories and subcategories with full CRUD operations
@@ -35,6 +41,40 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Responsibility sharing**: Split transactions between multiple people
 - **Installment support**: Track recurring payments and installments
 - **Advanced filtering**: Search and filter by date, type, category, and amount
+- ✅ **NEW**: Bank statement import (CSV/OFX) with configurable mapping, duplicate detection, and dry-run mode
+
+### 📥 Statement Import
+- **Endpoint**: `POST /transactions/import` (multipart form data)
+- **Formats supported**: CSV (header-based) and OFX 1.x/2.x
+- **Duplicate strategies**: Skip (default) or allow duplicates when importing existing records
+- **Dry-run mode**: Validate and simulate imports without persisting transactions
+- **Field mapping**: Configure column names, locale, delimiter, and category/source mappings per request
+
+```bash
+curl -X POST "https://api.yourdomain.com/transactions/import" \
+  -H "Authorization: Bearer <token>" \
+  -F "file=@/path/to/statement.csv;type=text/csv" \
+  -F 'config={
+        "userId": 1,
+        "defaultCategoryId": 5,
+        "defaultSubtype": "FIXED",
+        "defaultSource": "BANK_TRANSACTION",
+        "duplicateStrategy": "SKIP",
+        "responsibilities": [
+          {"responsibleId": 2, "percentage": 100}
+        ],
+        "csv": {
+          "containsHeader": true,
+          "delimiter": ";",
+          "locale": "pt-BR",
+          "dateColumn": "date",
+          "descriptionColumn": "description",
+          "amountColumn": "amount"
+        }
+      };type=application/json'
+```
+
+> **Tip:** Use the `dryRun` flag to preview results, or provide `categoryMappings` / `sourceEntityMappings` to translate bank labels into Finance Control IDs automatically.
 
 ### 🎯 Financial Goals
 - **Goal tracking**: Set and monitor financial objectives
@@ -66,12 +106,29 @@ A comprehensive financial management system built with Spring Boot, designed to 
   - ✅ **NEW**: Custom business metrics and system resource monitoring
 
 ### ☁️ Supabase Integration
+- **Authentication**: Supabase Auth integration with JWT support
+  - ✅ **NEW**: Supabase JWT token validation and user mapping
+  - ✅ **NEW**: Dual authentication support (local + Supabase)
+  - ✅ **NEW**: Supabase Auth service with signup/login/password reset
+  - ✅ **NEW**: REST API endpoints for Supabase authentication
+- **Storage**: Supabase Storage for file management
+  - ✅ **NEW**: File upload/download/delete operations via WebClient
+  - ✅ **NEW**: Avatar uploads with automatic URL generation
+  - ✅ **NEW**: Bucket organization (avatars, documents, transactions)
+  - ✅ **NEW**: REST API for storage operations
 - **Realtime Messaging**: Supabase Realtime for live updates and notifications
   - ✅ **NEW**: WebSocket-based realtime subscriptions (transactions, dashboard, goals)
   - ✅ **NEW**: Real-time dashboard updates and transaction notifications
   - ✅ **NEW**: Goal progress realtime updates
   - ✅ **NEW**: REST API for subscription management
   - ✅ **NEW**: Spring WebSocket integration for client-side updates
+- **PostgreSQL Database**: Supabase PostgreSQL integration
+  - ✅ **COMPLETE**: Full PostgreSQL integration with Supabase
+  - ✅ **WORKING**: Application successfully connects to Supabase database
+  - ✅ **MIGRATIONS**: Flyway migrations run automatically on Supabase
+  - ✅ **REAL-TIME**: Database change detection and notifications
+  - ✅ **CONFIGURED**: Environment variables set for Supabase connection
+  - 📋 **STATUS**: See `POSTGRESQL_INTEGRATION_STATUS.md` for details
 
 ## 🏗️ Architecture
 
@@ -144,11 +201,144 @@ DB_PASSWORD=your_password
 # PostgreSQL Container
 POSTGRES_DB=finance_control
 
+# Supabase Configuration (Optional)
+SUPABASE_ENABLED=true
+SUPABASE_URL=https://your-project-ref.supabase.co
+
+# AI Predictions (Optional)
+APP_AI_OPENAI_ENABLED=false
+APP_AI_OPENAI_MODEL=gpt-4o-mini
+APP_AI_OPENAI_MAX_TOKENS=800
+APP_AI_OPENAI_TEMPERATURE=0.2
+OPENAI_API_KEY=your-openai-api-key
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_JWT_SIGNER=your-supabase-jwt-signer
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+
+# Supabase Database (PostgreSQL)
+SUPABASE_DATABASE_ENABLED=false                    # Set to true to use Supabase PostgreSQL
+SUPABASE_DATABASE_HOST=db.your-project-ref.supabase.co
+SUPABASE_DATABASE_PORT=5432
+SUPABASE_DATABASE_NAME=postgres
+SUPABASE_DATABASE_USERNAME=postgres.your-project-ref
+SUPABASE_DATABASE_PASSWORD=your-database-password
+SUPABASE_DATABASE_SSL_ENABLED=true
+SUPABASE_DATABASE_SSL_MODE=require
+
+# Supabase Storage & Realtime
+SUPABASE_STORAGE_ENABLED=true
+SUPABASE_REALTIME_ENABLED=true
+
 # Sentry Configuration (Optional)
 SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
 SENTRY_ENVIRONMENT=development
 SENTRY_RELEASE=1.0.0
 ```
+
+### Supabase Configuration
+
+#### Getting Supabase Credentials
+1. **Create a Supabase project** at [supabase.com](https://supabase.com)
+2. **Get your project URL** from Settings → API → Project URL
+3. **Get your anon key** from Settings → API → Project API keys → anon public
+4. **Get your service role key** from Settings → API → Project API keys → service_role secret
+5. **Get your JWT signer** from Settings → API → JWT Secret
+
+#### Environment Variables
+```env
+SUPABASE_ENABLED=true                           # Enable Supabase integration
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_JWT_SIGNER=your-supabase-jwt-signer
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+SUPABASE_STORAGE_ENABLED=true                   # Enable Storage features
+SUPABASE_REALTIME_ENABLED=true                  # Enable Realtime features
+```
+
+#### Database Setup
+Create the required tables in your Supabase database:
+```sql
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Enable RLS (Row Level Security)
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financial_goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Create policies (adjust based on your needs)
+CREATE POLICY "Users can view own record" ON users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own record" ON users FOR UPDATE USING (auth.uid() = id);
+```
+
+#### Storage Buckets
+Create these buckets in your Supabase Storage:
+- `avatars` - User profile pictures
+- `documents` - User documents
+- `transactions` - Transaction attachments
+
+#### PostgreSQL Database Integration
+The application supports **dual database modes**:
+
+1. **Local PostgreSQL** (default): Uses Docker container or local PostgreSQL instance
+2. **Supabase PostgreSQL**: Uses Supabase's hosted PostgreSQL database
+
+##### Switching to Supabase Database
+
+1. **Get Database Credentials** from Supabase Dashboard:
+   - Go to Settings → Database
+   - Copy the connection parameters (host, database, username, password)
+
+2. **Update Environment Variables**:
+   ```env
+   SUPABASE_DATABASE_ENABLED=true
+   SUPABASE_DATABASE_HOST=db.your-project-ref.supabase.co
+   SUPABASE_DATABASE_USERNAME=postgres.your-project-ref
+   SUPABASE_DATABASE_PASSWORD=your-database-password
+   ```
+
+3. **Database Schema Setup**:
+   ```sql
+   -- Connect to your Supabase database and run:
+   CREATE SCHEMA IF NOT EXISTS finance_control;
+
+   -- The application will automatically run Flyway migrations
+   -- to create all required tables, indexes, and constraints
+   ```
+
+##### Database Features with Supabase
+
+✅ **Row Level Security (RLS)**: Automatic data isolation per user
+✅ **Real-time Subscriptions**: Live database change notifications
+✅ **Built-in Backup**: Automatic daily backups
+✅ **Connection Pooling**: Optimized connection management
+✅ **SSL Encryption**: Secure connections by default
+
+##### Migration Process
+
+1. **Backup Local Data** (if needed):
+   ```bash
+   # Export local database
+   pg_dump -h localhost -U finance_user -d finance_control > backup.sql
+   ```
+
+2. **Enable Supabase Database**:
+   ```env
+   SUPABASE_DATABASE_ENABLED=true
+   ```
+
+3. **Run Application**:
+   ```bash
+   ./gradlew bootRun
+   # Flyway will automatically create/update the schema
+   ```
+
+4. **Migrate Data** (optional):
+   ```bash
+   # Import data into Supabase (if needed)
+   psql "postgresql://postgres.your-project-ref:password@db.your-project-ref.supabase.co:5432/postgres" < backup.sql
+   ```
 
 ### Running with Docker Compose
 ```bash
@@ -194,6 +384,487 @@ cd finance-control
 ./scripts/test-sentry.sh
 ```
 
+### Supabase Integration API
+
+#### Authentication Endpoints
+```bash
+# Supabase User Registration
+curl -X POST http://localhost:8080/supabase/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123","data":{"name":"John Doe"}}'
+
+# Supabase User Login
+curl -X POST http://localhost:8080/supabase/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+
+# Refresh Supabase Token
+curl -X POST http://localhost:8080/supabase/auth/refresh-token \
+  -H "Authorization: Bearer your-refresh-token"
+
+# Password Reset
+curl -X POST http://localhost:8080/supabase/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","redirect_to":"http://localhost:3000/reset-password"}'
+
+# Update Password
+curl -X PUT http://localhost:8080/supabase/auth/update-password \
+  -H "Authorization: Bearer your-access-token" \
+  -H "Content-Type: application/json" \
+  -d '{"password":"newpassword123"}'
+
+# Logout
+curl -X POST http://localhost:8080/supabase/auth/logout \
+  -H "Authorization: Bearer your-access-token"
+```
+
+#### Storage Endpoints
+```bash
+# Upload a file
+curl -X POST http://localhost:8080/supabase/storage/upload \
+  -F "bucket=avatars" \
+  -F "folder=user123" \
+  -F "file=@/path/to/avatar.jpg"
+
+# Download a file
+curl -X GET http://localhost:8080/supabase/storage/download/avatars/avatar.jpg \
+  -o downloaded-avatar.jpg
+
+# Delete a file
+curl -X DELETE http://localhost:8080/supabase/storage/delete/avatars/avatar.jpg
+
+# Upload avatar (profile integration)
+curl -X POST http://localhost:8080/profile/avatar \
+  -H "Authorization: Bearer your-jwt-token" \
+  -F "file=@/path/to/avatar.jpg"
+```
+
+#### Realtime WebSocket Connection
+```javascript
+// Connect to Supabase Realtime
+const socket = new WebSocket('ws://localhost:8080/supabase/realtime');
+
+// Subscribe to transaction updates
+socket.send(JSON.stringify({
+  event: 'subscribe',
+  channel: 'transactions',
+  userId: 'user123'
+}));
+
+// Subscribe to goal updates
+socket.send(JSON.stringify({
+  event: 'subscribe',
+  channel: 'goals',
+  userId: 'user123'
+}));
+
+// Subscribe to dashboard updates
+socket.send(JSON.stringify({
+  event: 'subscribe',
+  channel: 'dashboard',
+  userId: 'user123'
+}));
+
+// Listen for messages
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Realtime update:', data);
+};
+```
+
+#### Dual Authentication Support
+The application supports both local JWT and Supabase JWT authentication:
+
+```bash
+# Local authentication (existing)
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+
+# Supabase authentication (new)
+curl -X POST http://localhost:8080/api/auth/supabase/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+```
+
+### Integration Examples & Usage Patterns
+
+#### Frontend Integration with Supabase
+
+##### React with Supabase Client
+```typescript
+// Install dependencies
+npm install @supabase/supabase-js @supabase/auth-helpers-react
+
+// Configure Supabase client
+import { createClient } from '@supabase/supabase-js'
+import { useSupabaseClient } from '@supabase/auth-helpers-react'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// Authentication example
+const signUp = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name: 'John Doe',
+      }
+    }
+  })
+  return { data, error }
+}
+
+// File upload example
+const uploadAvatar = async (file: File) => {
+  const { data, error } = await supabase.storage
+    .from('avatars')
+    .upload(`user-${userId}/avatar.jpg`, file)
+
+  if (data) {
+    // Update profile with new avatar URL
+    const avatarUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${data.path}`
+    await fetch('/api/profile/avatar', {
+      method: 'PUT',
+      body: JSON.stringify({ avatarUrl }),
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+  return { data, error }
+}
+```
+
+##### Vue.js with Supabase
+```javascript
+// Configure Supabase client
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+
+// Real-time subscription example
+const subscribeToTransactions = (userId) => {
+  return supabase
+    .channel('transactions')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'transactions',
+      filter: `user_id=eq.${userId}`
+    }, (payload) => {
+      console.log('Transaction change:', payload)
+      // Update UI with new transaction data
+      updateTransactionsList(payload.new)
+    })
+    .subscribe()
+}
+```
+
+##### Angular with Supabase
+```typescript
+// Configure Supabase client
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+
+@Injectable({
+  providedIn: 'root'
+})
+export class SupabaseService {
+  private supabase: SupabaseClient
+
+  constructor() {
+    this.supabase = createClient(
+      environment.supabaseUrl,
+      environment.supabaseAnonKey
+    )
+  }
+
+  // Authentication service
+  async signIn(email: string, password: string) {
+    const { data, error } = await this.supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+    return { data, error }
+  }
+
+  // Storage service
+  async uploadFile(bucket: string, path: string, file: File) {
+    const { data, error } = await this.supabase.storage
+      .from(bucket)
+      .upload(path, file)
+
+    return { data, error }
+  }
+}
+```
+
+#### Backend Integration Patterns
+
+##### Spring Boot Controller Integration
+```java
+@RestController
+@RequestMapping("/api/transactions")
+@RequiredArgsConstructor
+public class TransactionController {
+
+    private final TransactionService transactionService;
+    private final SupabaseRealtimeService realtimeService;
+
+    @PostMapping
+    public ResponseEntity<TransactionDTO> createTransaction(@RequestBody @Valid CreateTransactionRequest request) {
+        // Create transaction
+        TransactionDTO transaction = transactionService.create(request);
+
+        // Send realtime notification
+        if (realtimeService != null) {
+            realtimeService.notifyTransactionUpdate(
+                transaction.getUserId(),
+                transaction
+            );
+        }
+
+        return ResponseEntity.ok(transaction);
+    }
+}
+```
+
+##### Service Layer Integration
+```java
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class TransactionService {
+
+    private final TransactionRepository transactionRepository;
+    private final SupabaseRealtimeService realtimeService; // Optional
+    private final DashboardService dashboardService; // Optional
+
+    @Autowired(required = false)
+    public void setRealtimeService(SupabaseRealtimeService realtimeService) {
+        this.realtimeService = realtimeService;
+    }
+
+    @Autowired(required = false)
+    public void setDashboardService(DashboardService dashboardService) {
+        this.dashboardService = dashboardService;
+    }
+
+    public TransactionDTO create(CreateTransactionRequest request) {
+        // Business logic...
+        Transaction transaction = transactionRepository.save(entity);
+
+        // Notify realtime subscribers
+        if (realtimeService != null) {
+            realtimeService.notifyTransactionUpdate(
+                transaction.getUserId(),
+                convertToDTO(transaction)
+            );
+        }
+
+        // Update dashboard
+        if (dashboardService != null) {
+            dashboardService.notifyDashboardUpdate(transaction.getUserId());
+        }
+
+        return convertToDTO(transaction);
+    }
+}
+```
+
+#### Real-time Dashboard Updates
+
+##### Frontend Real-time Connection
+```typescript
+// Connect to WebSocket for real-time updates
+class DashboardService {
+  private socket: WebSocket;
+  private subscribers: Map<string, Function[]> = new Map();
+
+  connect(userId: string) {
+    this.socket = new WebSocket('ws://localhost:8080/supabase/realtime');
+
+    this.socket.onopen = () => {
+      // Subscribe to dashboard updates
+      this.socket.send(JSON.stringify({
+        event: 'subscribe',
+        channel: 'dashboard',
+        userId: userId
+      }));
+
+      // Subscribe to transaction updates
+      this.socket.send(JSON.stringify({
+        event: 'subscribe',
+        channel: 'transactions',
+        userId: userId
+      }));
+
+      // Subscribe to goal updates
+      this.socket.send(JSON.stringify({
+        event: 'subscribe',
+        channel: 'goals',
+        userId: userId
+      }));
+    };
+
+    this.socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      this.notifySubscribers(data.channel, data);
+    };
+  }
+
+  subscribe(channel: string, callback: Function) {
+    if (!this.subscribers.has(channel)) {
+      this.subscribers.set(channel, []);
+    }
+    this.subscribers.get(channel)!.push(callback);
+  }
+
+  private notifySubscribers(channel: string, data: any) {
+    const callbacks = this.subscribers.get(channel) || [];
+    callbacks.forEach(callback => callback(data));
+  }
+}
+
+// Usage in React component
+const Dashboard = () => {
+  const [dashboardData, setDashboardData] = useState(null);
+  const dashboardService = new DashboardService();
+
+  useEffect(() => {
+    const userId = getCurrentUserId();
+    dashboardService.connect(userId);
+
+    // Subscribe to dashboard updates
+    dashboardService.subscribe('dashboard', (data) => {
+      console.log('Dashboard updated:', data);
+      // Refresh dashboard data
+      fetchDashboardData().then(setDashboardData);
+    });
+
+    // Subscribe to transaction updates
+    dashboardService.subscribe('transactions', (data) => {
+      console.log('Transaction updated:', data);
+      // Update transaction list
+      updateTransactionList(data.payload);
+    });
+
+    return () => dashboardService.disconnect();
+  }, []);
+};
+```
+
+#### Dual Authentication Flow
+
+##### Backend Dual Auth Support
+```java
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtils jwtUtils;
+
+    // Optional Supabase authentication
+    @Autowired(required = false)
+    private SupabaseAuthService supabaseAuthService;
+
+    // Local authentication (existing)
+    public AuthResponse authenticate(String email, String password) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new AuthenticationException("User not found"));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new AuthenticationException("Invalid credentials");
+        }
+
+        String token = jwtUtils.generateToken(user.getId().toString());
+        return AuthResponse.builder()
+            .token(token)
+            .userId(user.getId())
+            .build();
+    }
+
+    // Supabase authentication (new)
+    public Mono<AuthResponse> authenticateWithSupabase(String email, String password) {
+        if (supabaseAuthService == null || !supabaseAuthService.isSupabaseAuthEnabled()) {
+            return Mono.error(new IllegalStateException("Supabase authentication is not enabled"));
+        }
+
+        return supabaseAuthService.signin(new LoginRequest(email, password))
+            .map(response -> {
+                // Map Supabase user to local user or create new one
+                String supabaseUserId = response.getUser().getId();
+                User localUser = findOrCreateUserFromSupabase(response.getUser());
+
+                return AuthResponse.builder()
+                    .token(response.getAccessToken())
+                    .refreshToken(response.getRefreshToken())
+                    .userId(localUser.getId())
+                    .build();
+            });
+    }
+
+    private User findOrCreateUserFromSupabase(AuthResponse.User supabaseUser) {
+        // Implementation to map Supabase user to local user
+        return userRepository.findByEmail(supabaseUser.getEmail())
+            .orElseGet(() -> createUserFromSupabase(supabaseUser));
+    }
+}
+```
+
+##### Frontend Auth Selection
+```typescript
+// Authentication service with provider selection
+class AuthService {
+  private provider: 'local' | 'supabase' = 'local';
+
+  setAuthProvider(provider: 'local' | 'supabase') {
+    this.provider = provider;
+  }
+
+  async login(email: string, password: string) {
+    if (this.provider === 'supabase') {
+      return this.supabaseLogin(email, password);
+    } else {
+      return this.localLogin(email, password);
+    }
+  }
+
+  private async localLogin(email: string, password: string) {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    return response.json();
+  }
+
+  private async supabaseLogin(email: string, password: string) {
+    const response = await fetch('/api/auth/supabase/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    return response.json();
+  }
+}
+
+// Usage
+const authService = new AuthService();
+
+// Switch to Supabase auth
+authService.setAuthProvider('supabase');
+const result = await authService.login('user@example.com', 'password');
+```
+
 ### API Testing with Postman
 ```bash
 # Start the application
@@ -208,6 +879,13 @@ curl -X POST http://localhost:8080/api/monitoring/test-alert
 curl http://localhost:8080/api/transactions  # Should return 403
 curl http://localhost:8080/api/monitoring/status  # Should return 500 (not 403)
 ```
+
+**Collection:** Import `postman/FinanceControl.postman_collection.json` into your API client of choice.
+
+- `{{baseUrl}}` defaults to `http://localhost:8080`
+- `{{authToken}}` is the JWT from `/auth/login`
+- `{{supabaseToken}}` and `{{supabaseRefreshToken}}` come from Supabase Auth responses
+- Requests cover Supabase auth/storage operations, the CSV/OFX `/transactions/import`, and `/dashboard/predictions`
 
 ### Monitoring & Health Checks
 ```bash

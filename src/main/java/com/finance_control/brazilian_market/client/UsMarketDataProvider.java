@@ -243,9 +243,6 @@ public class UsMarketDataProvider implements MarketDataProvider {
     /**
      * Response wrapper for API
      */
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("EI_EXPOSE_REP")
     public static class ApiResponse {
         private QuoteResponseWrapper quoteResponse;
 
@@ -442,9 +439,6 @@ public class UsMarketDataProvider implements MarketDataProvider {
     /**
      * Chart response from API
      */
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("EI_EXPOSE_REP")
     public static class ChartResponse {
         private ChartResult chart;
 
@@ -452,9 +446,6 @@ public class UsMarketDataProvider implements MarketDataProvider {
         public void setChart(ChartResult chart) { this.chart = chart; }
     }
 
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("EI_EXPOSE_REP")
     public static class ChartResult {
         private List<ChartResultItem> result;
         private Object error;
@@ -465,9 +456,6 @@ public class UsMarketDataProvider implements MarketDataProvider {
         public void setError(Object error) { this.error = error; }
     }
 
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("EI_EXPOSE_REP")
     public static class ChartResultItem {
         private Meta meta;
         private List<Long> timestamp;
@@ -481,9 +469,6 @@ public class UsMarketDataProvider implements MarketDataProvider {
         public void setIndicators(Indicators indicators) { this.indicators = indicators; }
     }
 
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("EI_EXPOSE_REP")
     public static class Meta {
         private String currency;
         private String symbol;
@@ -540,9 +525,6 @@ public class UsMarketDataProvider implements MarketDataProvider {
         public void setValidRanges(List<String> validRanges) { this.validRanges = validRanges; }
     }
 
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("EI_EXPOSE_REP")
     public static class Indicators {
         private List<Quote> quote;
 
@@ -550,9 +532,6 @@ public class UsMarketDataProvider implements MarketDataProvider {
         public void setQuote(List<Quote> quote) { this.quote = quote; }
     }
 
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("EI_EXPOSE_REP")
     public static class Quote {
         private List<Double> open;
         private List<Double> high;
@@ -577,9 +556,6 @@ public class UsMarketDataProvider implements MarketDataProvider {
      */
     @lombok.Data
     @lombok.Builder
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("EI_EXPOSE_REP")
     public static class MarketData {
         private BigDecimal currentPrice;
         private BigDecimal previousClose;

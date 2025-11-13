@@ -11,6 +11,7 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -53,10 +54,11 @@ public class RedisConfig {
             config.setPassword(redis.password());
         }
 
-        LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
-        factory.setTimeout(redis.timeout());
+        LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
+                .commandTimeout(Duration.ofMillis(redis.timeout()))
+                .build();
 
-        return factory;
+        return new LettuceConnectionFactory(config, clientConfig);
     }
 
     /**

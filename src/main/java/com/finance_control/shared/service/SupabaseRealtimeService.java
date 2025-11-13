@@ -1,21 +1,31 @@
 package com.finance_control.shared.service;
 
 import com.finance_control.shared.config.AppProperties;
-// Temporarily disabled until Supabase dependency is available
-// import com.harium.supabase.SupabaseClient;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-// import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketHttpHeaders;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.client.WebSocketClient;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Service for managing Supabase Realtime subscriptions.
@@ -23,31 +33,37 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(value = "app.supabase.realtime.enabled", havingValue = "true", matchIfMissing = false) // Disabled by default
+@ConditionalOnProperty(value = "app.supabase.realtime.enabled", havingValue = "true", matchIfMissing = false)
 public class SupabaseRealtimeService {
-
-    // Temporarily disabled until Supabase dependency is available
-    // @Autowired
-    // private SupabaseClient supabaseClient;
-    private Object supabaseClient; // Temporarily Object
 
     @Autowired
     private AppProperties appProperties;
 
-    // @Autowired
-    // private SimpMessagingTemplate messagingTemplate;
-    private Object messagingTemplate; // Temporarily Object
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    // WebSocket client and session
+    private WebSocketClient webSocketClient;
+    private WebSocketSession webSocketSession;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Active subscriptions: channel -> Set of user IDs
     private final Map<String, Set<Long>> activeSubscriptions = new ConcurrentHashMap<>();
 
+    // Database change subscriptions: table -> Set of user IDs
+    private final Map<String, Set<Long>> databaseSubscriptions = new ConcurrentHashMap<>();
+
     // Realtime connection status
     private volatile boolean connected = false;
+
+    // Message ID counter for WebSocket messages
+    private final AtomicLong messageIdCounter = new AtomicLong(1);
 
     @PostConstruct
     public void initialize() {
         log.info("Initializing Supabase Realtime service");
         try {
+            webSocketClient = new StandardWebSocketClient();
             connect();
             setupDefaultChannels();
         } catch (Exception e) {
@@ -62,18 +78,39 @@ public class SupabaseRealtimeService {
     }
 
     /**
-     * Connects to Supabase Realtime.
+     * Connects to Supabase Realtime via WebSocket.
      */
     public void connect() {
+        if (connected) {
+            log.debug("Already connected to Supabase Realtime");
+            return;
+        }
+
         try {
-            if (supabaseClient != null) {
-                // Note: The exact connection method depends on the Supabase Java client implementation
-                // This is a placeholder for the actual connection logic
-                connected = true;
-                log.info("Connected to Supabase Realtime");
-            } else {
-                log.warn("Supabase client not available, realtime features disabled");
+            String supabaseUrl = appProperties.supabase().url();
+            String anonKey = appProperties.supabase().anonKey();
+
+            if (!StringUtils.hasText(supabaseUrl) || !StringUtils.hasText(anonKey)) {
+                log.warn("Supabase URL or anon key not configured, realtime features disabled");
+                return;
             }
+
+            // Convert HTTPS URL to WSS for WebSocket
+            String websocketUrl = supabaseUrl.replace("https://", "wss://") + "/realtime/v1/websocket";
+
+            // Add query parameters for authentication
+            String fullUrl = websocketUrl + "?apikey=" + anonKey;
+
+            log.info("Connecting to Supabase Realtime: {}", websocketUrl);
+
+            WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
+            SupabaseRealtimeWebSocketHandler handler = new SupabaseRealtimeWebSocketHandler();
+
+            webSocketSession = webSocketClient.execute(handler, headers, URI.create(fullUrl)).get();
+
+            connected = true;
+            log.info("Successfully connected to Supabase Realtime");
+
         } catch (Exception e) {
             log.error("Failed to connect to Supabase Realtime", e);
             connected = false;
@@ -85,8 +122,13 @@ public class SupabaseRealtimeService {
      */
     public void disconnect() {
         try {
+            if (webSocketSession != null && webSocketSession.isOpen()) {
+                webSocketSession.close(CloseStatus.NORMAL);
+            }
             activeSubscriptions.clear();
+            databaseSubscriptions.clear();
             connected = false;
+            webSocketSession = null;
             log.info("Disconnected from Supabase Realtime");
         } catch (Exception e) {
             log.error("Error during realtime disconnect", e);
@@ -168,7 +210,7 @@ public class SupabaseRealtimeService {
      */
     public void broadcastToUser(String channelName, Long userId, Object message) {
         try {
-            String destination = "/topic/" + channelName + "/user/" + userId;
+            // String destination = "/topic/" + channelName + "/user/" + userId;
             // Temporarily disabled until messaging template is available
             // messagingTemplate.convertAndSend(destination, message);
             log.debug("Message to user {} on channel {} would be sent: {} - TEMPORARILY DISABLED", userId, channelName, message);
@@ -248,16 +290,24 @@ public class SupabaseRealtimeService {
     }
 
     /**
-     * Sets up default realtime channels based on configuration.
+     * Sets up default realtime channels and database subscriptions based on configuration.
      */
     private void setupDefaultChannels() {
         String[] channels = appProperties.supabase().realtime().channels().toArray(new String[0]);
         log.info("Setting up realtime channels: {}", String.join(", ", channels));
 
-        // Note: Actual channel setup would depend on the Supabase Java client
-        // This is a placeholder for the channel initialization logic
+        // Setup default channels
         for (String channel : channels) {
             activeSubscriptions.putIfAbsent(channel, new HashSet<>());
+        }
+
+        // Setup database subscriptions for common tables
+        String[] defaultTables = {"transactions", "goals", "profiles"};
+        for (String table : defaultTables) {
+            databaseSubscriptions.putIfAbsent(table, new HashSet<>());
+            if (connected && webSocketSession != null && webSocketSession.isOpen()) {
+                sendDatabaseSubscriptionMessage(table);
+            }
         }
     }
 
@@ -279,7 +329,7 @@ public class SupabaseRealtimeService {
 
     /**
      * Handles incoming realtime messages from Supabase.
-     * This method would be called by the Supabase client when messages are received.
+     * This method is called by the WebSocket handler when messages are received.
      *
      * @param channelName the channel that received the message
      * @param payload the message payload
@@ -287,13 +337,262 @@ public class SupabaseRealtimeService {
     public void handleRealtimeMessage(String channelName, Object payload) {
         log.debug("Received realtime message on channel {}: {}", channelName, payload);
 
-        // Process the message and broadcast to subscribers
+        try {
+            // Process database change events
+            if (payload instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> payloadMap = (Map<String, Object>) payload;
+
+                String eventType = (String) payloadMap.get("eventType");
+                if ("INSERT".equals(eventType) || "UPDATE".equals(eventType) || "DELETE".equals(eventType)) {
+                    handleDatabaseChangeEvent(channelName, payloadMap);
+                }
+            }
+
+            // Broadcast to subscribers
+            broadcastToChannel(channelName, payload);
+
+        } catch (Exception e) {
+            log.error("Error handling realtime message", e);
+        }
+    }
+
+    /**
+     * Subscribes to database changes for a specific table.
+     *
+     * @param tableName the name of the table to monitor
+     * @param userId the user ID subscribing to changes
+     */
+    public void subscribeToDatabaseChanges(String tableName, Long userId) {
+        databaseSubscriptions.computeIfAbsent(tableName, k -> new HashSet<>()).add(userId);
+
+        if (connected && webSocketSession != null && webSocketSession.isOpen()) {
+            sendDatabaseSubscriptionMessage(tableName);
+        }
+
+        log.info("User {} subscribed to database changes for table {}", userId, tableName);
+    }
+
+    /**
+     * Unsubscribes a user from database changes for a specific table.
+     *
+     * @param tableName the name of the table
+     * @param userId the user ID unsubscribing
+     */
+    public void unsubscribeFromDatabaseChanges(String tableName, Long userId) {
+        Set<Long> subscribers = databaseSubscriptions.get(tableName);
+        if (subscribers != null) {
+            subscribers.remove(userId);
+            if (subscribers.isEmpty()) {
+                databaseSubscriptions.remove(tableName);
+                if (connected && webSocketSession != null && webSocketSession.isOpen()) {
+                    sendDatabaseUnsubscriptionMessage(tableName);
+                }
+            }
+            log.info("User {} unsubscribed from database changes for table {}", userId, tableName);
+        }
+    }
+
+    /**
+     * Handles database change events.
+     */
+    private void handleDatabaseChangeEvent(String tableName, Map<String, Object> payload) {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> record = (Map<String, Object>) payload.get("new");
+            if (record == null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> oldRecord = (Map<String, Object>) payload.get("old");
+                record = oldRecord;
+            }
+
+            if (record != null) {
+                // Extract user ID from the record to determine who should receive the notification
+                Object userIdObj = record.get("user_id");
+                if (userIdObj instanceof Number) {
+                    Long recordUserId = ((Number) userIdObj).longValue();
+                    notifyDatabaseChange(tableName, recordUserId, payload);
+                } else {
+                    // If no user_id field, broadcast to all subscribers of the table
+                    broadcastDatabaseChange(tableName, payload);
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Error handling database change event for table {}", tableName, e);
+        }
+    }
+
+    /**
+     * Notifies a specific user about database changes.
+     */
+    private void notifyDatabaseChange(String tableName, Long userId, Map<String, Object> payload) {
         Map<String, Object> message = new HashMap<>();
-        message.put("type", "realtime_message");
-        message.put("channel", channelName);
-        message.put("payload", payload);
+        message.put("type", "database_change");
+        message.put("table", tableName);
+        message.put("userId", userId);
+        message.put("data", payload);
         message.put("timestamp", System.currentTimeMillis());
 
-        broadcastToChannel(channelName, message);
+        broadcastToUser(tableName, userId, message);
+    }
+
+    /**
+     * Broadcasts database changes to all subscribers of a table.
+     */
+    private void broadcastDatabaseChange(String tableName, Map<String, Object> payload) {
+        Set<Long> subscribers = databaseSubscriptions.get(tableName);
+        if (subscribers != null && !subscribers.isEmpty()) {
+            Map<String, Object> message = new HashMap<>();
+            message.put("type", "database_change");
+            message.put("table", tableName);
+            message.put("data", payload);
+            message.put("timestamp", System.currentTimeMillis());
+
+            for (Long userId : subscribers) {
+                broadcastToUser(tableName, userId, message);
+            }
+        }
+    }
+
+    /**
+     * Sends a subscription message for database changes.
+     */
+    private void sendDatabaseSubscriptionMessage(String tableName) {
+        try {
+            Map<String, Object> message = new HashMap<>();
+            message.put("event", "phx_join");
+            message.put("topic", "realtime:" + tableName);
+            message.put("payload", new HashMap<>());
+            message.put("ref", String.valueOf(messageIdCounter.incrementAndGet()));
+
+            String jsonMessage = objectMapper.writeValueAsString(message);
+            webSocketSession.sendMessage(new TextMessage(jsonMessage));
+
+            log.debug("Sent database subscription message for table: {}", tableName);
+
+        } catch (Exception e) {
+            log.error("Failed to send database subscription message for table {}", tableName, e);
+        }
+    }
+
+    /**
+     * Sends an unsubscription message for database changes.
+     */
+    private void sendDatabaseUnsubscriptionMessage(String tableName) {
+        try {
+            Map<String, Object> message = new HashMap<>();
+            message.put("event", "phx_leave");
+            message.put("topic", "realtime:" + tableName);
+            message.put("payload", new HashMap<>());
+            message.put("ref", String.valueOf(messageIdCounter.incrementAndGet()));
+
+            String jsonMessage = objectMapper.writeValueAsString(message);
+            webSocketSession.sendMessage(new TextMessage(jsonMessage));
+
+            log.debug("Sent database unsubscription message for table: {}", tableName);
+
+        } catch (Exception e) {
+            log.error("Failed to send database unsubscription message for table {}", tableName, e);
+        }
+    }
+
+    /**
+     * WebSocket handler for Supabase Realtime connections.
+     */
+    private class SupabaseRealtimeWebSocketHandler extends TextWebSocketHandler {
+
+        @Override
+        public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+            log.info("WebSocket connection established with Supabase Realtime");
+            connected = true;
+
+            // Send heartbeat to keep connection alive
+            startHeartbeat();
+        }
+
+        @Override
+        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+            log.info("WebSocket connection closed: {}", status);
+            connected = false;
+            webSocketSession = null;
+
+            // Attempt to reconnect after a delay
+            reconnectAfterDelay();
+        }
+
+        @Override
+        protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+            try {
+                String payload = message.getPayload();
+                JsonNode jsonNode = objectMapper.readTree(payload);
+
+                String event = jsonNode.get("event").asText();
+                String topic = jsonNode.get("topic").asText();
+
+                if ("phx_reply".equals(event)) {
+                    // Handle replies to our messages
+                    log.debug("Received reply for topic: {}", topic);
+                } else if ("broadcast".equals(event)) {
+                    // Handle broadcast messages
+                    JsonNode messagePayload = jsonNode.get("payload");
+                    if (messagePayload != null) {
+                        handleRealtimeMessage(topic, objectMapper.treeToValue(messagePayload, Map.class));
+                    }
+                } else {
+                    log.debug("Received {} event for topic: {}", event, topic);
+                }
+
+            } catch (Exception e) {
+                log.error("Error handling WebSocket message", e);
+            }
+        }
+
+        @Override
+        public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+            log.error("WebSocket transport error", exception);
+        }
+
+        private void startHeartbeat() {
+            // Send periodic heartbeat messages to keep the connection alive
+            Thread heartbeatThread = new Thread(() -> {
+                while (connected && webSocketSession != null && webSocketSession.isOpen()) {
+                    try {
+                        Map<String, Object> heartbeat = new HashMap<>();
+                        heartbeat.put("event", "heartbeat");
+                        heartbeat.put("topic", "phoenix");
+                        heartbeat.put("payload", new HashMap<>());
+                        heartbeat.put("ref", String.valueOf(messageIdCounter.incrementAndGet()));
+
+                        String heartbeatMessage = objectMapper.writeValueAsString(heartbeat);
+                        webSocketSession.sendMessage(new TextMessage(heartbeatMessage));
+
+                        Thread.sleep(30000); // Send heartbeat every 30 seconds
+
+                    } catch (Exception e) {
+                        log.error("Error sending heartbeat", e);
+                        break;
+                    }
+                }
+            });
+            heartbeatThread.setDaemon(true);
+            heartbeatThread.start();
+        }
+
+        private void reconnectAfterDelay() {
+            Thread reconnectThread = new Thread(() -> {
+                try {
+                    Thread.sleep(5000); // Wait 5 seconds before reconnecting
+                    if (!connected) {
+                        log.info("Attempting to reconnect to Supabase Realtime");
+                        connect();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            reconnectThread.setDaemon(true);
+            reconnectThread.start();
+        }
     }
 }

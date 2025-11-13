@@ -2,20 +2,15 @@ package com.finance_control.unit.shared.monitoring;
 
 import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.monitoring.AlertingService;
-import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.monitoring.SentryService;
-import io.sentry.Sentry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -264,10 +259,7 @@ class AlertingServiceTest {
     @Test
     @DisplayName("Should prevent duplicate alerts")
     void triggerAlert_WithDuplicateAlert_ShouldNotSendDuplicate() {
-        // Given
-        String alertId = "test_alert";
-
-        // When - Trigger same alert twice
+        // Given - Trigger same alert twice
         alertingService.alertFailedAuthentication("test", "reason");
         alertingService.alertFailedAuthentication("test", "reason");
 

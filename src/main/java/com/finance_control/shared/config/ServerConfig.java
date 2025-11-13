@@ -17,9 +17,9 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 @EnableConfigurationProperties(AppProperties.class)
 public class ServerConfig {
-    
+
     private final AppProperties appProperties;
-    
+
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
         return factory -> {
@@ -43,4 +43,4 @@ public class ServerConfig {
             });
         };
     }
-} 
+}

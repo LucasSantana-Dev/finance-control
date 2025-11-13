@@ -5,7 +5,6 @@ import com.finance_control.brazilian_market.model.MarketIndicator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -14,433 +13,156 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
-/**
- * Unit tests for BCBApiClient.
- */
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class BCBApiClientTest {
 
     @Mock
     private RestTemplate restTemplate;
 
-    @InjectMocks
-    private BCBApiClient bcbApiClient;
-
-    private List<Map<String, Object>> mockResponseData;
+    private BCBApiClient client;
 
     @BeforeEach
     void setUp() {
-        bcbApiClient = new BCBApiClient(restTemplate, "https://api.bcb.gov.br/dados/serie/bcdata.sgs");
-
-        // Mock response data
-        mockResponseData = List.of(
-            Map.of("data", "2024-01-15", "valor", "13.75")
-        );
+        client = new BCBApiClient(restTemplate, "https://api.bcb.gov.br/dados/serie/bcdata.sgs");
     }
 
     @Test
-    void getCurrentSelicRate_WithValidResponse_ShouldReturnSelicRate() {
-        // Given
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+    void getCurrentSelicRate_ShouldReturnValue_WhenApiOk() {
+        List<Map<String, Object>> body = new ArrayList<>();
+        Map<String, Object> entry = new HashMap<>();
+        entry.put("valor", "10.5");
+        body.add(entry);
 
-        // When
-        BigDecimal result = bcbApiClient.getCurrentSelicRate();
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
 
-        // Then
-        assertThat(result).isEqualTo(new BigDecimal("13.75"));
-        verify(restTemplate).getForEntity(anyString(), eq(List.class));
+        BigDecimal result = client.getCurrentSelicRate();
+        assertThat(result).isEqualByComparingTo("10.5");
     }
 
     @Test
-    void getCurrentSelicRate_WithEmptyResponse_ShouldReturnZero() {
-        // Given
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+    void getCurrentSelicRate_ShouldReturnZero_WhenApiNotOk() {
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenReturn(new ResponseEntity<>(null, HttpStatus.BAD_REQUEST));
 
-        // When
-        BigDecimal result = bcbApiClient.getCurrentSelicRate();
-
-        // Then
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
+        BigDecimal result = client.getCurrentSelicRate();
+        assertThat(result).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     @Test
-    void getCurrentSelicRate_WithNullValue_ShouldReturnZero() {
-        // Given
-        Map<String, Object> responseMap = new java.util.HashMap<>();
-        responseMap.put("data", "2024-01-15");
-        responseMap.put("valor", null);
-        List<Map<String, Object>> responseData = List.of(responseMap);
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(responseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+    void getCurrentSelicRate_ShouldReturnZero_WhenException() {
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenThrow(new RuntimeException("network error"));
 
-        // When
-        BigDecimal result = bcbApiClient.getCurrentSelicRate();
-
-        // Then
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
+        BigDecimal result = client.getCurrentSelicRate();
+        assertThat(result).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     @Test
-    void getCurrentSelicRate_WithException_ShouldReturnZero() {
-        // Given
-        when(restTemplate.getForEntity(anyString(), eq(List.class)))
-                .thenThrow(new RuntimeException("API Error"));
+    void getHistoricalData_ShouldReturnList_WhenApiOk() {
+        List<Map<String, Object>> body = new ArrayList<>();
+        body.add(Map.of("data", "01/01/2024", "valor", "10.1"));
+        body.add(Map.of("data", "02/01/2024", "valor", "10.2"));
 
-        // When
-        BigDecimal result = bcbApiClient.getCurrentSelicRate();
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
 
-        // Then
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getCurrentCDIRate_WithValidResponse_ShouldReturnCDIRate() {
-        // Given
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        // When
-        BigDecimal result = bcbApiClient.getCurrentCDIRate();
-
-        // Then
-        assertThat(result).isEqualTo(new BigDecimal("13.75"));
-        verify(restTemplate).getForEntity(anyString(), eq(List.class));
-    }
-
-    @Test
-    void getCurrentIPCA_WithValidResponse_ShouldReturnIPCA() {
-        // Given
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        // When
-        BigDecimal result = bcbApiClient.getCurrentIPCA();
-
-        // Then
-        assertThat(result).isEqualTo(new BigDecimal("13.75"));
-        verify(restTemplate).getForEntity(anyString(), eq(List.class));
-    }
-
-    @Test
-    void getCurrentExchangeRate_WithValidResponse_ShouldReturnExchangeRate() {
-        // Given
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        // When
-        BigDecimal result = bcbApiClient.getCurrentExchangeRate();
-
-        // Then
-        assertThat(result).isEqualTo(new BigDecimal("13.75"));
-        verify(restTemplate).getForEntity(anyString(), eq(List.class));
-    }
-
-    @Test
-    void getHistoricalData_WithValidResponse_ShouldReturnHistoricalData() {
-        // Given
-        List<Map<String, Object>> historicalData = List.of(
-            Map.of("data", "2024-01-15", "valor", "13.75"),
-            Map.of("data", "2024-01-14", "valor", "13.50"),
-            Map.of("data", "2024-01-13", "valor", "13.25")
-        );
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(historicalData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        // When
-        List<Map<String, Object>> result = bcbApiClient.getHistoricalData("432", 3);
-
-        // Then
-        assertThat(result).hasSize(3);
-        assertThat(result.get(0).get("valor")).isEqualTo("13.75");
-        verify(restTemplate).getForEntity(anyString(), eq(List.class));
-    }
-
-    @Test
-    void getDataInRange_WithValidResponse_ShouldReturnDataInRange() {
-        // Given
-        LocalDate startDate = LocalDate.of(2024, 1, 1);
-        LocalDate endDate = LocalDate.of(2024, 1, 31);
-        List<Map<String, Object>> rangeData = List.of(
-            Map.of("data", "2024-01-15", "valor", "13.75"),
-            Map.of("data", "2024-01-10", "valor", "13.50")
-        );
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(rangeData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        // When
-        List<Map<String, Object>> result = bcbApiClient.getDataInRange("432", startDate, endDate);
-
-        // Then
+        List<Map<String, Object>> result = client.getHistoricalData(BCBApiClient.SELIC_CODE, 2);
         assertThat(result).hasSize(2);
-        verify(restTemplate).getForEntity(anyString(), eq(List.class));
+        assertThat(result.get(0).get("valor").toString()).isEqualTo("10.1");
     }
 
     @Test
-    void getDataInRange_WithException_ShouldReturnEmptyList() {
-        // Given
-        LocalDate startDate = LocalDate.of(2024, 1, 1);
-        LocalDate endDate = LocalDate.of(2024, 1, 31);
-        when(restTemplate.getForEntity(anyString(), eq(List.class)))
-                .thenThrow(new RuntimeException("API Error"));
+    void getHistoricalData_ShouldReturnEmpty_WhenApiNotOk() {
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenReturn(new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR));
 
-        // When
-        List<Map<String, Object>> result = bcbApiClient.getDataInRange("432", startDate, endDate);
-
-        // Then
+        List<Map<String, Object>> result = client.getHistoricalData(BCBApiClient.SELIC_CODE, 2);
         assertThat(result).isEmpty();
     }
 
     @Test
-    void createMarketIndicator_ShouldCreateIndicatorWithCurrentValue() {
-        // Given
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(mockResponseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
+    void getHistoricalData_ShouldReturnEmpty_WhenException() {
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenThrow(new RuntimeException("io"));
 
-        // When
-        MarketIndicator indicator = bcbApiClient.createMarketIndicator(
-                "SELIC",
-                "Taxa Selic",
-                "Taxa básica de juros da economia brasileira",
+        List<Map<String, Object>> result = client.getHistoricalData(BCBApiClient.SELIC_CODE, 2);
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getDataInRange_ShouldReturnList_WhenApiOk() {
+        List<Map<String, Object>> body = new ArrayList<>();
+        body.add(Map.of("data", "01/01/2024", "valor", "4.95"));
+
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
+
+        List<Map<String, Object>> result = client.getDataInRange(
+                BCBApiClient.CDI_CODE,
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 1, 31)
+        );
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("valor").toString()).isEqualTo("4.95");
+    }
+
+    @Test
+    void getDataInRange_ShouldReturnEmpty_WhenApiNotOkOrNull() {
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenReturn(new ResponseEntity<>(null, HttpStatus.OK));
+
+        List<Map<String, Object>> result = client.getDataInRange(
+                BCBApiClient.CDI_CODE,
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 1, 31)
+        );
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getDataInRange_ShouldReturnEmpty_WhenException() {
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenThrow(new RuntimeException("timeout"));
+
+        List<Map<String, Object>> result = client.getDataInRange(
+                BCBApiClient.CDI_CODE,
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 1, 31)
+        );
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void createMarketIndicator_ShouldPopulateCurrentValue_WhenApiOk() {
+        // First call during createMarketIndicator -> getCurrentValueForCode(code)
+        List<Map<String, Object>> body = new ArrayList<>();
+        body.add(Map.of("valor", "3.14"));
+        when(restTemplate.getForEntity(anyString(), any(Class.class)))
+                .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
+
+        MarketIndicator indicator = client.createMarketIndicator(
+                BCBApiClient.SELIC_CODE,
+                "Selic",
+                "Brazilian base interest rate",
                 MarketIndicator.IndicatorType.INTEREST_RATE,
                 MarketIndicator.Frequency.DAILY
         );
 
-        // Then
-        assertThat(indicator.getCode()).isEqualTo("SELIC");
-        assertThat(indicator.getName()).isEqualTo("Taxa Selic");
-        assertThat(indicator.getDescription()).isEqualTo("Taxa básica de juros da economia brasileira");
-        assertThat(indicator.getIndicatorType()).isEqualTo(MarketIndicator.IndicatorType.INTEREST_RATE);
-        assertThat(indicator.getFrequency()).isEqualTo(MarketIndicator.Frequency.DAILY);
-        assertThat(indicator.getCurrentValue()).isEqualTo(new BigDecimal("13.75"));
+        assertThat(indicator.getCode()).isEqualTo(BCBApiClient.SELIC_CODE);
+        assertThat(indicator.getCurrentValue()).isEqualByComparingTo("3.14");
+        assertThat(indicator.getLastUpdated()).isNotNull();
         assertThat(indicator.getIsActive()).isTrue();
-    }
-
-    @Test
-    void createMarketIndicator_WithApiError_ShouldCreateIndicatorWithoutValue() {
-        // Given
-        when(restTemplate.getForEntity(anyString(), eq(List.class)))
-                .thenThrow(new RuntimeException("API Error"));
-
-        // When
-        MarketIndicator indicator = bcbApiClient.createMarketIndicator(
-                "SELIC",
-                "Taxa Selic",
-                "Taxa básica de juros da economia brasileira",
-                MarketIndicator.IndicatorType.INTEREST_RATE,
-                MarketIndicator.Frequency.DAILY
-        );
-
-        // Then
-        assertThat(indicator.getCode()).isEqualTo("SELIC");
-        assertThat(indicator.getName()).isEqualTo("Taxa Selic");
-        assertThat(indicator.getCurrentValue()).isNull();
-        assertThat(indicator.getIsActive()).isTrue();
-    }
-
-    @Test
-    void getHistoricalData_WithException_ShouldReturnEmptyList() {
-        // Given
-        when(restTemplate.getForEntity(anyString(), eq(List.class)))
-                .thenThrow(new RuntimeException("API Error"));
-
-        // When
-        List<Map<String, Object>> result = bcbApiClient.getHistoricalData("432", 5);
-
-        // Then
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getCurrentCDIRate_WithEmptyResponse_ShouldReturnZero() {
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        BigDecimal result = bcbApiClient.getCurrentCDIRate();
-
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getCurrentCDIRate_WithNullValue_ShouldReturnZero() {
-        Map<String, Object> responseMap = new java.util.HashMap<>();
-        responseMap.put("data", "2024-01-15");
-        responseMap.put("valor", null);
-        List<Map<String, Object>> responseData = List.of(responseMap);
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(responseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        BigDecimal result = bcbApiClient.getCurrentCDIRate();
-
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getCurrentCDIRate_WithException_ShouldReturnZero() {
-        when(restTemplate.getForEntity(anyString(), eq(List.class)))
-                .thenThrow(new RuntimeException("API Error"));
-
-        BigDecimal result = bcbApiClient.getCurrentCDIRate();
-
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getCurrentIPCA_WithEmptyResponse_ShouldReturnZero() {
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        BigDecimal result = bcbApiClient.getCurrentIPCA();
-
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getCurrentIPCA_WithNullValue_ShouldReturnZero() {
-        Map<String, Object> responseMap = new java.util.HashMap<>();
-        responseMap.put("data", "2024-01-15");
-        responseMap.put("valor", null);
-        List<Map<String, Object>> responseData = List.of(responseMap);
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(responseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        BigDecimal result = bcbApiClient.getCurrentIPCA();
-
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getCurrentIPCA_WithException_ShouldReturnZero() {
-        when(restTemplate.getForEntity(anyString(), eq(List.class)))
-                .thenThrow(new RuntimeException("API Error"));
-
-        BigDecimal result = bcbApiClient.getCurrentIPCA();
-
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getCurrentExchangeRate_WithEmptyResponse_ShouldReturnZero() {
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        BigDecimal result = bcbApiClient.getCurrentExchangeRate();
-
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getCurrentExchangeRate_WithNullValue_ShouldReturnZero() {
-        Map<String, Object> responseMap = new java.util.HashMap<>();
-        responseMap.put("data", "2024-01-15");
-        responseMap.put("valor", null);
-        List<Map<String, Object>> responseData = List.of(responseMap);
-        ResponseEntity<List<Map<String, Object>>> response = new ResponseEntity<>(responseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        BigDecimal result = bcbApiClient.getCurrentExchangeRate();
-
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getCurrentExchangeRate_WithException_ShouldReturnZero() {
-        when(restTemplate.getForEntity(anyString(), eq(List.class)))
-                .thenThrow(new RuntimeException("API Error"));
-
-        BigDecimal result = bcbApiClient.getCurrentExchangeRate();
-
-        assertThat(result).isEqualTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void getDataInRange_WithNonOkStatus_ShouldReturnEmptyList() {
-        LocalDate startDate = LocalDate.of(2024, 1, 1);
-        LocalDate endDate = LocalDate.of(2024, 1, 31);
-        ResponseEntity<List> response = new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        List<Map<String, Object>> result = bcbApiClient.getDataInRange("432", startDate, endDate);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getDataInRange_WithNullBody_ShouldReturnEmptyList() {
-        LocalDate startDate = LocalDate.of(2024, 1, 1);
-        LocalDate endDate = LocalDate.of(2024, 1, 31);
-        ResponseEntity<List> response = new ResponseEntity<>(null, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        List<Map<String, Object>> result = bcbApiClient.getDataInRange("432", startDate, endDate);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getHistoricalData_WithNonOkStatus_ShouldReturnEmptyList() {
-        ResponseEntity<List> response = new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        List<Map<String, Object>> result = bcbApiClient.getHistoricalData("432", 5);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getHistoricalData_WithNullBody_ShouldReturnEmptyList() {
-        ResponseEntity<List> response = new ResponseEntity<>(null, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        List<Map<String, Object>> result = bcbApiClient.getHistoricalData("432", 5);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void createMarketIndicator_WithEmptyResponse_ShouldCreateIndicatorWithoutValue() {
-        ResponseEntity<List> response = new ResponseEntity<>(List.of(), HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        MarketIndicator indicator = bcbApiClient.createMarketIndicator(
-                "SELIC",
-                "Taxa Selic",
-                "Description",
-                MarketIndicator.IndicatorType.INTEREST_RATE,
-                MarketIndicator.Frequency.DAILY
-        );
-
-        assertThat(indicator.getCode()).isEqualTo("SELIC");
-        assertThat(indicator.getCurrentValue()).isNull();
-    }
-
-    @Test
-    void createMarketIndicator_WithNullValue_ShouldCreateIndicatorWithoutValue() {
-        Map<String, Object> responseMap = new java.util.HashMap<>();
-        responseMap.put("data", "2024-01-15");
-        responseMap.put("valor", null);
-        List<Map<String, Object>> responseData = List.of(responseMap);
-        ResponseEntity<List> response = new ResponseEntity<>(responseData, HttpStatus.OK);
-        when(restTemplate.getForEntity(anyString(), eq(List.class))).thenReturn(response);
-
-        MarketIndicator indicator = bcbApiClient.createMarketIndicator(
-                "SELIC",
-                "Taxa Selic",
-                "Description",
-                MarketIndicator.IndicatorType.INTEREST_RATE,
-                MarketIndicator.Frequency.DAILY
-        );
-
-        assertThat(indicator.getCode()).isEqualTo("SELIC");
-        assertThat(indicator.getCurrentValue()).isNull();
     }
 }

@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/profile")
@@ -39,6 +40,16 @@ public class ProfileController {
 
         ProfileDTO updatedProfile = profileService.updateCurrentProfile(request);
         log.info("Profile updated successfully");
+        return ResponseEntity.ok(updatedProfile);
+    }
+
+    @PostMapping("/avatar")
+    @Operation(summary = "Upload profile avatar", description = "Upload a new avatar image for the current user's profile")
+    public ResponseEntity<ProfileDTO> uploadAvatar(@RequestParam("file") MultipartFile avatarFile) {
+        log.debug("POST request to upload avatar (file present: {})", avatarFile != null && !avatarFile.isEmpty());
+
+        ProfileDTO updatedProfile = profileService.uploadAvatar(avatarFile);
+        log.info("Avatar uploaded successfully");
         return ResponseEntity.ok(updatedProfile);
     }
 }

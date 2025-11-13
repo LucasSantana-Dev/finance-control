@@ -6,11 +6,13 @@ import com.finance_control.goals.repository.FinancialGoalRepository;
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.enums.TransactionType;
 import com.finance_control.shared.monitoring.MetricsService;
+import com.finance_control.shared.service.SupabaseRealtimeService;
 import com.finance_control.shared.util.StreamUtils;
 import com.finance_control.transactions.model.Transaction;
 import com.finance_control.transactions.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,9 @@ public class DashboardService {
     private final TransactionRepository transactionRepository;
     private final FinancialGoalRepository financialGoalRepository;
     private final MetricsService metricsService;
+
+    @Autowired(required = false)
+    private SupabaseRealtimeService realtimeService;
 
     /**
      * Get comprehensive dashboard summary for the current user.
@@ -91,6 +96,10 @@ public class DashboardService {
     @Cacheable(value = "dashboard",
                 key = "#root.methodName + '_' + T(com.finance_control.shared.context.UserContext).getCurrentUserId() + '_' + #startDate + '_' + #endDate")
     public FinancialMetricsDTO getFinancialMetrics(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("Start date and end date cannot be null");
+        }
+
         Long userId = UserContext.getCurrentUserId();
         log.debug("Generating financial metrics (user present: {}, dates present: {}, {})", userId != null, startDate != null, endDate != null);
 
@@ -372,5 +381,31 @@ public class DashboardService {
      */
     private int countTransactionsInDateRange(List<Transaction> transactions, LocalDate startDate, LocalDate endDate) {
         return (int) StreamUtils.countByLocalDateRange(transactions, t -> t.getDate().toLocalDate(), startDate, endDate);
+    }
+
+    /**
+     * Notify subscribers about dashboard updates for a user.
+     * This method can be called when transaction or goal data changes.
+     *
+     * @param userId the user ID whose dashboard was updated
+     */
+    public void notifyDashboardUpdate(Long userId) {
+        if (realtimeService != null) {
+            try {
+                // Generate fresh dashboard data for the user
+                // Note: This is simplified - in a real implementation, you might want to
+                // generate a lightweight dashboard update notification instead of full data
+                Map<String, Object> dashboardData = Map.of(
+                    "userId", userId,
+                    "timestamp", System.currentTimeMillis(),
+                    "type", "dashboard_update"
+                );
+
+                realtimeService.notifyDashboardUpdate(userId, dashboardData);
+                log.debug("Sent realtime notification for dashboard update: user {}", userId);
+            } catch (Exception e) {
+                log.warn("Failed to send realtime notification for dashboard update: {}", e.getMessage());
+            }
+        }
     }
 }

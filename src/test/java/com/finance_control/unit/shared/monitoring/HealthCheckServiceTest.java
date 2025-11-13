@@ -2,7 +2,6 @@ package com.finance_control.unit.shared.monitoring;
 
 import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.monitoring.HealthCheckService;
-import com.finance_control.shared.monitoring.MetricsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +21,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.lenient;
 

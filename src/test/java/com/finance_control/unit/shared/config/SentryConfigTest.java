@@ -10,7 +10,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import io.sentry.SentryOptions;
 
 /**
  * Unit tests for SentryConfig.

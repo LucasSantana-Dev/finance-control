@@ -322,7 +322,9 @@ class InvestmentControllerIntegrationTest {
         assertThat(response.getBody()).isNotNull();
 
         // Parse the JSON response
-        Map<String, Object> responseMap = objectMapper.readValue(response.getBody(), Map.class);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseMap = (Map<String, Object>) objectMapper.readValue(response.getBody(), Map.class);
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> content = (List<Map<String, Object>>) responseMap.get("content");
 
         assertThat(content).hasSize(1);
@@ -366,7 +368,9 @@ class InvestmentControllerIntegrationTest {
         assertThat(response.getBody()).isNotNull();
 
         // Parse the JSON response
-        Map<String, Object> responseMap = objectMapper.readValue(response.getBody(), Map.class);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseMap = (Map<String, Object>) objectMapper.readValue(response.getBody(), Map.class);
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> content = (List<Map<String, Object>>) responseMap.get("content");
 
         assertThat(content).hasSize(1);

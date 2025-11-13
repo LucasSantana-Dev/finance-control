@@ -25,9 +25,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class TransactionSubcategoryServiceTest {
 
     @Mock
@@ -141,8 +143,7 @@ class TransactionSubcategoryServiceTest {
         List<TransactionSubcategory> subcategories = List.of(testSubcategory);
         Page<TransactionSubcategory> page = new PageImpl<>(subcategories, PageRequest.of(0, 10), 1);
 
-        when(transactionSubcategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         List<TransactionSubcategoryDTO> result = transactionSubcategoryService.findByCategoryId(1L);
@@ -153,7 +154,7 @@ class TransactionSubcategoryServiceTest {
         assertThat(result.get(0).getName()).isEqualTo("Test Subcategory");
         assertThat(result.get(0).getCategoryId()).isEqualTo(1L);
 
-        verify(transactionSubcategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -288,8 +289,7 @@ class TransactionSubcategoryServiceTest {
         List<TransactionSubcategory> subcategories = List.of(testSubcategory);
         Page<TransactionSubcategory> page = new PageImpl<>(subcategories, PageRequest.of(0, 10), 1);
 
-        when(transactionSubcategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         List<TransactionSubcategoryDTO> result = transactionSubcategoryService.findAllActive();
@@ -299,7 +299,7 @@ class TransactionSubcategoryServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getIsActive()).isTrue();
 
-        verify(transactionSubcategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -309,7 +309,7 @@ class TransactionSubcategoryServiceTest {
         Pageable pageable = PageRequest.of(0, 1);
         Page<TransactionSubcategory> fullPage = new PageImpl<>(subcategories, PageRequest.of(0, 10), 1);
 
-        when(transactionSubcategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
+        when(transactionSubcategoryRepository.findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
                 .thenReturn(fullPage);
 
         // When
@@ -318,7 +318,7 @@ class TransactionSubcategoryServiceTest {
         // Then
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionSubcategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -362,8 +362,7 @@ class TransactionSubcategoryServiceTest {
         // Given
         Page<TransactionSubcategory> page = new PageImpl<>(List.of(testSubcategory), PageRequest.of(0, 10), 1);
 
-        when(transactionSubcategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         Optional<TransactionSubcategoryDTO> result = transactionSubcategoryService.findByCategoryIdAndName(1L, "Test Subcategory");
@@ -371,7 +370,7 @@ class TransactionSubcategoryServiceTest {
         // Then
         assertThat(result).isPresent();
         assertThat(result.get().getName()).isEqualTo("Test Subcategory");
-        verify(transactionSubcategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -379,8 +378,7 @@ class TransactionSubcategoryServiceTest {
         // Given
         Page<TransactionSubcategory> page = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
-        when(transactionSubcategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         Optional<TransactionSubcategoryDTO> result = transactionSubcategoryService.findByCategoryIdAndName(1L, "Non Existent");
@@ -467,15 +465,14 @@ class TransactionSubcategoryServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Map<String, Object> filters = Map.of("isActive", true);
 
-        when(transactionSubcategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         Page<TransactionSubcategoryDTO> result = transactionSubcategoryService.findAll(null, filters, null, null, pageable);
 
         // Then
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionSubcategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -485,15 +482,14 @@ class TransactionSubcategoryServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Map<String, Object> filters = Map.of("name", "Test");
 
-        when(transactionSubcategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         Page<TransactionSubcategoryDTO> result = transactionSubcategoryService.findAll(null, filters, null, null, pageable);
 
         // Then
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionSubcategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -503,15 +499,14 @@ class TransactionSubcategoryServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Map<String, Object> filters = Map.of("description", "Test");
 
-        when(transactionSubcategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         Page<TransactionSubcategoryDTO> result = transactionSubcategoryService.findAll(null, filters, null, null, pageable);
 
         // Then
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionSubcategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -521,15 +516,14 @@ class TransactionSubcategoryServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Map<String, Object> filters = Map.of("unknownKey", "value");
 
-        when(transactionSubcategoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class)))
-                .thenReturn(page);
+        doReturn(page).when(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
 
         // When
         Page<TransactionSubcategoryDTO> result = transactionSubcategoryService.findAll(null, filters, null, null, pageable);
 
         // Then
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionSubcategoryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
+        verify(transactionSubcategoryRepository).findAll((org.springframework.data.jpa.domain.Specification<TransactionSubcategory>) any(org.springframework.data.jpa.domain.Specification.class), any(Pageable.class));
     }
 
     @Test

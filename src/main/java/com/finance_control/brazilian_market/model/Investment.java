@@ -11,6 +11,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -265,7 +266,7 @@ public class Investment extends BaseModel<Long> {
             return null;
         }
         return currentPrice.subtract(previousClose)
-                .divide(previousClose, 4, BigDecimal.ROUND_HALF_UP)
+                .divide(previousClose, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
     }
 }

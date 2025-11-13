@@ -11,7 +11,6 @@ import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.security.CustomUserDetails;
 import com.finance_control.transactions.repository.TransactionRepository;
 import com.finance_control.users.model.User;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,8 +54,6 @@ class DashboardControllerTest {
     @MockitoBean
     private MetricsService metricsService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
 
     private DashboardSummaryDTO sampleSummary;
     private FinancialMetricsDTO sampleMetrics;

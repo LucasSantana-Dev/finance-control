@@ -2,7 +2,6 @@ package com.finance_control.shared.controller;
 
 import com.finance_control.shared.monitoring.AlertingService;
 import com.finance_control.shared.monitoring.HealthCheckService;
-import com.finance_control.shared.monitoring.MetricsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -27,7 +26,6 @@ import java.util.Map;
 @Slf4j
 public class MonitoringController {
 
-    private final MetricsService metricsService;
     private final AlertingService alertingService;
     private final HealthCheckService healthCheckService;
 

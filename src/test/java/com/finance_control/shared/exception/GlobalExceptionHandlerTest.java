@@ -399,4 +399,337 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getMessage()).isNull();
     }
+
+    @Test
+    void handleGenericException_WithEntityMappingException_ShouldFallThroughToGenericHandler() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/entity-mapping")
+            public void throwEntityMapping() {
+                throw new EntityMappingException("Entity mapping failed");
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/entity-mapping"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
+    }
+
+    @Test
+    void handleGenericException_WithReflectionException_ShouldFallThroughToGenericHandler() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/reflection")
+            public void throwReflection() {
+                throw new ReflectionException("Reflection operation failed");
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/reflection"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
+    }
+
+    @Test
+    void handleGenericException_WithSqlException_ShouldReturn500() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/sql-exception")
+            public void throwSqlException() {
+                throw new RuntimeException(new java.sql.SQLException("Database error occurred"));
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/sql-exception"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
+    }
+
+    @Test
+    void handleGenericException_WithIOException_ShouldReturn500() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/io-exception")
+            public void throwIOException() {
+                throw new RuntimeException(new java.io.IOException("IO operation failed"));
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/io-exception"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
+    }
+
+    @Test
+    void handleGenericException_WithCustomBusinessException_ShouldReturn500() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/business-exception")
+            public void throwBusinessException() {
+                throw new RuntimeException("Business logic error: insufficient funds");
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/business-exception"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
+    }
+
+    @Test
+    void handleEntityNotFound_WithEmptyMessage_ShouldHandleGracefully() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/entity-not-found-empty")
+            public void throwEntityNotFoundEmpty() {
+                throw new EntityNotFoundException("");
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/entity-not-found-empty"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value(""));
+    }
+
+    @Test
+    void handleIllegalArgument_WithVeryLongMessage_ShouldReturnFullMessage() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/illegal-argument-long")
+            public void throwIllegalArgumentLong() {
+                String longMessage = "a".repeat(1000);
+                throw new IllegalArgumentException(longMessage);
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/illegal-argument-long"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("a".repeat(1000)));
+    }
+
+    @Test
+    void handleValidationExceptions_WithNullFieldName_ShouldHandleGracefully() throws NoSuchMethodException {
+        BindingResult bindingResult = mock(BindingResult.class);
+        FieldError fieldError = new FieldError("testObject", null, "value", false, null, null, "Error message");
+        when(bindingResult.getAllErrors()).thenReturn(Collections.singletonList(fieldError));
+
+        java.lang.reflect.Method method = String.class.getMethod("equals", Object.class);
+        org.springframework.core.MethodParameter realParameter = new org.springframework.core.MethodParameter(method, 0);
+        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(realParameter, bindingResult);
+        WebRequest webRequest = mock(WebRequest.class);
+        when(webRequest.getDescription(false)).thenReturn("uri=/test/validation");
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleValidationExceptions(exception, webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDetails()).containsKey(null);
+        assertThat(response.getBody().getDetails().get(null)).isEqualTo("Error message");
+    }
+
+    @Test
+    void handleValidationExceptions_WithNullErrorMessage_ShouldHandleGracefully() throws NoSuchMethodException {
+        BindingResult bindingResult = mock(BindingResult.class);
+        FieldError fieldError = new FieldError("testObject", "fieldName", "value", false, null, null, null);
+        when(bindingResult.getAllErrors()).thenReturn(Collections.singletonList(fieldError));
+
+        java.lang.reflect.Method method = String.class.getMethod("equals", Object.class);
+        org.springframework.core.MethodParameter realParameter = new org.springframework.core.MethodParameter(method, 0);
+        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(realParameter, bindingResult);
+        WebRequest webRequest = mock(WebRequest.class);
+        when(webRequest.getDescription(false)).thenReturn("uri=/test/validation");
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleValidationExceptions(exception, webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDetails()).containsKey("fieldName");
+        assertThat(response.getBody().getDetails().get("fieldName")).isNull();
+    }
+
+    @Test
+    void handleGenericException_WithNestedException_ShouldNotExposeInternalDetails() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/nested-exception")
+            public void throwNestedException() {
+                throw new RuntimeException("Wrapper exception", new IllegalStateException("Root cause"));
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/nested-exception"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"))
+                .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    void handleEntityNotFound_WithSpecialCharacters_ShouldReturnCorrectly() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/entity-not-found-special")
+            public void throwEntityNotFoundSpecial() {
+                throw new EntityNotFoundException("Entity with special chars: @#$%^&*()_+{}|:<>?[]\\;',./");
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/entity-not-found-special"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Entity with special chars: @#$%^&*()_+{}|:<>?[]\\;',./"));
+    }
+
+    @Test
+    void handleIllegalArgument_WithUnicodeMessage_ShouldReturnCorrectly() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/illegal-argument-unicode")
+            public void throwIllegalArgumentUnicode() {
+                throw new IllegalArgumentException("Unicode message: ñáéíóú 中文 🚀");
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/illegal-argument-unicode"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Unicode message: ñáéíóú 中文 🚀"));
+    }
+
+    @Test
+    void handleValidationExceptions_WithGlobalErrors_ShouldHandleObjectErrors() throws NoSuchMethodException {
+        BindingResult bindingResult = mock(BindingResult.class);
+        org.springframework.validation.ObjectError objectError = new org.springframework.validation.ObjectError(
+                "testObject", "Global validation error");
+        when(bindingResult.getAllErrors()).thenReturn(Collections.singletonList(objectError));
+
+        java.lang.reflect.Method method = String.class.getMethod("equals", Object.class);
+        org.springframework.core.MethodParameter realParameter = new org.springframework.core.MethodParameter(method, 0);
+        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(realParameter, bindingResult);
+        WebRequest webRequest = mock(WebRequest.class);
+        when(webRequest.getDescription(false)).thenReturn("uri=/test/validation");
+
+        // This test verifies that the cast to FieldError will fail as expected for ObjectError
+        assertThatThrownBy(() -> exceptionHandler.handleValidationExceptions(exception, webRequest))
+                .isInstanceOf(ClassCastException.class);
+    }
+
+    @Test
+    void handleGenericException_WithOutOfMemoryError_ShouldReturn500() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/out-of-memory")
+            public void throwOutOfMemory() {
+                throw new OutOfMemoryError("Java heap space");
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/out-of-memory"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
+    }
+
+    @Test
+    void handleGenericException_WithStackOverflowError_ShouldReturn500() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/stack-overflow")
+            public void throwStackOverflow() {
+                throw new StackOverflowError("Stack overflow occurred");
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/stack-overflow"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
+    }
+
+    @Test
+    void handleEntityNotFound_WithVeryLongEntityName_ShouldReturnCorrectly() throws Exception {
+        TestExceptionController controller = new TestExceptionController() {
+            @GetMapping("/test/entity-not-found-long-name")
+            public void throwEntityNotFoundLongName() {
+                String longEntityName = "VeryLongEntityNameThatMightCauseIssuesWithDisplay".repeat(10);
+                throw new EntityNotFoundException(longEntityName);
+            }
+        };
+
+        MockMvc testMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(exceptionHandler)
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .build();
+
+        testMvc.perform(get("/test/entity-not-found-long-name"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"));
+    }
 }

@@ -4,7 +4,7 @@ import com.finance_control.shared.enums.TransactionType;
 import com.finance_control.shared.exception.GlobalExceptionHandler;
 import com.finance_control.transactions.dto.TransactionDTO;
 import com.finance_control.transactions.service.TransactionService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finance_control.transactions.service.TransactionImportService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +24,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -39,18 +38,17 @@ class TransactionControllerTest {
     @Mock
     private TransactionService transactionService;
 
+    @Mock
+    private TransactionImportService transactionImportService;
+
     @InjectMocks
     private TransactionController transactionController;
-
-    private ObjectMapper objectMapper;
 
     private TransactionDTO sampleTransaction;
     private Page<TransactionDTO> samplePage;
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
-
         // Set up MockMvc with standalone setup, PageableHandlerMethodArgumentResolver, and GlobalExceptionHandler
         mockMvc = MockMvcBuilders.standaloneSetup(transactionController)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
@@ -71,7 +69,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithValidParameters_ShouldReturnOk() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -93,7 +91,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithSearchParameter_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -107,7 +105,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithDateRange_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -122,7 +120,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithAmountRange_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -137,7 +135,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithDefaultParameters_ShouldReturnOk() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered"))
@@ -148,7 +146,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithCategoryFilter_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -162,7 +160,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithSubcategoryFilter_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -176,7 +174,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithSourceFilter_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -190,7 +188,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithTypeFilter_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -204,7 +202,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithIsActiveFilter_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -218,7 +216,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithAllFiltersCombined_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -243,7 +241,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithEmptyStringFilters_ShouldNotAddFilters() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -260,7 +258,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithPartialFilters_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -276,7 +274,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithOnlyDateFilters_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -291,7 +289,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithOnlyAmountFilters_ShouldReturnFilteredResults() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")
@@ -306,7 +304,7 @@ class TransactionControllerTest {
 
     @Test
     void getTransactions_WithNullSortBy_ShouldUseDefaultSort() throws Exception {
-        when(transactionService.findAll(nullable(String.class), any(Map.class), nullable(String.class), nullable(String.class), any(Pageable.class)))
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
                 .thenReturn(samplePage);
 
         mockMvc.perform(get("/transactions/filtered")

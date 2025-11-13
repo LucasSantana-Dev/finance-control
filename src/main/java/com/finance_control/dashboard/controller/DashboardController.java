@@ -2,14 +2,19 @@ package com.finance_control.dashboard.controller;
 
 import com.finance_control.dashboard.dto.*;
 import com.finance_control.dashboard.service.DashboardService;
+import com.finance_control.dashboard.service.FinancialPredictionService;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,6 +31,7 @@ import java.util.List;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final ObjectProvider<FinancialPredictionService> financialPredictionServiceProvider;
 
     @GetMapping("/summary")
     @Operation(summary = "Get dashboard summary",
@@ -142,5 +148,21 @@ public class DashboardController {
             }
             default -> throw new IllegalArgumentException("Invalid data type: " + data);
         };
+    }
+
+    @PostMapping("/predictions")
+    @Operation(summary = "Generate financial predictions",
+               description = "Produce AI-assisted financial forecasts and actionable recommendations")
+    public ResponseEntity<FinancialPredictionResponse> generateFinancialPredictions(
+            @Valid @RequestBody FinancialPredictionRequest request) {
+        log.debug("POST request to generate financial predictions");
+        FinancialPredictionService predictionService = financialPredictionServiceProvider.getIfAvailable();
+        if (predictionService == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Financial predictions are disabled. Configure OpenAI credentials to enable this endpoint.");
+        }
+
+        FinancialPredictionResponse response = predictionService.generatePrediction(request);
+        return ResponseEntity.ok(response);
     }
 }

@@ -1,15 +1,20 @@
 package com.finance_control.goals.service;
 
+import com.finance_control.dashboard.service.DashboardService;
 import com.finance_control.goals.dto.FinancialGoalDTO;
 import com.finance_control.goals.dto.GoalCompletionRequest;
 import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.goals.repository.FinancialGoalRepository;
+import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.service.BaseService;
+import com.finance_control.shared.service.SupabaseRealtimeService;
 import com.finance_control.shared.util.EntityMapper;
 import com.finance_control.transactions.model.source.TransactionSourceEntity;
 import com.finance_control.transactions.repository.source.TransactionSourceRepository;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -20,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @Transactional
 public class FinancialGoalService extends BaseService<FinancialGoal, Long, FinancialGoalDTO> {
@@ -29,6 +35,21 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
     private final FinancialGoalRepository financialGoalRepository;
     private final UserRepository userRepository;
     private final TransactionSourceRepository transactionSourceRepository;
+
+    private SupabaseRealtimeService realtimeService;
+    private DashboardService dashboardService;
+
+    // Setter for optional SupabaseRealtimeService injection
+    @Autowired(required = false)
+    public void setRealtimeService(SupabaseRealtimeService realtimeService) {
+        this.realtimeService = realtimeService;
+    }
+
+    // Setter for optional DashboardService injection
+    @Autowired(required = false)
+    public void setDashboardService(DashboardService dashboardService) {
+        this.dashboardService = dashboardService;
+    }
 
     public FinancialGoalService(FinancialGoalRepository financialGoalRepository,
             UserRepository userRepository,
@@ -320,5 +341,71 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
 
         FinancialGoal savedGoal = financialGoalRepository.save(goal);
         return mapToResponseDTO(savedGoal);
+    }
+
+    @Override
+    public FinancialGoalDTO create(FinancialGoalDTO createDTO) {
+        FinancialGoalDTO result = super.create(createDTO);
+
+        // Send realtime notification for goal creation
+        if (realtimeService != null) {
+            try {
+                Long userId = UserContext.getCurrentUserId();
+                if (userId != null) {
+                    realtimeService.notifyGoalUpdate(userId, result);
+                    log.debug("Sent realtime notification for goal creation: {}", result.getId());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to send realtime notification for goal creation: {}", e.getMessage());
+            }
+        }
+
+        // Notify dashboard update
+        if (dashboardService != null) {
+            try {
+                Long userId = UserContext.getCurrentUserId();
+                if (userId != null) {
+                    dashboardService.notifyDashboardUpdate(userId);
+                    log.debug("Sent dashboard update notification for goal creation: {}", result.getId());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to send dashboard update notification for goal creation: {}", e.getMessage());
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public FinancialGoalDTO update(Long id, FinancialGoalDTO updateDTO) {
+        FinancialGoalDTO result = super.update(id, updateDTO);
+
+        // Send realtime notification for goal update
+        if (realtimeService != null) {
+            try {
+                Long userId = UserContext.getCurrentUserId();
+                if (userId != null) {
+                    realtimeService.notifyGoalUpdate(userId, result);
+                    log.debug("Sent realtime notification for goal update: {}", result.getId());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to send realtime notification for goal update: {}", e.getMessage());
+            }
+        }
+
+        // Notify dashboard update
+        if (dashboardService != null) {
+            try {
+                Long userId = UserContext.getCurrentUserId();
+                if (userId != null) {
+                    dashboardService.notifyDashboardUpdate(userId);
+                    log.debug("Sent dashboard update notification for goal update: {}", result.getId());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to send dashboard update notification for goal update: {}", e.getMessage());
+            }
+        }
+
+        return result;
     }
 }

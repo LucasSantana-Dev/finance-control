@@ -17,14 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.core.MethodParameter;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,13 +26,12 @@ import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import com.finance_control.shared.exception.GlobalExceptionHandler;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -47,7 +39,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 
 /**
  * Unit tests for unified InvestmentController endpoints.
@@ -94,8 +85,9 @@ class InvestmentControllerTest {
             }
         };
 
-        mockMvc = MockMvcBuilders.standaloneSetup(investmentController)
+        mockMvc = MockMvcBuilders.standaloneSetup(new InvestmentController(investmentService, externalMarketDataService))
                         .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver(), authPrincipalResolver)
+                        .setControllerAdvice(new GlobalExceptionHandler())
                         .build();
 
         // Create test user
@@ -300,8 +292,8 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithSubtypesMetadataWithoutType_ShouldReturnBadRequest() throws Exception {
         mockMvc.perform(get("/investments")
-                .param("data", "subtypes"))
-                .andExpect(status().isInternalServerError());
+                                .param("data", "subtypes"))
+                                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -325,8 +317,8 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithInvalidDataType_ShouldReturnBadRequest() throws Exception {
         mockMvc.perform(get("/investments")
-                .param("data", "invalid-type"))
-                .andExpect(status().isInternalServerError());
+                                .param("data", "invalid-type"))
+                                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -515,19 +507,6 @@ class InvestmentControllerTest {
     @Test
     @DisplayName("POST /investments/{id}/update-market-data should update market data successfully")
     void updateMarketData_WithValidId_ShouldReturnOk() throws Exception {
-        HandlerMethodArgumentResolver argumentResolver = new HandlerMethodArgumentResolver() {
-            @Override
-            public boolean supportsParameter(MethodParameter parameter) {
-                return parameter.getParameterType().equals(CustomUserDetails.class);
-            }
-
-            @Override
-            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
-                                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-                return testUserDetails;
-            }
-        };
-
         // Using the main mockMvc from @WebMvcTest with custom argument resolver
 
         Investment updatedInvestment = new Investment();
@@ -563,19 +542,6 @@ class InvestmentControllerTest {
     @Test
     @DisplayName("POST /investments/{id}/update-market-data should return 404 when investment not found")
     void updateMarketData_WithInvalidId_ShouldReturnNotFound() throws Exception {
-        HandlerMethodArgumentResolver argumentResolver = new HandlerMethodArgumentResolver() {
-            @Override
-            public boolean supportsParameter(MethodParameter parameter) {
-                return parameter.getParameterType().equals(CustomUserDetails.class);
-            }
-
-            @Override
-            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
-                                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-                return testUserDetails;
-            }
-        };
-
         // Using the main mockMvc from @WebMvcTest with custom argument resolver
 
         when(investmentService.getInvestmentById(eq(999L), eq(testUser)))
@@ -591,19 +557,6 @@ class InvestmentControllerTest {
     @Test
     @DisplayName("POST /investments/{id}/update-market-data should throw exception when authentication principal is null")
     void updateMarketData_WithoutAuthentication_ShouldThrowException() throws Exception {
-        HandlerMethodArgumentResolver argumentResolver = new HandlerMethodArgumentResolver() {
-            @Override
-            public boolean supportsParameter(MethodParameter parameter) {
-                return parameter.getParameterType().equals(CustomUserDetails.class);
-            }
-
-            @Override
-            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
-                                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-                return null;
-            }
-        };
-
         // Using the main mockMvc from @WebMvcTest with custom setup
 
         mockMvc.perform(post("/investments/1/update-market-data"))
@@ -615,19 +568,6 @@ class InvestmentControllerTest {
     @Test
     @DisplayName("POST /investments/update-all-market-data should initiate market data update for all investments")
     void updateAllMarketData_ShouldInitiateUpdate() throws Exception {
-        HandlerMethodArgumentResolver argumentResolver = new HandlerMethodArgumentResolver() {
-            @Override
-            public boolean supportsParameter(MethodParameter parameter) {
-                return parameter.getParameterType().equals(CustomUserDetails.class);
-            }
-
-            @Override
-            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
-                                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-                return testUserDetails;
-            }
-        };
-
         // Using the main mockMvc from @WebMvcTest with custom argument resolver
 
         mockMvc.perform(post("/investments/update-all-market-data"))
@@ -639,19 +579,6 @@ class InvestmentControllerTest {
     @Test
     @DisplayName("POST /investments/update-all-market-data should handle null user details")
     void updateAllMarketData_WithNullUserDetails_ShouldHandleGracefully() throws Exception {
-        HandlerMethodArgumentResolver argumentResolver = new HandlerMethodArgumentResolver() {
-            @Override
-            public boolean supportsParameter(MethodParameter parameter) {
-                return parameter.getParameterType().equals(CustomUserDetails.class);
-            }
-
-            @Override
-            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
-                                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-                return null;
-            }
-        };
-
         // Using the main mockMvc from @WebMvcTest with custom setup
 
         mockMvc.perform(post("/investments/update-all-market-data"))

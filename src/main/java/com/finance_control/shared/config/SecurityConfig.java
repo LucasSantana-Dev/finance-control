@@ -125,10 +125,10 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("deprecation") // Using deprecated constructor/method as they are the only available ones
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(passwordEncoder());
         authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
 
