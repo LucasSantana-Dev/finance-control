@@ -409,4 +409,222 @@ class TransactionRepositoryTest {
         assertThat(recentTransactions).hasSize(1);
         assertThat(recentTransactions.get(0).getDescription()).isEqualTo("Test Transaction");
     }
+
+    @Test
+    void shouldSumByUserAndTypeAndDateBetween() {
+        // Given - Create transactions with different types and dates
+        // Note: testTransaction from setUp is INCOME with 100.00, so we need to account for it
+        LocalDateTime startDate = LocalDateTime.now().minusDays(5);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(5);
+
+        Transaction income1 = new Transaction();
+        income1.setDescription("Income 1");
+        income1.setAmount(BigDecimal.valueOf(1000.00));
+        income1.setType(TransactionType.INCOME);
+        income1.setSubtype(TransactionSubtype.FIXED);
+        income1.setSource(TransactionSource.CASH);
+        income1.setUser(testUser);
+        income1.setCategory(testCategory);
+        income1.setDate(LocalDateTime.now());
+        income1.setCreatedAt(LocalDateTime.now());
+        income1.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(income1);
+
+        Transaction income2 = new Transaction();
+        income2.setDescription("Income 2");
+        income2.setAmount(BigDecimal.valueOf(500.00));
+        income2.setType(TransactionType.INCOME);
+        income2.setSubtype(TransactionSubtype.FIXED);
+        income2.setSource(TransactionSource.CASH);
+        income2.setUser(testUser);
+        income2.setCategory(testCategory);
+        income2.setDate(LocalDateTime.now().plusDays(2));
+        income2.setCreatedAt(LocalDateTime.now());
+        income2.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(income2);
+
+        Transaction expense = new Transaction();
+        expense.setDescription("Expense");
+        expense.setAmount(BigDecimal.valueOf(200.00));
+        expense.setType(TransactionType.EXPENSE);
+        expense.setSubtype(TransactionSubtype.FIXED);
+        expense.setSource(TransactionSource.CASH);
+        expense.setUser(testUser);
+        expense.setCategory(testCategory);
+        expense.setDate(LocalDateTime.now());
+        expense.setCreatedAt(LocalDateTime.now());
+        expense.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(expense);
+
+        // When - Sum includes testTransaction (100.00) + income1 (1000.00) + income2 (500.00) = 1600.00
+        BigDecimal sum = transactionRepository.sumByUserAndTypeAndDateBetween(
+                testUser.getId(), TransactionType.INCOME, startDate, endDate);
+
+        // Then
+        assertThat(sum).isEqualByComparingTo(BigDecimal.valueOf(1600.00));
+    }
+
+    @Test
+    void shouldFindByUserIdWithResponsibilities() {
+        // When
+        List<Transaction> transactions = transactionRepository.findByUserIdWithResponsibilities(testUser.getId());
+
+        // Then
+        assertThat(transactions).hasSize(1);
+        assertThat(transactions.get(0).getDescription()).isEqualTo("Test Transaction");
+        assertThat(transactions.get(0).getUser().getId()).isEqualTo(testUser.getId());
+    }
+
+    @Test
+    void shouldFindDistinctCategoriesByUserId() {
+        // Given - Create another category with transaction
+        TransactionCategory anotherCategory = new TransactionCategory();
+        anotherCategory.setName("Another Category");
+        anotherCategory.setCreatedAt(LocalDateTime.now());
+        anotherCategory.setUpdatedAt(LocalDateTime.now());
+        anotherCategory = entityManager.persistAndFlush(anotherCategory);
+
+        Transaction anotherTransaction = new Transaction();
+        anotherTransaction.setDescription("Another Transaction");
+        anotherTransaction.setAmount(BigDecimal.valueOf(200.00));
+        anotherTransaction.setType(TransactionType.INCOME);
+        anotherTransaction.setSubtype(TransactionSubtype.FIXED);
+        anotherTransaction.setSource(TransactionSource.CASH);
+        anotherTransaction.setUser(testUser);
+        anotherTransaction.setCategory(anotherCategory);
+        anotherTransaction.setDate(LocalDateTime.now());
+        anotherTransaction.setCreatedAt(LocalDateTime.now());
+        anotherTransaction.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(anotherTransaction);
+
+        // When
+        List<TransactionCategory> categories = transactionRepository.findDistinctCategoriesByUserId(testUser.getId());
+
+        // Then
+        assertThat(categories).hasSize(2);
+        assertThat(categories).extracting(TransactionCategory::getName)
+                .containsExactlyInAnyOrder("Test Category", "Another Category");
+    }
+
+    @Test
+    void shouldFindDistinctTypes() {
+        // Given - Create expense transaction
+        Transaction expense = new Transaction();
+        expense.setDescription("Expense");
+        expense.setAmount(BigDecimal.valueOf(50.00));
+        expense.setType(TransactionType.EXPENSE);
+        expense.setSubtype(TransactionSubtype.FIXED);
+        expense.setSource(TransactionSource.CASH);
+        expense.setUser(testUser);
+        expense.setCategory(testCategory);
+        expense.setDate(LocalDateTime.now());
+        expense.setCreatedAt(LocalDateTime.now());
+        expense.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(expense);
+
+        // When
+        List<String> types = transactionRepository.findDistinctTypes();
+
+        // Then
+        assertThat(types).hasSize(2);
+        assertThat(types).containsExactlyInAnyOrder("INCOME", "EXPENSE");
+    }
+
+    @Test
+    void shouldGetTotalAmountByUserId() {
+        // Given - Create additional transactions
+        Transaction transaction2 = new Transaction();
+        transaction2.setDescription("Transaction 2");
+        transaction2.setAmount(BigDecimal.valueOf(200.00));
+        transaction2.setType(TransactionType.INCOME);
+        transaction2.setSubtype(TransactionSubtype.FIXED);
+        transaction2.setSource(TransactionSource.CASH);
+        transaction2.setUser(testUser);
+        transaction2.setCategory(testCategory);
+        transaction2.setDate(LocalDateTime.now());
+        transaction2.setCreatedAt(LocalDateTime.now());
+        transaction2.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(transaction2);
+
+        // When
+        BigDecimal total = transactionRepository.getTotalAmountByUserId(testUser.getId());
+
+        // Then
+        assertThat(total).isEqualByComparingTo(BigDecimal.valueOf(300.00));
+    }
+
+    @Test
+    void shouldFindPotentialDuplicates() {
+        // Given - Create a duplicate transaction (same amount, description, date range)
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(1);
+
+        Transaction duplicate = new Transaction();
+        duplicate.setDescription("Test Transaction");
+        duplicate.setAmount(BigDecimal.valueOf(100.00));
+        duplicate.setType(TransactionType.INCOME);
+        duplicate.setSubtype(TransactionSubtype.FIXED);
+        duplicate.setSource(TransactionSource.CASH);
+        duplicate.setUser(testUser);
+        duplicate.setCategory(testCategory);
+        duplicate.setDate(LocalDateTime.now());
+        duplicate.setCreatedAt(LocalDateTime.now());
+        duplicate.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(duplicate);
+
+        // When
+        List<Transaction> duplicates = transactionRepository.findPotentialDuplicates(
+                testUser.getId(),
+                BigDecimal.valueOf(100.00),
+                "Test Transaction",
+                startDate,
+                endDate);
+
+        // Then
+        assertThat(duplicates).hasSize(2);
+        assertThat(duplicates).extracting(Transaction::getDescription)
+                .containsExactlyInAnyOrder("Test Transaction", "Test Transaction");
+    }
+
+    @Test
+    void shouldFindTransactionsWithSearch() {
+        // Given - Create transactions with different descriptions
+        Transaction transaction1 = new Transaction();
+        transaction1.setDescription("Grocery Shopping");
+        transaction1.setAmount(BigDecimal.valueOf(50.00));
+        transaction1.setType(TransactionType.EXPENSE);
+        transaction1.setSubtype(TransactionSubtype.FIXED);
+        transaction1.setSource(TransactionSource.CASH);
+        transaction1.setUser(testUser);
+        transaction1.setCategory(testCategory);
+        transaction1.setDate(LocalDateTime.now());
+        transaction1.setCreatedAt(LocalDateTime.now());
+        transaction1.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(transaction1);
+
+        // When
+        Page<Transaction> results = transactionRepository.findAll("Grocery", Pageable.unpaged());
+
+        // Then
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getDescription()).isEqualTo("Grocery Shopping");
+    }
+
+    @Test
+    void shouldFindTransactionsWithEmptySearch() {
+        // When
+        Page<Transaction> results = transactionRepository.findAll("", Pageable.unpaged());
+
+        // Then
+        assertThat(results.getContent()).hasSize(1);
+    }
+
+    @Test
+    void shouldFindTransactionsWithNullSearch() {
+        // When
+        Page<Transaction> results = transactionRepository.findAll((String) null, Pageable.unpaged());
+
+        // Then
+        assertThat(results.getContent()).hasSize(1);
+    }
 }

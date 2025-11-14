@@ -74,4 +74,11 @@ public interface TransactionRepository extends BaseRepository<Transaction, Long>
            "FROM Transaction t WHERE t.user.id = :userId AND t.date BETWEEN :startDate AND :endDate " +
            "GROUP BY FUNCTION('DATE_FORMAT', t.date, '%Y-%m') ORDER BY month")
     Map<String, Object> getMonthlySummary(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.user.id = :userId AND t.externalReference = :externalReference")
+    long countByUserIdAndExternalReference(@Param("userId") Long userId, @Param("externalReference") String externalReference);
+
+    default boolean existsByUserIdAndExternalReference(Long userId, String externalReference) {
+        return countByUserIdAndExternalReference(userId, externalReference) > 0;
+    }
 }

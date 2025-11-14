@@ -268,4 +268,14 @@ public class AlertingService {
             String.format("External API failure: %s - %s", apiName, error),
             Map.of("apiName", apiName, "error", error));
     }
+
+    public void alertFrontendError(String severity, String message, Map<String, Object> data) {
+        triggerAlert(
+            "frontend_error_" + severity + "_" + message.hashCode(),
+            "FRONTEND",
+            severity,
+            "Frontend error: " + message,
+            data
+        );
+    }
 }

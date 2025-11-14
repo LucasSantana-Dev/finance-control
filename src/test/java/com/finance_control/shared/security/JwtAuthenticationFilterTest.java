@@ -67,8 +67,9 @@ class JwtAuthenticationFilterTest {
         request.setRequestURI("/api/transactions");
         request.addHeader("Authorization", "Bearer " + token);
 
-        when(jwtUtils.validateToken(token)).thenReturn(true);
-        when(jwtUtils.getUserIdFromToken(token)).thenReturn(userId);
+        when(jwtUtils.validateTokenUniversal(token)).thenReturn(true);
+        when(jwtUtils.getUserIdFromTokenUniversal(token)).thenReturn(userId);
+        when(jwtUtils.isSupabaseToken(token)).thenReturn(false);
         when(userDetailsService.loadUserByUsername(userId.toString())).thenReturn(testUserDetails);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -76,8 +77,8 @@ class JwtAuthenticationFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
         assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isEqualTo(testUserDetails);
         assertThat(UserContext.getCurrentUserId()).isNull();
-        verify(jwtUtils).validateToken(token);
-        verify(jwtUtils).getUserIdFromToken(token);
+        verify(jwtUtils).validateTokenUniversal(token);
+        verify(jwtUtils).getUserIdFromTokenUniversal(token);
         verify(userDetailsService).loadUserByUsername(userId.toString());
         verify(filterChain).doFilter(request, response);
     }
@@ -90,8 +91,9 @@ class JwtAuthenticationFilterTest {
         request.setRequestURI("/api/users");
         request.addHeader("Authorization", "Bearer " + token);
 
-        when(jwtUtils.validateToken(token)).thenReturn(true);
-        when(jwtUtils.getUserIdFromToken(token)).thenReturn(userId);
+        when(jwtUtils.validateTokenUniversal(token)).thenReturn(true);
+        when(jwtUtils.getUserIdFromTokenUniversal(token)).thenReturn(userId);
+        when(jwtUtils.isSupabaseToken(token)).thenReturn(false);
         when(userDetailsService.loadUserByUsername(userId.toString())).thenReturn(testUserDetails);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -107,13 +109,13 @@ class JwtAuthenticationFilterTest {
         request.setRequestURI("/api/transactions");
         request.addHeader("Authorization", "Bearer " + token);
 
-        when(jwtUtils.validateToken(token)).thenReturn(false);
+        when(jwtUtils.validateTokenUniversal(token)).thenReturn(false);
 
         filter.doFilterInternal(request, response, filterChain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        verify(jwtUtils).validateToken(token);
-        verify(jwtUtils, never()).getUserIdFromToken(anyString());
+        verify(jwtUtils).validateTokenUniversal(token);
+        verify(jwtUtils, never()).getUserIdFromTokenUniversal(anyString());
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(filterChain).doFilter(request, response);
     }
@@ -125,7 +127,7 @@ class JwtAuthenticationFilterTest {
         filter.doFilterInternal(request, response, filterChain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        verify(jwtUtils, never()).validateToken(anyString());
+        verify(jwtUtils, never()).validateTokenUniversal(anyString());
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(filterChain).doFilter(request, response);
     }
@@ -137,13 +139,13 @@ class JwtAuthenticationFilterTest {
         request.setRequestURI("/api/transactions");
         request.addHeader("Authorization", "Bearer " + token);
 
-        when(jwtUtils.validateToken(token)).thenReturn(false);
+        when(jwtUtils.validateTokenUniversal(token)).thenReturn(false);
 
         filter.doFilterInternal(request, response, filterChain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        verify(jwtUtils).validateToken(token);
-        verify(jwtUtils, never()).getUserIdFromToken(anyString());
+        verify(jwtUtils).validateTokenUniversal(token);
+        verify(jwtUtils, never()).getUserIdFromTokenUniversal(anyString());
         verify(filterChain).doFilter(request, response);
     }
 
@@ -153,7 +155,7 @@ class JwtAuthenticationFilterTest {
 
         filter.doFilterInternal(request, response, filterChain);
 
-        verify(jwtUtils, never()).validateToken(anyString());
+        verify(jwtUtils, never()).validateTokenUniversal(anyString());
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(filterChain).doFilter(request, response);
     }
@@ -164,7 +166,7 @@ class JwtAuthenticationFilterTest {
 
         filter.doFilterInternal(request, response, filterChain);
 
-        verify(jwtUtils, never()).validateToken(anyString());
+        verify(jwtUtils, never()).validateTokenUniversal(anyString());
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(filterChain).doFilter(request, response);
     }
@@ -175,7 +177,7 @@ class JwtAuthenticationFilterTest {
 
         filter.doFilterInternal(request, response, filterChain);
 
-        verify(jwtUtils, never()).validateToken(anyString());
+        verify(jwtUtils, never()).validateTokenUniversal(anyString());
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(filterChain).doFilter(request, response);
     }
@@ -188,8 +190,9 @@ class JwtAuthenticationFilterTest {
         request.setRequestURI("/api/transactions");
         request.addHeader("Authorization", "Bearer " + token);
 
-        when(jwtUtils.validateToken(token)).thenReturn(true);
-        when(jwtUtils.getUserIdFromToken(token)).thenReturn(userId);
+        when(jwtUtils.validateTokenUniversal(token)).thenReturn(true);
+        when(jwtUtils.getUserIdFromTokenUniversal(token)).thenReturn(userId);
+        when(jwtUtils.isSupabaseToken(token)).thenReturn(false);
         when(userDetailsService.loadUserByUsername(userId.toString())).thenReturn(testUserDetails);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -206,8 +209,9 @@ class JwtAuthenticationFilterTest {
         request.setRequestURI("/api/transactions");
         request.addHeader("Authorization", "Bearer " + token);
 
-        when(jwtUtils.validateToken(token)).thenReturn(true);
-        when(jwtUtils.getUserIdFromToken(token)).thenReturn(userId);
+        when(jwtUtils.validateTokenUniversal(token)).thenReturn(true);
+        when(jwtUtils.getUserIdFromTokenUniversal(token)).thenReturn(userId);
+        when(jwtUtils.isSupabaseToken(token)).thenReturn(false);
         when(userDetailsService.loadUserByUsername(userId.toString())).thenThrow(new RuntimeException("Service error"));
 
         filter.doFilterInternal(request, response, filterChain);
@@ -223,14 +227,14 @@ class JwtAuthenticationFilterTest {
         request.setRequestURI("/api/transactions");
         request.addHeader("Authorization", "Bearer " + token);
 
-        when(jwtUtils.validateToken(token)).thenReturn(true);
-        when(jwtUtils.getUserIdFromToken(token)).thenReturn(null);
+        when(jwtUtils.validateTokenUniversal(token)).thenReturn(true);
+        when(jwtUtils.getUserIdFromTokenUniversal(token)).thenReturn(null);
 
         filter.doFilterInternal(request, response, filterChain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        verify(jwtUtils).validateToken(token);
-        verify(jwtUtils).getUserIdFromToken(token);
+        verify(jwtUtils).validateTokenUniversal(token);
+        verify(jwtUtils).getUserIdFromTokenUniversal(token);
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(filterChain).doFilter(request, response);
     }
@@ -242,7 +246,7 @@ class JwtAuthenticationFilterTest {
 
         filter.doFilterInternal(request, response, filterChain);
 
-        verify(jwtUtils, never()).validateToken(anyString());
+        verify(jwtUtils, never()).validateTokenUniversal(anyString());
         verify(filterChain).doFilter(request, response);
     }
 
@@ -252,7 +256,7 @@ class JwtAuthenticationFilterTest {
 
         filter.doFilterInternal(request, response, filterChain);
 
-        verify(jwtUtils, never()).validateToken(anyString());
+        verify(jwtUtils, never()).validateTokenUniversal(anyString());
         verify(filterChain).doFilter(request, response);
     }
 
@@ -262,7 +266,7 @@ class JwtAuthenticationFilterTest {
 
         filter.doFilterInternal(request, response, filterChain);
 
-        verify(jwtUtils, never()).validateToken(anyString());
+        verify(jwtUtils, never()).validateTokenUniversal(anyString());
         verify(filterChain).doFilter(request, response);
     }
 }

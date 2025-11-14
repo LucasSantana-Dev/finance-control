@@ -5,6 +5,7 @@ import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
+@ConditionalOnBean(SupabaseAuthService.class)
 @RequiredArgsConstructor
 public class UserSynchronizationService {
 

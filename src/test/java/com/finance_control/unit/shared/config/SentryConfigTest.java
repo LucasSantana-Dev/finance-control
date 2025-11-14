@@ -1,15 +1,18 @@
 package com.finance_control.unit.shared.config;
 
+import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.config.SentryConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for SentryConfig.
@@ -17,22 +20,24 @@ import static org.mockito.Mockito.never;
 @ExtendWith(MockitoExtension.class)
 class SentryConfigTest {
 
+    @Mock
+    private AppProperties appProperties;
+
+    @BeforeEach
+    void setUp() {
+        AppProperties.Monitoring monitoring = new AppProperties.Monitoring(
+            true,
+            new AppProperties.Sentry(true, "https://test@sentry.io/test", "test", "1.0.0", 0.1, 0.1, false, true, true),
+            new AppProperties.HealthCheck(),
+            new AppProperties.FrontendErrors()
+        );
+        when(appProperties.monitoring()).thenReturn(monitoring);
+    }
+
     @Test
     void initializeSentry_WithValidDsn_ShouldInitializeSentry() {
         // Given
-        SentryConfig sentryConfig = new SentryConfig();
-        ReflectionTestUtils.setField(sentryConfig, "sentryDsn", "https://test@sentry.io/test");
-        ReflectionTestUtils.setField(sentryConfig, "environment", "test");
-        ReflectionTestUtils.setField(sentryConfig, "release", "1.0.0");
-        ReflectionTestUtils.setField(sentryConfig, "sampleRate", 0.1);
-        ReflectionTestUtils.setField(sentryConfig, "tracesSampleRate", 0.1);
-        ReflectionTestUtils.setField(sentryConfig, "profilesSampleRate", 0.1);
-        ReflectionTestUtils.setField(sentryConfig, "sendDefaultPii", false);
-        ReflectionTestUtils.setField(sentryConfig, "attachStacktrace", true);
-        ReflectionTestUtils.setField(sentryConfig, "enableTracing", true);
-        ReflectionTestUtils.setField(sentryConfig, "debug", false);
-        ReflectionTestUtils.setField(sentryConfig, "serverName", "test-server");
-        ReflectionTestUtils.setField(sentryConfig, "tags", "environment:test,service:finance-control");
+        SentryConfig sentryConfig = new SentryConfig(appProperties);
 
         try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
             // When - Initialize Sentry (should not throw exception)
@@ -53,8 +58,14 @@ class SentryConfigTest {
     @Test
     void initializeSentry_WithEmptyDsn_ShouldNotInitializeSentry() {
         // Given
-        SentryConfig sentryConfig = new SentryConfig();
-        ReflectionTestUtils.setField(sentryConfig, "sentryDsn", "");
+        AppProperties.Monitoring monitoring = new AppProperties.Monitoring(
+            true,
+            new AppProperties.Sentry(true, "", "test", "1.0.0", 0.1, 0.1, false, true, true),
+            new AppProperties.HealthCheck(),
+            new AppProperties.FrontendErrors()
+        );
+        when(appProperties.monitoring()).thenReturn(monitoring);
+        SentryConfig sentryConfig = new SentryConfig(appProperties);
 
         try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
             // When
@@ -68,8 +79,14 @@ class SentryConfigTest {
     @Test
     void initializeSentry_WithNullDsn_ShouldNotInitializeSentry() {
         // Given
-        SentryConfig sentryConfig = new SentryConfig();
-        ReflectionTestUtils.setField(sentryConfig, "sentryDsn", null);
+        AppProperties.Monitoring monitoring = new AppProperties.Monitoring(
+            true,
+            new AppProperties.Sentry(true, null, "test", "1.0.0", 0.1, 0.1, false, true, true),
+            new AppProperties.HealthCheck(),
+            new AppProperties.FrontendErrors()
+        );
+        when(appProperties.monitoring()).thenReturn(monitoring);
+        SentryConfig sentryConfig = new SentryConfig(appProperties);
 
         try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
             // When

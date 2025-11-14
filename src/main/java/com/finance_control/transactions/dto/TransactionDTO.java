@@ -60,6 +60,10 @@ public class TransactionDTO extends BaseDTO<Long> {
     @NotNull(message = "User ID is required")
     private Long userId;
 
+    private String externalReference;
+
+    private String bankReference;
+
     @NotEmpty(message = "At least one responsible is required")
     @Valid
     private List<TransactionResponsiblesDTO> responsibilities;

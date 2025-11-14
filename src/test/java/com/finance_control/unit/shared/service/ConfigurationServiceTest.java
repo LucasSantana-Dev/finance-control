@@ -133,7 +133,8 @@ class ConfigurationServiceTest {
             new AppProperties.RateLimit(true, 100, 200, 60),
             new AppProperties.Ai(),
             new AppProperties.Supabase(false, "", "", "", "", new AppProperties.SupabaseDatabase(), new AppProperties.Storage(), new AppProperties.Realtime(false, List.of("transactions", "dashboard", "goals"))),
-            new AppProperties.Monitoring(true, new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30, true))
+            new AppProperties.Monitoring(true, new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30, true), new AppProperties.FrontendErrors()),
+            new AppProperties.OpenFinance()
         );
 
         // Mock AppProperties using record accessors
@@ -433,7 +434,8 @@ class ConfigurationServiceTest {
             appPropertiesInstance.rateLimit(),
             appPropertiesInstance.ai(),
             appPropertiesInstance.supabase(),
-            appPropertiesInstance.monitoring()
+            appPropertiesInstance.monitoring(),
+            appPropertiesInstance.openFinance()
         );
 
         configurationService = new ConfigurationService(nullSecretAppProperties, environmentInfo);

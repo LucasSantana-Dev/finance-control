@@ -3,6 +3,7 @@ package com.finance_control.transactions.service;
 import com.finance_control.dashboard.service.DashboardService;
 import com.finance_control.shared.exception.EntityNotFoundException;
 import com.finance_control.shared.monitoring.MetricsService;
+import com.finance_control.shared.monitoring.SentryService;
 import com.finance_control.shared.service.BaseService;
 import com.finance_control.shared.service.SupabaseRealtimeService;
 import com.finance_control.shared.util.EntityMapper;
@@ -61,6 +62,7 @@ public class TransactionService
     private final TransactionSourceRepository sourceEntityRepository;
     private final TransactionResponsiblesRepository responsibleRepository;
     private final MetricsService metricsService;
+    private final SentryService sentryService;
 
     private SupabaseRealtimeService realtimeService;
     private DashboardService dashboardService;
@@ -83,7 +85,8 @@ public class TransactionService
             TransactionSubcategoryRepository subcategoryRepository,
             TransactionSourceRepository sourceEntityRepository,
             TransactionResponsiblesRepository responsibleRepository,
-            MetricsService metricsService) {
+            MetricsService metricsService,
+            SentryService sentryService) {
         super(transactionRepository);
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
@@ -92,6 +95,7 @@ public class TransactionService
         this.sourceEntityRepository = sourceEntityRepository;
         this.responsibleRepository = responsibleRepository;
         this.metricsService = metricsService;
+        this.sentryService = sentryService;
     }
 
     /**
@@ -477,6 +481,11 @@ public class TransactionService
                     log.debug("Sent realtime notification for transaction creation: {}", result.getId());
                 } catch (Exception e) {
                     log.warn("Failed to send realtime notification for transaction creation: {}", e.getMessage());
+                    sentryService.captureException(e, Map.of(
+                        "operation", "realtime_notification",
+                        "transaction_id", result.getId().toString(),
+                        "user_id", result.getUserId().toString()
+                    ));
                 }
             }
 
@@ -487,6 +496,11 @@ public class TransactionService
                     log.debug("Sent dashboard update notification for transaction creation: {}", result.getId());
                 } catch (Exception e) {
                     log.warn("Failed to send dashboard update notification for transaction creation: {}", e.getMessage());
+                    sentryService.captureException(e, Map.of(
+                        "operation", "dashboard_notification",
+                        "transaction_id", result.getId().toString(),
+                        "user_id", result.getUserId().toString()
+                    ));
                 }
             }
 
@@ -510,6 +524,11 @@ public class TransactionService
                     log.debug("Sent realtime notification for transaction update: {}", result.getId());
                 } catch (Exception e) {
                     log.warn("Failed to send realtime notification for transaction update: {}", e.getMessage());
+                    sentryService.captureException(e, Map.of(
+                        "operation", "realtime_notification",
+                        "transaction_id", result.getId().toString(),
+                        "user_id", result.getUserId().toString()
+                    ));
                 }
             }
 
@@ -520,6 +539,11 @@ public class TransactionService
                     log.debug("Sent dashboard update notification for transaction update: {}", result.getId());
                 } catch (Exception e) {
                     log.warn("Failed to send dashboard update notification for transaction update: {}", e.getMessage());
+                    sentryService.captureException(e, Map.of(
+                        "operation", "dashboard_notification",
+                        "transaction_id", result.getId().toString(),
+                        "user_id", result.getUserId().toString()
+                    ));
                 }
             }
 

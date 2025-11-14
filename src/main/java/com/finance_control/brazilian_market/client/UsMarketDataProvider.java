@@ -2,6 +2,7 @@ package com.finance_control.brazilian_market.client;
 
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.util.MarketDataConversionUtils;
+import com.finance_control.shared.monitoring.SentryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 public class UsMarketDataProvider implements MarketDataProvider {
 
     private final RestTemplate restTemplate;
+    private final SentryService sentryService;
     private static final String CHART_BASE_URL = "https://query1.finance.yahoo.com/v8/finance/chart";
     private static final String QUOTE_BASE_URL = "https://query1.finance.yahoo.com/v7/finance/quote";
 
@@ -51,6 +53,11 @@ public class UsMarketDataProvider implements MarketDataProvider {
             return Optional.empty();
         } catch (Exception e) {
             log.error("Error fetching quote for ticker: {} from US market API", ticker, e);
+            sentryService.captureException(e, java.util.Map.of(
+                "operation", "get_quote",
+                "ticker", ticker,
+                "provider", "us_market"
+            ));
             return Optional.empty();
         }
     }
@@ -99,11 +106,22 @@ public class UsMarketDataProvider implements MarketDataProvider {
                     .toUriString();
 
             ChartResponse response = restTemplate.getForObject(url, ChartResponse.class);
-            return response != null ? Optional.of(convertToHistoricalData(response)) : Optional.empty();
-        } catch (Exception e) {
-            log.error("Error fetching historical data for ticker: {} from US market API", ticker, e);
-            return Optional.empty();
-        }
+            if (response == null) {
+                return Optional.empty();
+            }
+            HistoricalData historicalData = convertToHistoricalData(response);
+                return historicalData != null ? Optional.of(historicalData) : Optional.empty();
+            } catch (Exception e) {
+                log.error("Error fetching historical data for ticker: {} from US market API", ticker, e);
+                sentryService.captureException(e, java.util.Map.of(
+                    "operation", "get_historical_data",
+                    "ticker", ticker,
+                    "period", period != null ? period : "unknown",
+                    "interval", interval != null ? interval : "unknown",
+                    "provider", "us_market"
+                ));
+                return Optional.empty();
+            }
     }
 
     @Override
@@ -188,6 +206,24 @@ public class UsMarketDataProvider implements MarketDataProvider {
 
             if (meta == null || indicators == null || indicators.getQuote() == null ||
                 indicators.getQuote().isEmpty()) {
+                return null;
+            }
+
+            // Check if quote arrays are null or empty
+            com.finance_control.brazilian_market.client.UsMarketDataProvider.Quote quote = indicators.getQuote().get(0);
+            if (quote == null) {
+                return null;
+            }
+
+            // Check if timestamp is null or empty (required for historical data)
+            List<Long> timestamps = result.getTimestamp();
+            if (timestamps == null || timestamps.isEmpty()) {
+                return null;
+            }
+
+            // Check if critical price arrays are null or empty
+            // At least open prices should be present for valid historical data
+            if (quote.getOpen() == null || quote.getOpen().isEmpty()) {
                 return null;
             }
 

@@ -1,8 +1,8 @@
 package com.finance_control.shared.config;
 
 import io.sentry.Sentry;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 import jakarta.annotation.PostConstruct;
@@ -16,98 +16,61 @@ import jakarta.annotation.PostConstruct;
  */
 @Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class SentryConfig {
 
-    @Value("${sentry.dsn:}")
-    private String sentryDsn;
-
-    @Value("${sentry.environment:dev}")
-    private String environment;
-
-    @Value("${sentry.release:1.0.0}")
-    private String release;
-
-    @Value("${sentry.sample-rate:0.1}")
-    private Double sampleRate;
-
-    @Value("${sentry.traces-sample-rate:0.1}")
-    private Double tracesSampleRate;
-
-    @Value("${sentry.profiles-sample-rate:0.1}")
-    private Double profilesSampleRate;
-
-    @Value("${sentry.send-default-pii:false}")
-    private Boolean sendDefaultPii;
-
-    @Value("${sentry.attach-stacktrace:true}")
-    private Boolean attachStacktrace;
-
-    @Value("${sentry.enable-tracing:true}")
-    private Boolean enableTracing;
-
-    @Value("${sentry.debug:false}")
-    private Boolean debug;
-
-    @Value("${sentry.server-name:finance-control}")
-    private String serverName;
-
-    @Value("${sentry.tags:}")
-    private String tags;
+    private final AppProperties appProperties;
 
     @PostConstruct
     public void initializeSentry() {
-        if (sentryDsn == null || sentryDsn.isEmpty()) {
-            log.warn("Sentry DSN not configured. Error tracking will be disabled.");
+        AppProperties.Sentry sentryConfig = appProperties.monitoring().sentry();
+
+        if (!sentryConfig.enabled() || sentryConfig.dsn() == null || sentryConfig.dsn().isEmpty()) {
+            log.warn("Sentry is disabled or DSN not configured. Error tracking will be disabled.");
             return;
         }
 
         try {
             Sentry.init(options -> {
-                options.setDsn(sentryDsn);
-                options.setEnvironment(environment);
-                options.setRelease(release);
-                options.setSampleRate(sampleRate);
-                options.setTracesSampleRate(tracesSampleRate);
-                options.setProfilesSampleRate(profilesSampleRate);
-                options.setSendDefaultPii(sendDefaultPii);
-                options.setAttachStacktrace(attachStacktrace);
-                options.setEnableTracing(enableTracing);
-                options.setDebug(debug);
-                options.setServerName(serverName);
+                options.setDsn(sentryConfig.dsn());
+                options.setEnvironment(sentryConfig.environment());
+                options.setRelease(sentryConfig.release());
+                options.setSampleRate(sentryConfig.sampleRate());
+                options.setTracesSampleRate(sentryConfig.tracesSampleRate());
+                options.setSendDefaultPii(sentryConfig.sendDefaultPii());
+                options.setAttachStacktrace(sentryConfig.attachStacktrace());
+                options.setEnableTracing(sentryConfig.enableTracing());
+                options.setServerName("finance-control");
 
-                // Add custom tags
-                if (tags != null && !tags.isEmpty()) {
-                    String[] tagPairs = tags.split(",");
-                    for (String tagPair : tagPairs) {
-                        String[] keyValue = tagPair.split(":");
-                        if (keyValue.length == 2) {
-                            options.setTag(keyValue[0].trim(), keyValue[1].trim());
-                        }
-                    }
-                }
-
-                // Add custom context
+                // Add custom context tags
                 options.setTag("service", "finance-control");
-                options.setTag("version", release);
+                options.setTag("version", sentryConfig.release());
                 options.setTag("java.version", System.getProperty("java.version"));
-                options.setTag("spring.profiles.active", environment);
+                options.setTag("spring.profiles.active", sentryConfig.environment());
 
+                // Filter out health check requests and other noise
                 options.setBeforeSend((event, hint) -> {
-                    // Filter out health check requests
-                    if (event.getRequest() != null &&
-                        event.getRequest().getUrl() != null &&
-                        event.getRequest().getUrl().contains("/actuator/health")) {
-                        return null;
+                    if (event.getRequest() != null && event.getRequest().getUrl() != null) {
+                        String url = event.getRequest().getUrl();
+                        // Filter out health checks, metrics, and other monitoring endpoints
+                        if (url.contains("/actuator/health") ||
+                            url.contains("/actuator/metrics") ||
+                            url.contains("/actuator/info") ||
+                            url.contains("/swagger-ui") ||
+                            url.contains("/v3/api-docs")) {
+                            return null;
+                        }
                     }
                     return event;
                 });
 
                 options.setBeforeBreadcrumb((breadcrumb, hint) -> {
-                    // Filter out noisy breadcrumbs
-                    if (breadcrumb.getCategory() != null &&
-                        breadcrumb.getCategory().equals("http")) {
+                    // Filter out noisy breadcrumbs from monitoring endpoints
+                    if (breadcrumb.getCategory() != null && breadcrumb.getCategory().equals("http")) {
                         String url = (String) breadcrumb.getData("url");
-                        if (url != null && url.contains("/actuator/health")) {
+                        if (url != null && (url.contains("/actuator/health") ||
+                                           url.contains("/actuator/metrics") ||
+                                           url.contains("/swagger-ui"))) {
                             return null;
                         }
                     }
@@ -116,7 +79,7 @@ public class SentryConfig {
             });
 
             log.info("Sentry initialized successfully for environment: {} with release: {}",
-                    environment, release);
+                    sentryConfig.environment(), sentryConfig.release());
 
             // Add initial breadcrumb
             Sentry.addBreadcrumb("Sentry initialized", "system");

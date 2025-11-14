@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import org.mockito.stubbing.Answer;
 
 /**
  * Unit tests for DashboardService.
@@ -75,7 +76,7 @@ class DashboardServiceTest {
         testCategory.setName("Test Category");
 
         timerSample = Instant.now();
-        when(metricsService.startDashboardGenerationTimer()).thenReturn(timerSample);
+        lenient().when(metricsService.startDashboardGenerationTimer()).thenReturn(timerSample);
     }
 
     @AfterEach
@@ -89,14 +90,29 @@ class DashboardServiceTest {
         Transaction incomeTransaction = createTransaction(TransactionType.INCOME, BigDecimal.valueOf(5000.00));
         Transaction expenseTransaction = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(3000.00));
 
+        // Mock repository calls - use Answer to distinguish between monthly and year-to-date calls
+        // Monthly calls use start/end of month, year-to-date uses start/end of year
         when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
-                .thenReturn(BigDecimal.valueOf(5000.00));
+                .thenAnswer((Answer<BigDecimal>) invocation -> {
+                    LocalDateTime startDate = invocation.getArgument(2);
+                    // If start date is day 1 of year, it's a year-to-date call
+                    if (startDate.toLocalDate().getDayOfYear() == 1) {
+                        return BigDecimal.valueOf(60000.00); // Year-to-date income
+                    }
+                    return BigDecimal.valueOf(5000.00); // Monthly income
+                });
         when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
-                .thenReturn(BigDecimal.valueOf(3000.00));
+                .thenAnswer((Answer<BigDecimal>) invocation -> {
+                    LocalDateTime startDate = invocation.getArgument(2);
+                    // If start date is day 1 of year, it's a year-to-date call
+                    if (startDate.toLocalDate().getDayOfYear() == 1) {
+                        return BigDecimal.valueOf(40000.00); // Year-to-date expenses
+                    }
+                    return BigDecimal.valueOf(3000.00); // Monthly expenses
+                });
+
         when(transactionRepository.findByUserIdWithResponsibilities(1L))
                 .thenReturn(List.of(incomeTransaction, expenseTransaction));
-        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
-                .thenReturn(BigDecimal.valueOf(60000.00)); // For net worth calculation
 
         FinancialGoal activeGoal = createFinancialGoal(true);
         FinancialGoal completedGoal = createFinancialGoal(true);
@@ -116,6 +132,7 @@ class DashboardServiceTest {
         assertThat(result.getTotalExpenses()).isEqualByComparingTo(BigDecimal.valueOf(3000.00));
         assertThat(result.getMonthlyBalance()).isEqualByComparingTo(BigDecimal.valueOf(2000.00));
         assertThat(result.getSavingsRate()).isEqualByComparingTo(BigDecimal.valueOf(40.00)); // (5000-3000)/5000 * 100
+        assertThat(result.getNetWorth()).isEqualByComparingTo(BigDecimal.valueOf(20000.00)); // 60000 - 40000
         assertThat(result.getActiveGoals()).isEqualTo(1);
         assertThat(result.getCompletedGoals()).isEqualTo(1);
         assertThat(result.getTotalTransactions()).isEqualTo(2);
@@ -157,7 +174,9 @@ class DashboardServiceTest {
         LocalDate endDate = LocalDate.of(2024, 1, 31);
 
         Transaction incomeTransaction = createTransaction(TransactionType.INCOME, BigDecimal.valueOf(5000.00));
+        incomeTransaction.setDate(LocalDateTime.of(2024, 1, 15, 12, 0)); // Within date range
         Transaction expenseTransaction = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(3000.00));
+        expenseTransaction.setDate(LocalDateTime.of(2024, 1, 20, 12, 0)); // Within date range
 
         when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
                 .thenReturn(BigDecimal.valueOf(5000.00));
@@ -205,9 +224,9 @@ class DashboardServiceTest {
         LocalDate startDate = LocalDate.of(2024, 1, 1);
         LocalDate endDate = LocalDate.of(2024, 1, 31);
 
-        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+        lenient().when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
                 .thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
+        lenient().when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
                 .thenReturn(BigDecimal.ZERO);
         when(transactionRepository.findByUserIdWithResponsibilities(1L))
                 .thenReturn(new ArrayList<>());
@@ -227,10 +246,15 @@ class DashboardServiceTest {
     @Test
     void getTopSpendingCategories_ShouldReturnSortedCategories() {
         // Given
+        LocalDate currentMonthStart = java.time.YearMonth.now().atDay(1);
+
         Transaction expense1 = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(1000.00));
         expense1.getCategory().setName("Food");
+        expense1.setDate(currentMonthStart.plusDays(5).atStartOfDay()); // Within current month
+
         Transaction expense2 = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(500.00));
         expense2.getCategory().setName("Transport");
+        expense2.setDate(currentMonthStart.plusDays(10).atStartOfDay()); // Within current month
 
         when(transactionRepository.findByUserIdWithResponsibilities(1L))
                 .thenReturn(List.of(expense1, expense2));
@@ -330,6 +354,220 @@ class DashboardServiceTest {
         BigDecimal result = dashboardService.calculateSavingsRate(BigDecimal.valueOf(5000.00), BigDecimal.valueOf(3000.00));
 
         assertThat(result).isEqualByComparingTo(BigDecimal.valueOf(40.00));
+    }
+
+    @Test
+    void calculateSavingsRate_WithNegativeSavings_ShouldCalculateCorrectly() {
+        BigDecimal result = dashboardService.calculateSavingsRate(BigDecimal.valueOf(3000.00), BigDecimal.valueOf(5000.00));
+
+        assertThat(result).isEqualByComparingTo(BigDecimal.valueOf(-66.6667));
+    }
+
+    @Test
+    void calculateSavingsRate_WithNegativeIncome_ShouldReturnZero() {
+        BigDecimal result = dashboardService.calculateSavingsRate(BigDecimal.valueOf(-1000.00), BigDecimal.valueOf(500.00));
+
+        assertThat(result).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getDashboardSummary_WithEmptyGoals_ShouldReturnZeroProgress() {
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                .thenReturn(new ArrayList<>());
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+
+        when(financialGoalRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(1L))
+                .thenReturn(new ArrayList<>());
+        when(financialGoalRepository.findCompletedGoals(1L))
+                .thenReturn(new ArrayList<>());
+
+        DashboardSummaryDTO result = dashboardService.getDashboardSummary();
+
+        assertThat(result.getTotalGoalProgress()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(result.getActiveGoals()).isEqualTo(0);
+        assertThat(result.getCompletedGoals()).isEqualTo(0);
+    }
+
+    @Test
+    void getDashboardSummary_WithMultipleGoals_ShouldCalculateAverageProgress() {
+        FinancialGoal goal1 = createFinancialGoal(true);
+        goal1.setCurrentAmount(BigDecimal.valueOf(5000.00));
+        goal1.setTargetAmount(BigDecimal.valueOf(10000.00));
+
+        FinancialGoal goal2 = createFinancialGoal(true);
+        goal2.setCurrentAmount(BigDecimal.valueOf(3000.00));
+        goal2.setTargetAmount(BigDecimal.valueOf(10000.00));
+
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                .thenReturn(new ArrayList<>());
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+
+        when(financialGoalRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(1L))
+                .thenReturn(List.of(goal1, goal2));
+        when(financialGoalRepository.findCompletedGoals(1L))
+                .thenReturn(new ArrayList<>());
+
+        DashboardSummaryDTO result = dashboardService.getDashboardSummary();
+
+        assertThat(result.getTotalGoalProgress()).isEqualByComparingTo(BigDecimal.valueOf(40.00));
+    }
+
+    @Test
+    void getFinancialMetrics_WithSingleTransaction_ShouldReturnCorrectValues() {
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        LocalDate endDate = LocalDate.of(2024, 1, 31);
+
+        Transaction singleTransaction = createTransaction(TransactionType.INCOME, BigDecimal.valueOf(1000.00));
+
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+                .thenReturn(BigDecimal.valueOf(1000.00));
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                .thenReturn(List.of(singleTransaction));
+
+        FinancialMetricsDTO result = dashboardService.getFinancialMetrics(startDate, endDate);
+
+        assertThat(result.getAverageTransactionAmount()).isEqualByComparingTo(BigDecimal.valueOf(1000.00));
+        assertThat(result.getLargestTransaction()).isEqualByComparingTo(BigDecimal.valueOf(1000.00));
+        assertThat(result.getSmallestTransaction()).isEqualByComparingTo(BigDecimal.valueOf(1000.00));
+    }
+
+    @Test
+    void getFinancialMetrics_WithMultipleTransactions_ShouldCalculateCorrectly() {
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        LocalDate endDate = LocalDate.of(2024, 1, 31);
+
+        Transaction t1 = createTransaction(TransactionType.INCOME, BigDecimal.valueOf(1000.00));
+        Transaction t2 = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(500.00));
+        Transaction t3 = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(200.00));
+
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+                .thenReturn(BigDecimal.valueOf(1000.00));
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
+                .thenReturn(BigDecimal.valueOf(700.00));
+        when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                .thenReturn(List.of(t1, t2, t3));
+
+        FinancialMetricsDTO result = dashboardService.getFinancialMetrics(startDate, endDate);
+
+        assertThat(result.getAverageTransactionAmount()).isEqualByComparingTo(BigDecimal.valueOf(566.67));
+        assertThat(result.getLargestTransaction()).isEqualByComparingTo(BigDecimal.valueOf(1000.00));
+        assertThat(result.getSmallestTransaction()).isEqualByComparingTo(BigDecimal.valueOf(200.00));
+    }
+
+    @Test
+    void getTopSpendingCategories_WithLimit_ShouldEnforceLimit() {
+        LocalDate currentMonthStart = java.time.YearMonth.now().atDay(1);
+
+        TransactionCategory category1 = new TransactionCategory();
+        category1.setId(1L);
+        category1.setName("Food");
+
+        TransactionCategory category2 = new TransactionCategory();
+        category2.setId(2L);
+        category2.setName("Transport");
+
+        TransactionCategory category3 = new TransactionCategory();
+        category3.setId(3L);
+        category3.setName("Entertainment");
+
+        Transaction expense1 = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(1000.00));
+        expense1.setCategory(category1);
+        expense1.setDate(currentMonthStart.plusDays(5).atStartOfDay()); // Within current month
+
+        Transaction expense2 = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(500.00));
+        expense2.setCategory(category2);
+        expense2.setDate(currentMonthStart.plusDays(10).atStartOfDay()); // Within current month
+
+        Transaction expense3 = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(200.00));
+        expense3.setCategory(category3);
+        expense3.setDate(currentMonthStart.plusDays(15).atStartOfDay()); // Within current month
+
+        when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                .thenReturn(List.of(expense1, expense2, expense3));
+
+        List<CategorySpendingDTO> result = dashboardService.getTopSpendingCategories(1L, 2);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getCategoryName()).isEqualTo("Food");
+        assertThat(result.get(1).getCategoryName()).isEqualTo("Transport");
+    }
+
+    @Test
+    void getTopSpendingCategories_WithEmptyExpenses_ShouldReturnEmptyList() {
+        when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                .thenReturn(new ArrayList<>());
+
+        List<CategorySpendingDTO> result = dashboardService.getTopSpendingCategories(1L, 5);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getMonthlyTrends_WithZeroMonths_ShouldReturnEmptyList() {
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                .thenReturn(new ArrayList<>());
+
+        List<MonthlyTrendDTO> result = dashboardService.getMonthlyTrends(1L, 0);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getMonthlyTrends_WithOneMonth_ShouldReturnSingleTrend() {
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+                .thenReturn(BigDecimal.valueOf(5000.00));
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
+                .thenReturn(BigDecimal.valueOf(3000.00));
+        when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                .thenReturn(List.of(createTransaction(TransactionType.INCOME, BigDecimal.valueOf(1000.00))));
+
+        List<MonthlyTrendDTO> result = dashboardService.getMonthlyTrends(1L, 1);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getIncome()).isEqualByComparingTo(BigDecimal.valueOf(5000.00));
+        assertThat(result.get(0).getExpenses()).isEqualByComparingTo(BigDecimal.valueOf(3000.00));
+        assertThat(result.get(0).getBalance()).isEqualByComparingTo(BigDecimal.valueOf(2000.00));
+    }
+
+    @Test
+    void getFinancialMetrics_WithReconciledTransactions_ShouldCountCorrectly() {
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        LocalDate endDate = LocalDate.of(2024, 1, 31);
+
+        Transaction reconciledTransaction = createTransaction(TransactionType.INCOME, BigDecimal.valueOf(1000.00));
+        reconciledTransaction.setReconciled(true);
+
+        Transaction unreconciledTransaction = createTransaction(TransactionType.EXPENSE, BigDecimal.valueOf(500.00));
+        unreconciledTransaction.setReconciled(false);
+
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.INCOME), any(), any()))
+                .thenReturn(BigDecimal.valueOf(1000.00));
+        when(transactionRepository.sumByUserAndTypeAndDateBetween(eq(1L), eq(TransactionType.EXPENSE), any(), any()))
+                .thenReturn(BigDecimal.valueOf(500.00));
+        when(transactionRepository.findByUserIdWithResponsibilities(1L))
+                .thenReturn(List.of(reconciledTransaction, unreconciledTransaction));
+
+        FinancialMetricsDTO result = dashboardService.getFinancialMetrics(startDate, endDate);
+
+        assertThat(result.getTotalTransactions()).isEqualTo(2);
+        assertThat(result.getIncomeTransactions()).isEqualTo(1);
+        assertThat(result.getExpenseTransactions()).isEqualTo(1);
     }
 
     private Transaction createTransaction(TransactionType type, BigDecimal amount) {

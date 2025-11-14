@@ -188,6 +188,10 @@ app:
       enabled: ${SENTRY_ENABLED:true}
     health-check:
       interval: ${HEALTH_CHECK_INTERVAL:30}
+    frontend-errors:
+      enabled: ${FRONTEND_ERRORS_ENABLED:true}
+      alert-threshold: ${FRONTEND_ERRORS_ALERT_THRESHOLD:10}
+      alert-window-minutes: ${FRONTEND_ERRORS_ALERT_WINDOW_MINUTES:5}
 
   supabase:
     enabled: ${SUPABASE_ENABLED:true}
@@ -227,6 +231,38 @@ app:
       base-url: ${ALPHA_VANTAGE_BASE_URL:https://www.alphavantage.co/query}
     update-interval-minutes: ${MARKET_DATA_UPDATE_INTERVAL_MINUTES:15}
     rate-limit-delay-ms: ${MARKET_DATA_RATE_LIMIT_DELAY_MS:100}
+
+  open-finance:
+    enabled: ${OPEN_FINANCE_ENABLED:false}
+    sandbox-base-url: ${OPEN_FINANCE_SANDBOX_BASE_URL:https://api.sandbox.openfinancebrasil.org.br}
+    production-base-url: ${OPEN_FINANCE_PRODUCTION_BASE_URL:https://api.openfinancebrasil.org.br}
+    use-production: ${OPEN_FINANCE_USE_PRODUCTION:false}
+    oauth:
+      client-id: ${OPEN_FINANCE_CLIENT_ID:}
+      client-secret: ${OPEN_FINANCE_CLIENT_SECRET:}
+      redirect-uri: ${OPEN_FINANCE_REDIRECT_URI:http://localhost:8080/api/open-finance/consents/callback}
+      default-scopes: ${OPEN_FINANCE_DEFAULT_SCOPES:accounts,transactions,payments}
+    certificates:
+      client-certificate-path: ${OPEN_FINANCE_CLIENT_CERT_PATH:}
+      private-key-path: ${OPEN_FINANCE_PRIVATE_KEY_PATH:}
+      ca-certificate-path: ${OPEN_FINANCE_CA_CERT_PATH:}
+      keystore-path: ${OPEN_FINANCE_KEYSTORE_PATH:}
+      keystore-password: ${OPEN_FINANCE_KEYSTORE_PASSWORD:}
+      use-supabase-storage: ${OPEN_FINANCE_USE_SUPABASE_STORAGE:false}
+      supabase-storage-bucket: ${OPEN_FINANCE_SUPABASE_STORAGE_BUCKET:certificates}
+    sync:
+      enabled: ${OPEN_FINANCE_SYNC_ENABLED:true}
+      balance-sync-interval-minutes: ${OPEN_FINANCE_BALANCE_SYNC_INTERVAL:15}
+      balance-sync-interval-ms: ${OPEN_FINANCE_BALANCE_SYNC_INTERVAL_MS:900000}
+      transaction-sync-interval-hours: ${OPEN_FINANCE_TRANSACTION_SYNC_INTERVAL:24}
+      transaction-sync-cron: ${OPEN_FINANCE_TRANSACTION_SYNC_CRON:0 0 2 * * ?}
+      token-refresh-before-expiration-minutes: ${OPEN_FINANCE_TOKEN_REFRESH_BEFORE_EXPIRATION:5}
+      max-retry-attempts: ${OPEN_FINANCE_MAX_RETRY_ATTEMPTS:3}
+      retry-delay-ms: ${OPEN_FINANCE_RETRY_DELAY_MS:5000}
+    institution-registry:
+      endpoint: ${OPEN_FINANCE_INSTITUTION_REGISTRY_ENDPOINT:https://api.openfinancebrasil.org.br/institutions}
+      refresh-interval-hours: ${OPEN_FINANCE_INSTITUTION_REFRESH_INTERVAL:24}
+      auto-refresh: ${OPEN_FINANCE_INSTITUTION_AUTO_REFRESH:true}
 
 # Brazilian Market Data Configuration
 brazilian-market:

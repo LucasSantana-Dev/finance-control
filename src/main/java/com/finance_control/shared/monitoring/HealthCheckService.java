@@ -19,14 +19,20 @@ import java.time.LocalDateTime;
  * Provides detailed health status for database, Redis, and other critical components.
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 @SuppressFBWarnings("EI_EXPOSE_REP2") // False positive: Spring dependency injection is safe
 public class HealthCheckService {
 
     private final DataSource dataSource;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final AppProperties appProperties;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
+
+    public HealthCheckService(DataSource dataSource, AppProperties appProperties) {
+        this.dataSource = dataSource;
+        this.appProperties = appProperties;
+    }
 
     public Map<String, Object> health() {
         try {
@@ -95,6 +101,17 @@ public class HealthCheckService {
     }
 
     private Map<String, Object> checkRedisHealth() {
+        if (redisTemplate == null) {
+            Map<String, Object> details = new HashMap<>();
+            details.put("status", "DOWN");
+            details.put("error", "Redis is not configured or unavailable");
+            details.put("host", appProperties.redis().host() != null ? appProperties.redis().host() : "not configured");
+            details.put("port", appProperties.redis().port());
+            details.put("database", appProperties.redis().database());
+            details.put("checkTime", LocalDateTime.now().toString());
+            return java.util.Collections.unmodifiableMap(details);
+        }
+
         try {
             var connectionFactory = redisTemplate.getConnectionFactory();
             if (connectionFactory == null) {

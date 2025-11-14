@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/storage")
 @RequiredArgsConstructor
+@ConditionalOnProperty(value = "app.supabase.storage.enabled", havingValue = "true", matchIfMissing = false)
 @Tag(name = "Supabase Storage", description = "File storage operations using Supabase Storage")
 public class SupabaseStorageController {
 

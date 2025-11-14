@@ -201,7 +201,7 @@ class TransactionImportServiceIntegrationTest extends BaseIntegrationTest {
         List<Transaction> persisted = transactionRepository.findAll();
         assertThat(persisted).hasSize(2);
         assertThat(persisted).anySatisfy(transaction -> {
-            assertThat(transaction.getDescription()).isEqualTo("Utility Bill");
+            assertThat(transaction.getDescription()).isEqualTo("Electric company");
             assertThat(transaction.getType()).isEqualTo(com.finance_control.shared.enums.TransactionType.EXPENSE);
         });
         assertThat(persisted).anySatisfy(transaction -> {
@@ -252,4 +252,3 @@ class TransactionImportServiceIntegrationTest extends BaseIntegrationTest {
         assertThat(second.getIssues()).anyMatch(issue -> issue.getType() == com.finance_control.transactions.importer.TransactionImportIssueType.DUPLICATE_SKIPPED);
     }
 }
-

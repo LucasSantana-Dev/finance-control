@@ -13,6 +13,7 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 
 import javax.sql.DataSource;
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
@@ -95,7 +96,7 @@ class HealthCheckServiceTest {
         );
 
         AppProperties.Monitoring monitoringProperties = new AppProperties.Monitoring(
-            true, new AppProperties.Sentry(), new AppProperties.HealthCheck()
+            true, new AppProperties.Sentry(), new AppProperties.HealthCheck(), new AppProperties.FrontendErrors()
         );
 
         lenient().when(appProperties.redis()).thenReturn(redisProperties);
@@ -105,7 +106,16 @@ class HealthCheckServiceTest {
         lenient().when(appProperties.rateLimit()).thenReturn(rateLimitProperties);
         lenient().when(appProperties.monitoring()).thenReturn(monitoringProperties);
 
-        healthCheckService = new HealthCheckService(dataSource, redisTemplate, appProperties);
+        healthCheckService = new HealthCheckService(dataSource, appProperties);
+
+        // Set redisTemplate using reflection since it's now optional field injection
+        try {
+            Field redisTemplateField = HealthCheckService.class.getDeclaredField("redisTemplate");
+            redisTemplateField.setAccessible(true);
+            redisTemplateField.set(healthCheckService, redisTemplate);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException("Failed to set redisTemplate field in test", e);
+        }
     }
 
     @Test

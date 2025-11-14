@@ -450,4 +450,153 @@ class FinancialGoalRepositoryTest {
         assertThat(mediumProgressGoals.get(0).getName()).isEqualTo("Test Goal");
         assertThat(mediumProgressGoals.get(0).getCurrentAmount()).isEqualTo(BigDecimal.valueOf(3000.00));
     }
+
+    @Test
+    void shouldFindByUserIdAndIsActiveTrueOrderByCreatedAtDesc() {
+        // Given - Create inactive goal
+        FinancialGoal inactiveGoal = new FinancialGoal();
+        inactiveGoal.setName("Inactive Goal");
+        inactiveGoal.setDescription("Inactive Description");
+        inactiveGoal.setGoalType(GoalType.SAVINGS);
+        inactiveGoal.setTargetAmount(BigDecimal.valueOf(5000.00));
+        inactiveGoal.setCurrentAmount(BigDecimal.valueOf(500.00));
+        inactiveGoal.setDeadline(LocalDate.now().plusMonths(6));
+        inactiveGoal.setIsActive(false);
+        inactiveGoal.setAutoCalculate(false);
+        inactiveGoal.setUser(testUser);
+        inactiveGoal.setCreatedAt(LocalDateTime.now());
+        inactiveGoal.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(inactiveGoal);
+
+        // When
+        List<FinancialGoal> activeGoals = goalRepository.findByUserIdAndIsActiveTrueOrderByCreatedAtDesc(testUser.getId());
+
+        // Then
+        assertThat(activeGoals).hasSize(1);
+        assertThat(activeGoals.get(0).getName()).isEqualTo("Test Goal");
+        assertThat(activeGoals.get(0).getIsActive()).isTrue();
+    }
+
+    @Test
+    void shouldFindByUserIdAndGoalTypeOrderByCreatedAtDesc() {
+        // Given - Create investment goal
+        FinancialGoal investmentGoal = new FinancialGoal();
+        investmentGoal.setName("Investment Goal");
+        investmentGoal.setDescription("Investment Description");
+        investmentGoal.setGoalType(GoalType.INVESTMENT);
+        investmentGoal.setTargetAmount(BigDecimal.valueOf(50000.00));
+        investmentGoal.setCurrentAmount(BigDecimal.valueOf(5000.00));
+        investmentGoal.setDeadline(LocalDate.now().plusMonths(36));
+        investmentGoal.setIsActive(true);
+        investmentGoal.setAutoCalculate(false);
+        investmentGoal.setUser(testUser);
+        investmentGoal.setCreatedAt(LocalDateTime.now());
+        investmentGoal.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(investmentGoal);
+
+        // When
+        List<FinancialGoal> savingsGoals = goalRepository.findByUserIdAndGoalTypeOrderByCreatedAtDesc(testUser.getId(), GoalType.SAVINGS);
+
+        // Then
+        assertThat(savingsGoals).hasSize(1);
+        assertThat(savingsGoals.get(0).getName()).isEqualTo("Test Goal");
+        assertThat(savingsGoals.get(0).getGoalType()).isEqualTo(GoalType.SAVINGS);
+    }
+
+    @Test
+    void shouldFindGoalsNearDeadline() {
+        // Given - Create goal near deadline
+        FinancialGoal nearDeadlineGoal = new FinancialGoal();
+        nearDeadlineGoal.setName("Near Deadline Goal");
+        nearDeadlineGoal.setDescription("Near Deadline Description");
+        nearDeadlineGoal.setGoalType(GoalType.SAVINGS);
+        nearDeadlineGoal.setTargetAmount(BigDecimal.valueOf(10000.00));
+        nearDeadlineGoal.setCurrentAmount(BigDecimal.valueOf(5000.00));
+        nearDeadlineGoal.setDeadline(LocalDate.now().plusDays(5));
+        nearDeadlineGoal.setIsActive(true);
+        nearDeadlineGoal.setAutoCalculate(false);
+        nearDeadlineGoal.setUser(testUser);
+        nearDeadlineGoal.setCreatedAt(LocalDateTime.now());
+        nearDeadlineGoal.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(nearDeadlineGoal);
+
+        // When
+        LocalDate maxDate = LocalDate.now().plusDays(30);
+        List<FinancialGoal> goalsNearDeadline = goalRepository.findGoalsNearDeadline(testUser.getId(), maxDate);
+
+        // Then
+        assertThat(goalsNearDeadline).hasSize(1);
+        assertThat(goalsNearDeadline.get(0).getName()).isEqualTo("Near Deadline Goal");
+        assertThat(goalsNearDeadline.get(0).getDeadline()).isBeforeOrEqualTo(maxDate);
+    }
+
+    @Test
+    void shouldFindCompletedGoals() {
+        // Given - Create completed goal (currentAmount >= targetAmount)
+        FinancialGoal completedGoal = new FinancialGoal();
+        completedGoal.setName("Completed Goal");
+        completedGoal.setDescription("Completed Description");
+        completedGoal.setGoalType(GoalType.SAVINGS);
+        completedGoal.setTargetAmount(BigDecimal.valueOf(10000.00));
+        completedGoal.setCurrentAmount(BigDecimal.valueOf(10000.00));
+        completedGoal.setDeadline(LocalDate.now().plusMonths(12));
+        completedGoal.setIsActive(true);
+        completedGoal.setAutoCalculate(false);
+        completedGoal.setUser(testUser);
+        completedGoal.setCreatedAt(LocalDateTime.now());
+        completedGoal.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(completedGoal);
+
+        // When
+        List<FinancialGoal> completedGoals = goalRepository.findCompletedGoals(testUser.getId());
+
+        // Then
+        assertThat(completedGoals).hasSize(1);
+        assertThat(completedGoals.get(0).getName()).isEqualTo("Completed Goal");
+        assertThat(completedGoals.get(0).getCurrentAmount())
+                .isGreaterThanOrEqualTo(completedGoals.get(0).getTargetAmount());
+    }
+
+    @Test
+    void shouldFindGoalsWithSearch() {
+        // Given - Create goal with specific name
+        FinancialGoal searchableGoal = new FinancialGoal();
+        searchableGoal.setName("Vacation Fund");
+        searchableGoal.setDescription("Save for vacation");
+        searchableGoal.setGoalType(GoalType.SAVINGS);
+        searchableGoal.setTargetAmount(BigDecimal.valueOf(5000.00));
+        searchableGoal.setCurrentAmount(BigDecimal.valueOf(1000.00));
+        searchableGoal.setDeadline(LocalDate.now().plusMonths(6));
+        searchableGoal.setIsActive(true);
+        searchableGoal.setAutoCalculate(false);
+        searchableGoal.setUser(testUser);
+        searchableGoal.setCreatedAt(LocalDateTime.now());
+        searchableGoal.setUpdatedAt(LocalDateTime.now());
+        entityManager.persistAndFlush(searchableGoal);
+
+        // When
+        Page<FinancialGoal> results = goalRepository.findAll("Vacation", testUser.getId(), Pageable.unpaged());
+
+        // Then
+        assertThat(results.getContent()).hasSize(1);
+        assertThat(results.getContent().get(0).getName()).isEqualTo("Vacation Fund");
+    }
+
+    @Test
+    void shouldFindGoalsWithEmptySearch() {
+        // When
+        Page<FinancialGoal> results = goalRepository.findAll("", testUser.getId(), Pageable.unpaged());
+
+        // Then
+        assertThat(results.getContent()).hasSize(1);
+    }
+
+    @Test
+    void shouldFindGoalsWithNullSearch() {
+        // When
+        Page<FinancialGoal> results = goalRepository.findAll(null, testUser.getId(), Pageable.unpaged());
+
+        // Then
+        assertThat(results.getContent()).hasSize(1);
+    }
 }

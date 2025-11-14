@@ -1,3 +1,14 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.flywaydb:flyway-core:10.8.1'
+        classpath 'org.flywaydb:flyway-database-postgresql:10.8.1'
+        classpath 'org.postgresql:postgresql:42.7.3'
+    }
+}
+
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.3'
@@ -1076,5 +1087,98 @@ tasks.named('dependencyUpdates', com.github.benmanes.gradle.versions.updates.Dep
     reportfileName = 'report'
     rejectVersionIf {
         isNonStable(candidate.version) && !isNonStable(currentVersion)
+    }
+}
+
+// Custom Flyway tasks using Flyway API programmatically
+def createFlywayConfig = {
+    def useSupabase = System.getenv('SUPABASE_DATABASE_ENABLED') == 'true'
+    def url, user, password
+
+    if (useSupabase) {
+        def host = System.getenv('SUPABASE_DATABASE_HOST') ?: ''
+        def port = System.getenv('SUPABASE_DATABASE_PORT') ?: '5432'
+        def database = System.getenv('SUPABASE_DATABASE_NAME') ?: 'postgres'
+        def username = System.getenv('SUPABASE_DATABASE_USERNAME') ?: ''
+        def dbPassword = System.getenv('SUPABASE_DATABASE_PASSWORD') ?: ''
+        def sslMode = System.getenv('SUPABASE_DATABASE_SSL_MODE') ?: 'require'
+
+        url = "jdbc:postgresql://${host}:${port}/${database}?sslmode=${sslMode}"
+        user = username
+        password = dbPassword
+    } else {
+        url = System.getenv('DB_URL') ?: 'jdbc:postgresql://localhost:5432/finance_control'
+        user = System.getenv('DB_USERNAME') ?: 'postgres'
+        password = System.getenv('DB_PASSWORD') ?: 'postgres'
+    }
+
+    return [url: url, user: user, password: password]
+}
+
+task flywayInfo {
+    group = 'flyway'
+    description = 'Shows Flyway migration information'
+
+    doLast {
+        def config = createFlywayConfig()
+        def flyway = org.flywaydb.core.Flyway.configure()
+            .dataSource(config.url, config.user, config.password)
+            .locations('classpath:db/migration')
+            .load()
+
+        def info = flyway.info()
+        println "Flyway Migration Info:"
+        println "Current version: ${info.current()?.version?.toString() ?: 'None'}"
+        println "Pending migrations: ${info.pending().length}"
+        info.pending().each { migration ->
+            println "  - ${migration.version}: ${migration.description}"
+        }
+    }
+}
+
+task flywayMigrate {
+    group = 'flyway'
+    description = 'Runs Flyway migrations'
+
+    doLast {
+        def config = createFlywayConfig()
+        println "Migrating database: ${config.url}"
+
+        def flyway = org.flywaydb.core.Flyway.configure()
+            .dataSource(config.url, config.user, config.password)
+            .locations('classpath:db/migration')
+            .baselineOnMigrate(false)
+            .validateOnMigrate(true)
+            .outOfOrder(false)
+            .cleanDisabled(true)
+            .load()
+
+        def result = flyway.migrate()
+        println "Migration completed. Migrations applied: ${result.migrationsExecuted}"
+        if (result.migrationsExecuted > 0) {
+            println "Successfully applied ${result.migrationsExecuted} migration(s)"
+        } else {
+            println "Database is up to date"
+        }
+    }
+}
+
+task flywayValidate {
+    group = 'flyway'
+    description = 'Validates Flyway migrations'
+
+    doLast {
+        def config = createFlywayConfig()
+        def flyway = org.flywaydb.core.Flyway.configure()
+            .dataSource(config.url, config.user, config.password)
+            .locations('classpath:db/migration')
+            .load()
+
+        try {
+            flyway.validate()
+            println "Validation successful: All migrations are valid"
+        } catch (Exception e) {
+            throw new GradleException("Validation failed: ${e.message}", e)
+        }
     }
 }

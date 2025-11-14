@@ -6,7 +6,13 @@ import io.sentry.protocol.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
+import java.util.function.Supplier;
+
+import io.sentry.ISpan;
+import io.sentry.SpanStatus;
 
 /**
  * Service for Sentry integration providing centralized error tracking and monitoring.
@@ -137,6 +143,25 @@ public class SentryService {
         } catch (Exception e) {
             log.warn("Failed to capture message in Sentry: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Capture a message and return the resulting Sentry event id.
+     *
+     * @param message message to capture
+     * @param level severity level
+     * @return event id or null when Sentry disabled
+     */
+    public String captureMessageWithResponse(String message, SentryLevel level) {
+        try {
+            if (isSentryEnabled()) {
+                var sentryId = Sentry.captureMessage(message, level);
+                return sentryId != null ? sentryId.toString() : null;
+            }
+        } catch (Exception e) {
+            log.warn("Failed to capture message in Sentry: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**
@@ -325,6 +350,140 @@ public class SentryService {
         } catch (Exception e) {
             log.warn("Failed to check Sentry status: {}", e.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Execute a supplier function with performance monitoring.
+     * Automatically tracks execution time and captures slow operations.
+     *
+     * @param operationName The name of the operation being monitored
+     * @param slowThresholdMs Threshold in milliseconds to consider operation slow
+     * @param supplier The function to execute
+     * @param <T> The return type
+     * @return The result of the supplier function
+     */
+    public <T> T executeWithMonitoring(String operationName, long slowThresholdMs, Supplier<T> supplier) {
+        Instant start = Instant.now();
+        ISpan span = null;
+
+        try {
+            if (isSentryEnabled()) {
+                span = Sentry.startTransaction(operationName, "operation");
+                addBreadcrumb("Starting operation: " + operationName, "performance");
+            }
+
+            T result = supplier.get();
+
+            Duration duration = Duration.between(start, Instant.now());
+            long durationMs = duration.toMillis();
+
+            if (isSentryEnabled()) {
+                if (span != null) {
+                    span.setStatus(SpanStatus.OK);
+                    span.finish();
+                }
+
+                if (durationMs > slowThresholdMs) {
+                    captureWarning(String.format("Slow operation detected: %s took %dms (threshold: %dms)",
+                        operationName, durationMs, slowThresholdMs));
+                    setTags(Map.of(
+                        "operation", operationName,
+                        "duration_ms", String.valueOf(durationMs),
+                        "slow", "true"
+                    ));
+                } else {
+                    addBreadcrumb(
+                        String.format("Operation completed: %s took %dms", operationName, durationMs),
+                        "performance",
+                        SentryLevel.INFO
+                    );
+                }
+            }
+
+            return result;
+        } catch (Exception e) {
+            Duration duration = Duration.between(start, Instant.now());
+            if (isSentryEnabled()) {
+                if (span != null) {
+                    span.setStatus(SpanStatus.INTERNAL_ERROR);
+                    span.setThrowable(e);
+                    span.finish();
+                }
+                captureException(e, Map.of(
+                    "operation", operationName,
+                    "duration_ms", String.valueOf(duration.toMillis())
+                ));
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Execute a runnable with performance monitoring.
+     * Automatically tracks execution time and captures slow operations.
+     *
+     * @param operationName The name of the operation being monitored
+     * @param slowThresholdMs Threshold in milliseconds to consider operation slow
+     * @param runnable The function to execute
+     */
+    public void executeWithMonitoring(String operationName, long slowThresholdMs, Runnable runnable) {
+        executeWithMonitoring(operationName, slowThresholdMs, () -> {
+            runnable.run();
+            return null;
+        });
+    }
+
+    /**
+     * Start a Sentry transaction for performance monitoring.
+     *
+     * @param operationName The name of the operation
+     * @param operationType The type of operation (e.g., "db.query", "http.request")
+     * @return The transaction span, or null if Sentry is disabled
+     */
+    public ISpan startTransaction(String operationName, String operationType) {
+        try {
+            if (isSentryEnabled()) {
+                return Sentry.startTransaction(operationName, operationType);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to start Sentry transaction: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Finish a Sentry transaction with status.
+     *
+     * @param span The transaction span to finish
+     * @param status The status of the transaction
+     */
+    public void finishTransaction(ISpan span, SpanStatus status) {
+        try {
+            if (span != null && isSentryEnabled()) {
+                span.setStatus(status);
+                span.finish();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to finish Sentry transaction: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Finish a Sentry transaction with exception.
+     *
+     * @param span The transaction span to finish
+     * @param throwable The exception that occurred
+     */
+    public void finishTransaction(ISpan span, Throwable throwable) {
+        try {
+            if (span != null && isSentryEnabled()) {
+                span.setStatus(SpanStatus.INTERNAL_ERROR);
+                span.setThrowable(throwable);
+                span.finish();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to finish Sentry transaction: {}", e.getMessage());
         }
     }
 }

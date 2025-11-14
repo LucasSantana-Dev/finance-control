@@ -2,6 +2,7 @@ package com.finance_control.auth.service;
 
 import com.finance_control.auth.exception.AuthenticationException;
 import com.finance_control.shared.monitoring.MetricsService;
+import com.finance_control.shared.monitoring.SentryService;
 import com.finance_control.shared.service.SupabaseAuthService;
 import com.finance_control.shared.service.UserMappingService;
 import com.finance_control.shared.dto.AuthResponse;
@@ -23,6 +24,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MetricsService metricsService;
+    private final SentryService sentryService;
 
     // Optional Supabase authentication provider
     @Autowired(required = false)
@@ -50,6 +52,7 @@ public class AuthService {
             }
 
             if (!passwordEncoder.matches(password, user.getPassword())) {
+                sentryService.addBreadcrumb("Authentication failed: invalid password", "auth", io.sentry.SentryLevel.WARNING);
                 throw new AuthenticationException("Invalid email or password");
             }
 

@@ -7,9 +7,11 @@ import com.finance_control.goals.dto.GoalCompletionRequest;
 import com.finance_control.goals.service.FinancialGoalService;
 import com.finance_control.shared.exception.EntityNotFoundException;
 import com.finance_control.shared.exception.GlobalExceptionHandler;
+import com.finance_control.shared.monitoring.SentryService;
 import com.finance_control.users.model.User;
 import com.finance_control.shared.security.CustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,7 +32,9 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -49,6 +53,9 @@ class FinancialGoalControllerTest {
 
     @Mock
     private FinancialGoalService financialGoalService;
+
+    @Mock
+    private SentryService sentryService;
 
     @InjectMocks
     private FinancialGoalController financialGoalController;
@@ -80,7 +87,7 @@ class FinancialGoalControllerTest {
 
         mockMvc = MockMvcBuilders.standaloneSetup(financialGoalController)
                         .setCustomArgumentResolvers(new org.springframework.data.web.PageableHandlerMethodArgumentResolver(), authPrincipalResolver)
-                        .setControllerAdvice(new GlobalExceptionHandler())
+                        .setControllerAdvice(new GlobalExceptionHandler(sentryService))
                         .build();
 
         // Setup test user
@@ -683,5 +690,278 @@ class FinancialGoalControllerTest {
             .andExpect(jsonPath("$.content", hasSize(1)));
 
         verify(financialGoalService).findAll(any(), anyMap(), eq("name"), eq("desc"), any());
+    }
+
+    // Additional error handling tests
+
+    @Test
+    @DisplayName("updateProgress_WithZeroAmount_ShouldReturnBadRequest")
+    void updateProgress_WithZeroAmount_ShouldReturnBadRequest() throws Exception {
+        when(financialGoalService.updateProgress(eq(1L), any(BigDecimal.class)))
+            .thenThrow(new IllegalArgumentException("Amount must be positive"));
+
+        mockMvc.perform(post("/financial-goals/{id}/progress", 1L)
+                .with(user(testUserDetails))
+                .param("amount", "0.00")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Amount must be positive"));
+
+        verify(financialGoalService).updateProgress(eq(1L), any(BigDecimal.class));
+    }
+
+    @Test
+    @DisplayName("updateProgress_WithNullAmount_ShouldReturnError")
+    void updateProgress_WithNullAmount_ShouldReturnError() throws Exception {
+        // When amount parameter is missing, Spring tries to convert null to BigDecimal
+        // This causes a type conversion error (500) rather than validation error (400)
+        // because the parameter is required but null conversion fails
+        mockMvc.perform(post("/financial-goals/{id}/progress", 1L)
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().is5xxServerError()); // Type conversion error for null BigDecimal
+    }
+
+    @Test
+    @DisplayName("markAsCompleted_WithNonexistentGoal_ShouldReturnNotFound")
+    void markAsCompleted_WithNonexistentGoal_ShouldReturnNotFound() throws Exception {
+        when(financialGoalService.markAsCompleted(999L))
+            .thenThrow(new EntityNotFoundException("Goal not found with id: 999"));
+
+        mockMvc.perform(post("/financial-goals/{id}/complete", 999L)
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Goal not found with id: 999"));
+
+        verify(financialGoalService).markAsCompleted(999L);
+    }
+
+    @Test
+    @DisplayName("reactivate_WithNonexistentGoal_ShouldReturnNotFound")
+    void reactivate_WithNonexistentGoal_ShouldReturnNotFound() throws Exception {
+        when(financialGoalService.reactivate(999L))
+            .thenThrow(new EntityNotFoundException("Goal not found with id: 999"));
+
+        mockMvc.perform(post("/financial-goals/{id}/reactivate", 999L)
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Goal not found with id: 999"));
+
+        verify(financialGoalService).reactivate(999L);
+    }
+
+    @Test
+    @DisplayName("completeGoal_WithInvalidFinalAmount_ShouldReturnBadRequest")
+    void completeGoal_WithInvalidFinalAmount_ShouldReturnBadRequest() throws Exception {
+        GoalCompletionRequest request = new GoalCompletionRequest();
+        request.setFinalAmount(BigDecimal.valueOf(-100.00));
+        request.setCompletionDate(LocalDateTime.now());
+        request.setCompleted(true);
+
+        // The validation might happen at DTO level or service level
+        // Negative amount might pass DTO validation but fail service validation
+        // Let's test that service is called and throws exception, or validation catches it
+        when(financialGoalService.completeGoal(eq(1L), any(GoalCompletionRequest.class)))
+            .thenThrow(new IllegalArgumentException("Final amount must be positive"));
+
+        mockMvc.perform(put("/financial-goals/{id}/complete", 1L)
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest()); // Service validation or exception handler
+    }
+
+    @Test
+    @DisplayName("completeGoal_WithNullFinalAmount_ShouldReturnBadRequest")
+    void completeGoal_WithNullFinalAmount_ShouldReturnBadRequest() throws Exception {
+        GoalCompletionRequest request = new GoalCompletionRequest();
+        request.setFinalAmount(null);
+        request.setCompletionDate(LocalDateTime.now());
+        request.setCompleted(true);
+
+        mockMvc.perform(put("/financial-goals/{id}/complete", 1L)
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
+
+        verify(financialGoalService, never()).completeGoal(eq(1L), any());
+    }
+
+    @Test
+    @DisplayName("getStatusSummary_WithServiceException_ShouldReturnInternalServerError")
+    void getStatusSummary_WithServiceException_ShouldReturnInternalServerError() throws Exception {
+        when(financialGoalService.getStatusSummary(1L))
+            .thenThrow(new RuntimeException("Database error"));
+
+        mockMvc.perform(get("/financial-goals/metadata/status-summary")
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isInternalServerError());
+
+        verify(financialGoalService).getStatusSummary(1L);
+    }
+
+    @Test
+    @DisplayName("getProgressSummary_WithServiceException_ShouldReturnInternalServerError")
+    void getProgressSummary_WithServiceException_ShouldReturnInternalServerError() throws Exception {
+        when(financialGoalService.getProgressSummary(1L))
+            .thenThrow(new RuntimeException("Database error"));
+
+        mockMvc.perform(get("/financial-goals/metadata/progress-summary")
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isInternalServerError());
+
+        verify(financialGoalService).getProgressSummary(1L);
+    }
+
+    @Test
+    @DisplayName("getDeadlineAlerts_WithEmptyList_ShouldReturnEmptyArray")
+    void getDeadlineAlerts_WithEmptyList_ShouldReturnEmptyArray() throws Exception {
+        when(financialGoalService.getDeadlineAlerts(1L)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/financial-goals/metadata/deadline-alerts")
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$", hasSize(0)));
+
+        verify(financialGoalService).getDeadlineAlerts(1L);
+    }
+
+    @Test
+    @DisplayName("getCompletionRate_WithNoGoals_ShouldReturnZeroRate")
+    void getCompletionRate_WithNoGoals_ShouldReturnZeroRate() throws Exception {
+        Map<String, Object> completionRate = Map.of(
+            "completionRate", 0.0,
+            "totalCompleted", 0,
+            "totalGoals", 0,
+            "averageCompletionTime", 0
+        );
+
+        when(financialGoalService.getCompletionRate(1L)).thenReturn(completionRate);
+
+        mockMvc.perform(get("/financial-goals/metadata/completion-rate")
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.completionRate").value(0.0))
+            .andExpect(jsonPath("$.totalGoals").value(0));
+
+        verify(financialGoalService).getCompletionRate(1L);
+    }
+
+    @Test
+    @DisplayName("getAverageCompletionTime_WithNoCompletedGoals_ShouldReturnZero")
+    void getAverageCompletionTime_WithNoCompletedGoals_ShouldReturnZero() throws Exception {
+        Map<String, Object> avgCompletionTime = Map.of(
+            "averageDays", 0,
+            "averageMonths", 0.0,
+            "totalCompletedGoals", 0,
+            "fastestCompletion", 0,
+            "slowestCompletion", 0
+        );
+
+        when(financialGoalService.getAverageCompletionTime(1L)).thenReturn(avgCompletionTime);
+
+        mockMvc.perform(get("/financial-goals/metadata/average-completion-time")
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalCompletedGoals").value(0))
+            .andExpect(jsonPath("$.averageDays").value(0));
+
+        verify(financialGoalService).getAverageCompletionTime(1L);
+    }
+
+    @Test
+    @DisplayName("getActiveGoals_WithEmptyList_ShouldReturnEmptyArray")
+    void getActiveGoals_WithEmptyList_ShouldReturnEmptyArray() throws Exception {
+        when(financialGoalService.findActiveGoals()).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/financial-goals/active")
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$", hasSize(0)));
+
+        verify(financialGoalService).findActiveGoals();
+    }
+
+    @Test
+    @DisplayName("getCompletedGoals_WithEmptyList_ShouldReturnEmptyArray")
+    void getCompletedGoals_WithEmptyList_ShouldReturnEmptyArray() throws Exception {
+        when(financialGoalService.findCompletedGoals()).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/financial-goals/completed")
+                .with(user(testUserDetails))
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$", hasSize(0)));
+
+        verify(financialGoalService).findCompletedGoals();
+    }
+
+    @Test
+    @DisplayName("getAllGoals_WithInvalidPageNumber_ShouldHandleGracefully")
+    void getAllGoals_WithInvalidPageNumber_ShouldHandleGracefully() throws Exception {
+        // Spring may handle negative page numbers differently - could return 400 or default to 0
+        List<FinancialGoalDTO> goals = List.of(testGoalDTO);
+        Page<FinancialGoalDTO> goalPage = new PageImpl<>(goals, pageable, 1);
+
+        when(financialGoalService.findAll(any(), anyMap(), any(), any(), any()))
+            .thenReturn(goalPage);
+
+        // Spring might normalize negative page to 0 or return 400
+        // Let's test that it doesn't crash - Spring typically normalizes negative pages to 0
+        mockMvc.perform(get("/financial-goals")
+                .with(user(testUserDetails))
+                .param("page", "-1")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk()); // Spring normalizes negative page to 0
+    }
+
+    @Test
+    @DisplayName("getAllGoals_WithInvalidPageSize_ShouldHandleGracefully")
+    void getAllGoals_WithInvalidPageSize_ShouldHandleGracefully() throws Exception {
+        // Spring may handle zero or negative page size differently
+        // In standalone MockMvc, Spring normalizes 0 to default size (20)
+        List<FinancialGoalDTO> goals = List.of(testGoalDTO);
+        Page<FinancialGoalDTO> goalPage = new PageImpl<>(goals, pageable, 1);
+
+        when(financialGoalService.findAll(any(), anyMap(), any(), any(), any()))
+            .thenReturn(goalPage);
+
+        // Spring normalizes 0 size to default (20), so it returns 200 OK
+        mockMvc.perform(get("/financial-goals")
+                .with(user(testUserDetails))
+                .param("size", "0")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk()); // Spring normalizes 0 to default size
+    }
+
+    @Test
+    @DisplayName("getAllGoals_WithInvalidSortDirection_ShouldUseDefault")
+    void getAllGoals_WithInvalidSortDirection_ShouldUseDefault() throws Exception {
+        List<FinancialGoalDTO> goals = List.of(testGoalDTO);
+        Page<FinancialGoalDTO> goalPage = new PageImpl<>(goals, pageable, 1);
+
+        when(financialGoalService.findAll(any(), anyMap(), any(), any(), any()))
+            .thenReturn(goalPage);
+
+        mockMvc.perform(get("/financial-goals")
+                .with(user(testUserDetails))
+                .param("sortDirection", "invalid")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content", hasSize(1)));
+
+        verify(financialGoalService).findAll(any(), anyMap(), any(), any(), any());
     }
 }

@@ -27,6 +27,7 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import com.finance_control.shared.exception.GlobalExceptionHandler;
+import com.finance_control.shared.monitoring.SentryService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -54,6 +55,9 @@ class InvestmentControllerTest {
 
     @Mock
     private ExternalMarketDataService externalMarketDataService;
+
+    @Mock
+    private SentryService sentryService;
 
     @InjectMocks
     private InvestmentController investmentController;
@@ -87,7 +91,7 @@ class InvestmentControllerTest {
 
         mockMvc = MockMvcBuilders.standaloneSetup(new InvestmentController(investmentService, externalMarketDataService))
                         .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver(), authPrincipalResolver)
-                        .setControllerAdvice(new GlobalExceptionHandler())
+                        .setControllerAdvice(new GlobalExceptionHandler(sentryService))
                         .build();
 
         // Create test user

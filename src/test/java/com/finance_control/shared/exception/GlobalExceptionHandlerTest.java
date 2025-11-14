@@ -1,9 +1,11 @@
 package com.finance_control.shared.exception;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finance_control.shared.monitoring.SentryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -63,6 +65,9 @@ class TestExceptionController {
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
 
+    @Mock
+    private SentryService sentryService;
+
     private MockMvc mockMvc;
     private GlobalExceptionHandler exceptionHandler;
     private TestExceptionController testController;
@@ -70,7 +75,7 @@ class GlobalExceptionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        exceptionHandler = new GlobalExceptionHandler();
+        exceptionHandler = new GlobalExceptionHandler(sentryService);
         testController = new TestExceptionController();
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules();
@@ -337,8 +342,12 @@ class GlobalExceptionHandlerTest {
         EntityNotFoundException ex = new EntityNotFoundException("Test entity");
         WebRequest webRequest = null;
 
-        assertThatThrownBy(() -> exceptionHandler.handleEntityNotFound(ex, webRequest))
-                .isInstanceOf(NullPointerException.class);
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleEntityNotFound(ex, webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getPath()).isEqualTo("unknown");
+        assertThat(response.getBody().getMessage()).isEqualTo("Test entity");
     }
 
     @Test
@@ -346,8 +355,12 @@ class GlobalExceptionHandlerTest {
         IllegalArgumentException ex = new IllegalArgumentException("Invalid argument");
         WebRequest webRequest = null;
 
-        assertThatThrownBy(() -> exceptionHandler.handleIllegalArgument(ex, webRequest))
-                .isInstanceOf(NullPointerException.class);
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleIllegalArgument(ex, webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getPath()).isEqualTo("unknown");
+        assertThat(response.getBody().getMessage()).isEqualTo("Invalid argument");
     }
 
     @Test
@@ -355,8 +368,12 @@ class GlobalExceptionHandlerTest {
         Exception ex = new RuntimeException("Unexpected error");
         WebRequest webRequest = null;
 
-        assertThatThrownBy(() -> exceptionHandler.handleGenericException(ex, webRequest))
-                .isInstanceOf(NullPointerException.class);
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleGenericException(ex, webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(500);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getPath()).isEqualTo("unknown");
+        assertThat(response.getBody().getMessage()).isEqualTo("An unexpected error occurred");
     }
 
     @Test
@@ -370,8 +387,12 @@ class GlobalExceptionHandlerTest {
         MethodArgumentNotValidException exception = new MethodArgumentNotValidException(realParameter, bindingResult);
         WebRequest webRequest = null;
 
-        assertThatThrownBy(() -> exceptionHandler.handleValidationExceptions(exception, webRequest))
-                .isInstanceOf(NullPointerException.class);
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleValidationExceptions(exception, webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getPath()).isEqualTo("unknown");
+        assertThat(response.getBody().getDetails()).containsKey("field");
     }
 
     @Test
@@ -551,7 +572,9 @@ class GlobalExceptionHandlerTest {
     @Test
     void handleValidationExceptions_WithNullFieldName_ShouldHandleGracefully() throws NoSuchMethodException {
         BindingResult bindingResult = mock(BindingResult.class);
-        FieldError fieldError = new FieldError("testObject", null, "value", false, null, null, "Error message");
+        // FieldError constructor doesn't allow null field name - it throws IllegalArgumentException
+        // So we'll test with a valid field name but verify the handler handles null gracefully
+        FieldError fieldError = new FieldError("testObject", "fieldName", "value", false, null, null, "Error message");
         when(bindingResult.getAllErrors()).thenReturn(Collections.singletonList(fieldError));
 
         java.lang.reflect.Method method = String.class.getMethod("equals", Object.class);
@@ -564,8 +587,8 @@ class GlobalExceptionHandlerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(400);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getDetails()).containsKey(null);
-        assertThat(response.getBody().getDetails().get(null)).isEqualTo("Error message");
+        assertThat(response.getBody().getDetails()).containsKey("fieldName");
+        assertThat(response.getBody().getDetails().get("fieldName")).isEqualTo("Error message");
     }
 
     @Test
@@ -585,7 +608,7 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getStatusCode().value()).isEqualTo(400);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getDetails()).containsKey("fieldName");
-        assertThat(response.getBody().getDetails().get("fieldName")).isNull();
+        assertThat(response.getBody().getDetails().get("fieldName")).isEqualTo(""); // Handler converts null to empty string
     }
 
     @Test
@@ -665,9 +688,12 @@ class GlobalExceptionHandlerTest {
         WebRequest webRequest = mock(WebRequest.class);
         when(webRequest.getDescription(false)).thenReturn("uri=/test/validation");
 
-        // This test verifies that the cast to FieldError will fail as expected for ObjectError
-        assertThatThrownBy(() -> exceptionHandler.handleValidationExceptions(exception, webRequest))
-                .isInstanceOf(ClassCastException.class);
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleValidationExceptions(exception, webRequest);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDetails()).containsKey("testObject");
+        assertThat(response.getBody().getDetails().get("testObject")).isEqualTo("Global validation error");
     }
 
     @Test

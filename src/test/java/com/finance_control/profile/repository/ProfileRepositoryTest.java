@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -16,6 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @ActiveProfiles("test")
+@TestPropertySource(properties = {
+    "app.supabase.enabled=false"
+})
 class ProfileRepositoryTest {
 
     @Autowired
@@ -150,11 +154,3 @@ class ProfileRepositoryTest {
         assertThat(result.get().getUser().getId()).isEqualTo(testUser.getId());
     }
 }
-
-
-
-
-
-
-
-

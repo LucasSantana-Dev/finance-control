@@ -58,6 +58,15 @@ class SentryServiceTest {
     }
 
     @Test
+    void captureMessageWithResponse_ShouldReturnNullWhenDisabled() {
+        // Given
+        String message = "Frontend error";
+
+        // When & Then - Should not throw exception even when Sentry disabled
+        assertDoesNotThrow(() -> sentryService.captureMessageWithResponse(message, SentryLevel.ERROR));
+    }
+
+    @Test
     void captureError_ShouldCallSentryService() {
         // Given
         String message = "Test error";

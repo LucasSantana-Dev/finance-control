@@ -1,6 +1,7 @@
 package com.finance_control.transactions.controller.category;
 
 import com.finance_control.shared.exception.GlobalExceptionHandler;
+import com.finance_control.shared.monitoring.SentryService;
 import com.finance_control.transactions.dto.category.TransactionCategoryDTO;
 import com.finance_control.transactions.service.category.TransactionCategoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +35,9 @@ class TransactionCategoryControllerTest {
     @Mock
     private TransactionCategoryService transactionCategoryService;
 
+    @Mock
+    private SentryService sentryService;
+
     @InjectMocks
     private TransactionCategoryController transactionCategoryController;
 
@@ -47,7 +51,7 @@ class TransactionCategoryControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(transactionCategoryController)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler(sentryService))
                 .build();
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules();

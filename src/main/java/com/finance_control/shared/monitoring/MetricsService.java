@@ -38,6 +38,14 @@ public class MetricsService {
     private final AtomicLong activeGoalsGauge = new AtomicLong(0);
     private final AtomicLong pendingReconciliationsGauge = new AtomicLong(0);
 
+    // Open Finance metrics
+    private final AtomicLong openFinanceConsentCreatedCounter = new AtomicLong(0);
+    private final AtomicLong openFinanceConsentRevokedCounter = new AtomicLong(0);
+    private final AtomicLong openFinanceAccountSyncSuccessCounter = new AtomicLong(0);
+    private final AtomicLong openFinanceAccountSyncFailureCounter = new AtomicLong(0);
+    private final AtomicLong openFinanceTransactionImportedCounter = new AtomicLong(0);
+    private final AtomicLong openFinancePaymentInitiatedCounter = new AtomicLong(0);
+
     public void incrementTransactionCreated() {
         transactionCreatedCounter.incrementAndGet();
         log.debug("Transaction created counter incremented");
@@ -211,5 +219,43 @@ public class MetricsService {
 
     public void addBreadcrumb(String message, String category) {
         sentryService.addBreadcrumb(message, category);
+    }
+
+    public void incrementOpenFinanceConsentCreated() {
+        openFinanceConsentCreatedCounter.incrementAndGet();
+        log.debug("Open Finance consent created counter incremented");
+    }
+
+    public void incrementOpenFinanceConsentRevoked() {
+        openFinanceConsentRevokedCounter.incrementAndGet();
+        log.debug("Open Finance consent revoked counter incremented");
+    }
+
+    public void incrementOpenFinanceAccountSyncSuccess() {
+        openFinanceAccountSyncSuccessCounter.incrementAndGet();
+        log.debug("Open Finance account sync success counter incremented");
+    }
+
+    public void incrementOpenFinanceAccountSyncFailure() {
+        openFinanceAccountSyncFailureCounter.incrementAndGet();
+        log.debug("Open Finance account sync failure counter incremented");
+    }
+
+    public void incrementOpenFinanceTransactionImported() {
+        openFinanceTransactionImportedCounter.incrementAndGet();
+        log.debug("Open Finance transaction imported counter incremented");
+    }
+
+    public void incrementOpenFinancePaymentInitiated() {
+        openFinancePaymentInitiatedCounter.incrementAndGet();
+        log.debug("Open Finance payment initiated counter incremented");
+    }
+
+    public void incrementOpenFinanceSyncCount(String syncType) {
+        if ("BALANCE".equals(syncType)) {
+            incrementOpenFinanceAccountSyncSuccess();
+        } else if ("TRANSACTION".equals(syncType)) {
+            incrementOpenFinanceTransactionImported();
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.finance_control.shared.config;
 
+import com.finance_control.shared.monitoring.SentryRequestFilter;
 import com.finance_control.shared.security.CustomUserDetailsService;
 import com.finance_control.shared.security.JwtAuthenticationFilter;
 import com.finance_control.shared.security.RateLimitFilter;
@@ -46,6 +47,7 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final AppProperties appProperties;
     private final RateLimitFilter rateLimitFilter;
+    private final SentryRequestFilter sentryRequestFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -83,6 +85,7 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authenticationProvider(authenticationProvider())
+            .addFilterBefore(sentryRequestFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

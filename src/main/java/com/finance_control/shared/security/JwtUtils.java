@@ -188,6 +188,12 @@ public class JwtUtils {
                 return false;
             }
 
+            // Validate that role is 'authenticated' for logged-in users
+            if (!"authenticated".equals(role)) {
+                log.warn("Invalid Supabase JWT: role must be 'authenticated', got: {}", role);
+                return false;
+            }
+
             // Subject should be a valid UUID
             if (!StringUtils.hasText(subject)) {
                 log.warn("Invalid Supabase JWT: missing subject claim");

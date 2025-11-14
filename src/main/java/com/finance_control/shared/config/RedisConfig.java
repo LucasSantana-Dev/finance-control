@@ -2,6 +2,7 @@ package com.finance_control.shared.config;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -27,6 +28,7 @@ import java.util.Map;
  * Provides Redis connection, cache manager, and Redis template configuration.
  */
 @Slf4j
+@ConditionalOnExpression("!'${app.redis.host:}'.isEmpty()")
 @Configuration
 @EnableCaching
 @RequiredArgsConstructor

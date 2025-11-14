@@ -1,8 +1,12 @@
 package com.finance_control.transactions.controller;
 
 import com.finance_control.shared.enums.TransactionType;
+import com.finance_control.shared.enums.TransactionSubtype;
+import com.finance_control.shared.enums.TransactionSource;
 import com.finance_control.shared.exception.GlobalExceptionHandler;
+import com.finance_control.shared.monitoring.SentryService;
 import com.finance_control.transactions.dto.TransactionDTO;
+import com.finance_control.transactions.dto.responsibles.TransactionResponsiblesDTO;
 import com.finance_control.transactions.service.TransactionService;
 import com.finance_control.transactions.service.TransactionImportService;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,9 +29,14 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import com.finance_control.shared.exception.EntityNotFoundException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Optional;
+
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +50,9 @@ class TransactionControllerTest {
     @Mock
     private TransactionImportService transactionImportService;
 
+    @Mock
+    private SentryService sentryService;
+
     @InjectMocks
     private TransactionController transactionController;
 
@@ -52,7 +64,7 @@ class TransactionControllerTest {
         // Set up MockMvc with standalone setup, PageableHandlerMethodArgumentResolver, and GlobalExceptionHandler
         mockMvc = MockMvcBuilders.standaloneSetup(transactionController)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler(sentryService))
                 .build();
 
         sampleTransaction = new TransactionDTO();
@@ -313,5 +325,126 @@ class TransactionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void getTransactions_WithEmptyResults_ShouldReturnEmptyPage() throws Exception {
+        Page<TransactionDTO> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenReturn(emptyPage);
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void findById_WithNonExistentId_ShouldReturnNotFound() throws Exception {
+        when(transactionService.findById(999L))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/transactions/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void findById_WithValidId_ShouldReturnOk() throws Exception {
+        when(transactionService.findById(1L))
+                .thenReturn(Optional.of(sampleTransaction));
+
+        mockMvc.perform(get("/transactions/1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.description").value("Test transaction"));
+    }
+
+    @Test
+    void create_WithInvalidData_ShouldReturnBadRequest() throws Exception {
+        TransactionDTO invalidDTO = new TransactionDTO();
+        invalidDTO.setDescription(null);
+        invalidDTO.setAmount(BigDecimal.ZERO);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String json = objectMapper.writeValueAsString(invalidDTO);
+
+        mockMvc.perform(post("/transactions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json))
+                .andExpect(status().isBadRequest());
+    }
+
+
+    @Test
+    void delete_WithNonExistentId_ShouldReturnNotFound() throws Exception {
+        doThrow(new EntityNotFoundException("Transaction", "id", 999L))
+                .when(transactionService).delete(999L);
+
+        mockMvc.perform(delete("/transactions/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void delete_WithValidId_ShouldReturnNoContent() throws Exception {
+        doNothing().when(transactionService).delete(1L);
+
+        mockMvc.perform(delete("/transactions/1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void getTransactions_WithInvalidPageNumber_ShouldReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/transactions/filtered")
+                .param("page", "-1")
+                .param("size", "20"))
+                .andExpect(status().isBadRequest()); // Spring validates negative page
+    }
+
+    @Test
+    void getTransactions_WithInvalidPageSize_ShouldReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/transactions/filtered")
+                .param("page", "0")
+                .param("size", "-1"))
+                .andExpect(status().isBadRequest()); // Spring validates negative size
+    }
+
+    @Test
+    void getTransactions_WithServiceThrowingException_ShouldReturnInternalServerError() throws Exception {
+        when(transactionService.findAll(nullable(String.class), anyMap(), nullable(String.class), nullable(String.class), any(Pageable.class)))
+                .thenThrow(new RuntimeException("Database connection error"));
+
+        mockMvc.perform(get("/transactions/filtered")
+                .param("page", "0")
+                .param("size", "20"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"));
+    }
+
+    private TransactionDTO createValidTransactionDTO() {
+        TransactionDTO dto = new TransactionDTO();
+        dto.setType(TransactionType.INCOME);
+        dto.setSubtype(TransactionSubtype.FIXED);
+        dto.setSource(TransactionSource.BANK_TRANSACTION);
+        dto.setDescription("Valid Transaction");
+        dto.setAmount(BigDecimal.valueOf(100.00));
+        dto.setCategoryId(1L);
+        dto.setUserId(1L);
+        dto.setDate(LocalDateTime.now());
+
+        // Add responsibilities
+        TransactionResponsiblesDTO resp = new TransactionResponsiblesDTO();
+        resp.setName("User 1");
+        resp.setResponsibleId(1L);
+        resp.setPercentage(BigDecimal.valueOf(100.00));
+        dto.setResponsibilities(List.of(resp));
+
+        return dto;
     }
 }

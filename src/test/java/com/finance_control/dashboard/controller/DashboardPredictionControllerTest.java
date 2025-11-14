@@ -27,14 +27,23 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.mockito.Mockito;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@TestPropertySource(properties = {
+    "app.ai.openai.enabled=false",
+    "app.supabase.enabled=false"
+})
 class DashboardPredictionControllerTest {
 
     @Autowired
@@ -44,10 +53,10 @@ class DashboardPredictionControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private ObjectProvider<FinancialPredictionService> financialPredictionServiceProvider;
-
-    @MockitoBean
     private FinancialPredictionService financialPredictionService;
+
+    @Autowired
+    private DashboardController dashboardController;
 
     private CustomUserDetails testUserDetails;
 
@@ -85,7 +94,13 @@ class DashboardPredictionControllerTest {
                 .rawModelResponse("{\"summary\":\"Forecast remains stable\"}")
                 .build();
 
-        when(financialPredictionServiceProvider.getIfAvailable()).thenReturn(financialPredictionService);
+        // Use reflection to set the ObjectProvider in the controller
+        java.lang.reflect.Field field = DashboardController.class.getDeclaredField("financialPredictionServiceProvider");
+        field.setAccessible(true);
+        ObjectProvider<FinancialPredictionService> mockProvider = Mockito.mock(ObjectProvider.class);
+        when(mockProvider.getIfAvailable()).thenReturn(financialPredictionService);
+        field.set(dashboardController, mockProvider);
+
         when(financialPredictionService.generatePrediction(any(FinancialPredictionRequest.class))).thenReturn(response);
 
         FinancialPredictionRequest request = FinancialPredictionRequest.builder()
@@ -106,7 +121,12 @@ class DashboardPredictionControllerTest {
 
     @Test
     void generateFinancialPredictions_DisabledFeature_ShouldReturnServiceUnavailable() throws Exception {
-        when(financialPredictionServiceProvider.getIfAvailable()).thenReturn(null);
+        // Use reflection to set the ObjectProvider in the controller to return null
+        java.lang.reflect.Field field = DashboardController.class.getDeclaredField("financialPredictionServiceProvider");
+        field.setAccessible(true);
+        ObjectProvider<FinancialPredictionService> mockProvider = Mockito.mock(ObjectProvider.class);
+        when(mockProvider.getIfAvailable()).thenReturn(null);
+        field.set(dashboardController, mockProvider);
 
         FinancialPredictionRequest request = FinancialPredictionRequest.builder()
                 .historyMonths(6)

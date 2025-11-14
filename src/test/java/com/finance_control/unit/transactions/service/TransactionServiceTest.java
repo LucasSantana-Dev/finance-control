@@ -89,6 +89,9 @@ class TransactionServiceTest {
     @Mock
     private DashboardService dashboardService;
 
+    @Mock
+    private com.finance_control.shared.monitoring.SentryService sentryService;
+
     @InjectMocks
     private TransactionService transactionService;
 
@@ -1777,6 +1780,193 @@ class TransactionServiceTest {
         verify(realtimeService, never()).notifyTransactionUpdate(anyLong(), any(TransactionDTO.class));
         verify(dashboardService, never()).notifyDashboardUpdate(anyLong());
         verify(metricsService).incrementTransactionUpdated();
+    }
+
+    @Test
+    void getCategoriesByUserId_ShouldReturnCategories() {
+        // Given
+        List<TransactionCategory> categories = List.of(testCategory);
+        when(transactionRepository.findDistinctCategoriesByUserId(1L)).thenReturn(categories);
+
+        // When
+        List<TransactionCategory> result = transactionService.getCategoriesByUserId(1L);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(1L);
+        verify(transactionRepository).findDistinctCategoriesByUserId(1L);
+    }
+
+    @Test
+    void getSubcategoriesByCategoryId_ShouldReturnSubcategories() {
+        // Given
+        List<TransactionSubcategory> subcategories = List.of(testSubcategory);
+        when(subcategoryRepository.findByCategoryIdAndIsActiveTrueOrderByNameAsc(1L)).thenReturn(subcategories);
+
+        // When
+        List<TransactionSubcategory> result = transactionService.getSubcategoriesByCategoryId(1L);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(1L);
+        verify(subcategoryRepository).findByCategoryIdAndIsActiveTrueOrderByNameAsc(1L);
+    }
+
+    @Test
+    void getTransactionTypes_ShouldReturnTypes() {
+        // Given
+        List<String> types = List.of("INCOME", "EXPENSE");
+        when(transactionRepository.findDistinctTypes()).thenReturn(types);
+
+        // When
+        List<String> result = transactionService.getTransactionTypes();
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(2);
+        assertThat(result).containsExactly("INCOME", "EXPENSE");
+        verify(transactionRepository).findDistinctTypes();
+    }
+
+    @Test
+    void getSourceEntities_ShouldReturnSourceEntities() {
+        // Given
+        List<TransactionSourceEntity> sourceEntities = List.of(testSourceEntity);
+        when(sourceRepository.findAll()).thenReturn(sourceEntities);
+
+        // When
+        List<TransactionSourceEntity> result = transactionService.getSourceEntities();
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(1L);
+        verify(sourceRepository).findAll();
+    }
+
+    @Test
+    void getTotalAmountByUserId_ShouldReturnTotalAmount() {
+        // Given
+        BigDecimal totalAmount = BigDecimal.valueOf(1000.00);
+        when(transactionRepository.getTotalAmountByUserId(1L)).thenReturn(totalAmount);
+
+        // When
+        BigDecimal result = transactionService.getTotalAmountByUserId(1L);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).isEqualByComparingTo(BigDecimal.valueOf(1000.00));
+        verify(transactionRepository).getTotalAmountByUserId(1L);
+    }
+
+    @Test
+    void getAmountByType_ShouldReturnAmountByType() {
+        // Given
+        Map<String, BigDecimal> amountsByType = Map.of(
+            "INCOME", BigDecimal.valueOf(2000.00),
+            "EXPENSE", BigDecimal.valueOf(1000.00)
+        );
+        when(transactionRepository.getAmountByType(1L)).thenReturn(amountsByType);
+
+        // When
+        Map<String, BigDecimal> result = transactionService.getAmountByType(1L);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(2);
+        assertThat(result.get("INCOME")).isEqualByComparingTo(BigDecimal.valueOf(2000.00));
+        assertThat(result.get("EXPENSE")).isEqualByComparingTo(BigDecimal.valueOf(1000.00));
+        verify(transactionRepository).getAmountByType(1L);
+    }
+
+    @Test
+    void getAmountByCategory_ShouldReturnAmountByCategory() {
+        // Given
+        Map<String, BigDecimal> amountsByCategory = Map.of(
+            "Food", BigDecimal.valueOf(500.00),
+            "Transport", BigDecimal.valueOf(300.00)
+        );
+        when(transactionRepository.getAmountByCategory(1L)).thenReturn(amountsByCategory);
+
+        // When
+        Map<String, BigDecimal> result = transactionService.getAmountByCategory(1L);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(2);
+        assertThat(result.get("Food")).isEqualByComparingTo(BigDecimal.valueOf(500.00));
+        assertThat(result.get("Transport")).isEqualByComparingTo(BigDecimal.valueOf(300.00));
+        verify(transactionRepository).getAmountByCategory(1L);
+    }
+
+    @Test
+    void getMonthlySummary_ShouldReturnMonthlySummary() {
+        // Given
+        java.time.LocalDate startDate = java.time.LocalDate.of(2024, 1, 1);
+        java.time.LocalDate endDate = java.time.LocalDate.of(2024, 12, 31);
+        Map<String, Object> summary = Map.of(
+            "totalIncome", BigDecimal.valueOf(12000.00),
+            "totalExpenses", BigDecimal.valueOf(8000.00),
+            "netSavings", BigDecimal.valueOf(4000.00)
+        );
+        when(transactionRepository.getMonthlySummary(1L, startDate, endDate)).thenReturn(summary);
+
+        // When
+        Map<String, Object> result = transactionService.getMonthlySummary(1L, startDate, endDate);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(3);
+        assertThat(result.get("totalIncome")).isEqualTo(BigDecimal.valueOf(12000.00));
+        assertThat(result.get("totalExpenses")).isEqualTo(BigDecimal.valueOf(8000.00));
+        assertThat(result.get("netSavings")).isEqualTo(BigDecimal.valueOf(4000.00));
+        verify(transactionRepository).getMonthlySummary(1L, startDate, endDate);
+    }
+
+    @Test
+    void delete_ShouldIncrementMetrics() {
+        // Given
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
+
+        // When
+        transactionService.delete(1L);
+
+        // Then
+        verify(transactionRepository).findById(1L);
+        verify(transactionRepository).deleteById(1L);
+        verify(metricsService).incrementTransactionDeleted();
+    }
+
+    @Test
+    void findAll_WithSortDirectionNull_ShouldDefaultToDesc() {
+        // Given
+        TransactionDTO filters = null;
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+        when(transactionRepository.findAll(eq((String) null), any(Pageable.class))).thenReturn(page);
+
+        // When
+        Page<TransactionDTO> result = transactionService.findAll(null, null, null, PageRequest.of(0, 10), filters);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(transactionRepository).findAll(eq((String) null), any(Pageable.class));
+    }
+
+    @Test
+    void findAll_WithSortDirectionProvided_ShouldUseProvidedDirection() {
+        // Given
+        TransactionDTO filters = null;
+        Page<Transaction> page = new PageImpl<>(List.of(testTransaction));
+        when(transactionRepository.findAll(eq((String) null), any(Pageable.class))).thenReturn(page);
+
+        // When
+        Page<TransactionDTO> result = transactionService.findAll(null, "description", "asc", PageRequest.of(0, 10), filters);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(transactionRepository).findAll(eq((String) null), any(Pageable.class));
     }
 
 }

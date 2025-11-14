@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Monitoring**: Elevated frontend alerting to always trigger for HIGH and CRITICAL severities regardless of rolling thresholds
 - Tests: Added high-yield unit tests to improve coverage towards 80%:
   - `src/test/java/com/finance_control/unit/brazilian_market/client/BCBApiClientTest.java`
   - `src/test/java/com/finance_control/unit/shared/controller/BaseControllerTest.java`
@@ -22,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI: Kept JaCoCo verification thresholds unchanged (lines 75%, branches 60%, methods 60%, classes 80%) until coverage reaches ≥80%.
 
 ### Added
+- **Frontend Error Ingestion**: Public `POST /monitoring/frontend-errors` endpoint to persist client-side errors, forward them to Sentry, and integrate with the alerting service
+- **Observability Schema**: New `frontend_error_log` entity/repository plus Flyway migration `V9__create_frontend_error_log.sql` for long-term storage and analytics
+- **Monitoring Configuration**: Additional `app.monitoring.frontend-errors.*` properties (alert thresholds, rolling window) with documentation updates
 - **Supabase Database Default**: `.env`, `docker.env`, and `application.yml` now point JDBC connections to Supabase PostgreSQL (`SUPABASE_DATABASE_ENABLED=true`) so that all JPA entities work against the hosted tables
 - **Postman Collection**: Added `postman/FinanceControl.postman_collection.json` covering Supabase auth/storage flows, `/transactions/import`, and the AI `/dashboard/predictions` endpoint
 - **Security Audit**: Comprehensive repository security scan completed - zero hardcoded secrets found

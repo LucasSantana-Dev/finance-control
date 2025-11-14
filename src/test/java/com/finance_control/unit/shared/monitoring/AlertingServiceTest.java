@@ -35,7 +35,8 @@ class AlertingServiceTest {
         AppProperties.Monitoring monitoringRecord = new AppProperties.Monitoring(
             true,
             new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true),
-            new AppProperties.HealthCheck(30, true)
+            new AppProperties.HealthCheck(30, true),
+            new AppProperties.FrontendErrors()
         );
         lenient().when(appProperties.monitoring()).thenReturn(monitoringRecord);
 
@@ -54,7 +55,8 @@ class AlertingServiceTest {
         AppProperties.Monitoring disabledMonitoring = new AppProperties.Monitoring(
             false,
             new AppProperties.Sentry(false, "", "dev", "1.0.0", 0.1, 0.1, false, true, true),
-            new AppProperties.HealthCheck(30, true)
+            new AppProperties.HealthCheck(30, true),
+            new AppProperties.FrontendErrors()
         );
         when(appProperties.monitoring()).thenReturn(disabledMonitoring);
         alertingService.startMonitoring();
@@ -229,6 +231,14 @@ class AlertingServiceTest {
 
         // Then
         verify(sentryService).captureMessage(anyString(), any(io.sentry.SentryLevel.class));
+    }
+
+    @Test
+    @DisplayName("Should alert frontend error and forward to Sentry")
+    void alertFrontendError_ShouldTriggerAlert() {
+        alertingService.alertFrontendError("HIGH", "UI crash", java.util.Map.of("component", "Dashboard"));
+
+        verify(sentryService).captureMessage(anyString(), eq(io.sentry.SentryLevel.ERROR));
     }
 
     @Test
