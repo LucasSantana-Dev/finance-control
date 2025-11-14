@@ -28,6 +28,7 @@ import java.util.UUID;
 public class SupabaseStorageService {
 
     private final AppProperties appProperties;
+    private final FileCompressionService compressionService;
 
     @Qualifier("supabaseWebClient")
     private final WebClient webClient;
@@ -64,17 +65,39 @@ public class SupabaseStorageService {
         try {
             byte[] fileBytes = file.getBytes();
             String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+            String finalFileName = fileName;
+            byte[] dataToUpload = fileBytes;
+            String finalContentType = contentType;
+
+            if (compressionService.shouldCompress(contentType, fileBytes.length)) {
+                try {
+                    byte[] compressedData = compressionService.compress(fileBytes);
+                    double compressionRatio = compressionService.calculateCompressionRatio(fileBytes.length, compressedData.length);
+
+                    if (compressionService.meetsCompressionThreshold(fileBytes.length, compressedData.length)) {
+                        dataToUpload = compressedData;
+                        finalFileName = compressionService.addCompressedExtension(fileName);
+                        finalContentType = "application/octet-stream";
+                        log.info("Compressed file {}: {} bytes -> {} bytes ({}% reduction)", fileName,
+                            fileBytes.length, compressedData.length, String.format("%.2f", compressionRatio * 100));
+                    } else {
+                        log.debug("Compression ratio {}% below threshold, storing original file", String.format("%.2f", compressionRatio * 100));
+                    }
+                } catch (Exception e) {
+                    log.warn("Compression failed for file {}, storing original: {}", fileName, e.getMessage());
+                }
+            }
 
             webClient.post()
-                    .uri("/storage/v1/object/{bucket}/{path}", bucketName, fileName)
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .bodyValue(fileBytes)
+                    .uri("/storage/v1/object/{bucket}/{path}", bucketName, finalFileName)
+                    .contentType(MediaType.parseMediaType(finalContentType))
+                    .bodyValue(dataToUpload)
                     .retrieve()
                     .bodyToMono(Void.class)
                     .block();
 
-            log.info("Successfully uploaded file {} to bucket {}", fileName, bucketName);
-            return generatePublicUrl(bucketName, fileName);
+            log.info("Successfully uploaded file {} to bucket {}", finalFileName, bucketName);
+            return generatePublicUrl(bucketName, finalFileName);
 
         } catch (Exception e) {
             log.error("Failed to upload file {} to bucket {}: {}", fileName, bucketName, e.getMessage(), e);
@@ -101,6 +124,17 @@ public class SupabaseStorageService {
 
             if (fileContent == null || fileContent.length == 0) {
                 throw new RuntimeException("File not found or empty: " + fileName);
+            }
+
+            if (compressionService.isCompressedFile(fileName)) {
+                try {
+                    byte[] decompressedData = compressionService.decompress(fileContent);
+                    log.debug("Decompressed file {}: {} bytes -> {} bytes", fileName, fileContent.length, decompressedData.length);
+                    return new ByteArrayResource(decompressedData);
+                } catch (Exception e) {
+                    log.error("Failed to decompress file {}: {}", fileName, e.getMessage(), e);
+                    throw new RuntimeException("Failed to decompress file from Supabase Storage", e);
+                }
             }
 
             log.debug("Successfully downloaded file {} from bucket {}", fileName, bucketName);

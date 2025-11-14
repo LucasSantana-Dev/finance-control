@@ -42,7 +42,7 @@ class SupabaseRealtimeServiceTest {
         AppProperties.Supabase supabaseRecord = new AppProperties.Supabase(
             true, "https://test.supabase.co", "test-anon-key", "test-jwt-signer", "test-service-role",
             new AppProperties.SupabaseDatabase(),
-            new AppProperties.Storage(true, "avatars", "documents", "transactions"),
+            new AppProperties.Storage(true, "avatars", "documents", "transactions", new AppProperties.Compression()),
             new AppProperties.Realtime(true, new java.util.ArrayList<>())
         );
         when(appProperties.supabase()).thenReturn(supabaseRecord);

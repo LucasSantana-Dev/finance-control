@@ -61,7 +61,7 @@ class JwtUtilsTest {
         AppProperties.Supabase supabaseRecord = new AppProperties.Supabase(
             true, "https://test.supabase.co", "test-anon-key", testSupabaseSecret, "test-service-role-key",
             new AppProperties.SupabaseDatabase(),
-            new AppProperties.Storage(true, "avatars", "documents", "transactions"),
+            new AppProperties.Storage(true, "avatars", "documents", "transactions", new AppProperties.Compression()),
             new AppProperties.Realtime(true, List.of("transactions", "dashboard", "goals"))
         );
 

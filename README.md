@@ -104,6 +104,14 @@ curl -X POST "https://api.yourdomain.com/transactions/import" \
   - ✅ **NEW**: Intelligent alerting system with severity levels and Sentry integration
   - ✅ **NEW**: Performance monitoring with slow operation detection
   - ✅ **NEW**: Custom business metrics and system resource monitoring
+  - ✅ **NEW**: Frontend error ingestion pipeline with Sentry forwarding (`POST /monitoring/frontend-errors`)
+
+### 🛡️ Frontend Error Reporting
+- **Endpoint**: `POST /monitoring/frontend-errors`
+- **Payload**: Structured JSON describing the error details, severity, user/session context, client metadata, and stack trace
+- **Behavior**: Persists the error, forwards it to Sentry (when enabled), and triggers alerts for high/critical severities or when thresholds are exceeded
+- **Configuration**: Adjust alert thresholds via `app.monitoring.frontend-errors.alert-threshold` and `alert-window-minutes` in `application.yml`
+- **Auditing**: All reports are stored in the `frontend_error_log` table for later analysis and dashboarding
 
 ### ☁️ Supabase Integration
 - **Authentication**: Supabase Auth integration with JWT support
@@ -279,6 +287,41 @@ Create these buckets in your Supabase Storage:
 - `documents` - User documents
 - `transactions` - Transaction attachments
 
+#### File Compression
+The application automatically compresses files before storing them in Supabase Storage to reduce storage costs and improve upload/download performance.
+
+**Compression Features:**
+- Automatic compression using Java Deflater API
+- Only compresses files that benefit from compression (skips already-compressed formats)
+- Configurable compression level and thresholds
+- Transparent decompression on download
+
+**Configuration:**
+```env
+# Compression settings (defaults shown)
+APP_SUPABASE_STORAGE_COMPRESSION_ENABLED=true
+APP_SUPABASE_STORAGE_COMPRESSION_LEVEL=6          # 0-9, where 6 is balanced
+APP_SUPABASE_STORAGE_COMPRESSION_MIN_REDUCTION_RATIO=0.1  # 10% minimum reduction
+APP_SUPABASE_STORAGE_COMPRESSION_MIN_FILE_SIZE_BYTES=1024  # Only compress files > 1KB
+```
+
+**Compression Behavior:**
+- Files smaller than `minFileSizeBytes` are not compressed
+- Already-compressed formats (JPEG, PNG, GIF, WebP, PDF, ZIP, etc.) are skipped
+- Compression only applied if size reduction exceeds `minReductionRatio` threshold
+- Compressed files are stored with `.compressed` extension
+- Original files are stored if compression doesn't meet threshold
+
+**Supported Formats (automatically skipped):**
+- Images: JPEG, PNG, GIF, WebP
+- Archives: ZIP, GZIP
+- Documents: PDF
+- Media: MP4, MPEG, MP3
+
+**Example:**
+A 5KB text file might compress to 2KB (60% reduction), so it will be stored compressed.
+A 2KB JPEG image will be stored as-is since it's already compressed.
+
 #### PostgreSQL Database Integration
 The application supports **dual database modes**:
 
@@ -318,26 +361,56 @@ The application supports **dual database modes**:
 
 ##### Migration Process
 
-1. **Backup Local Data** (if needed):
+**Automatic Migrations (Recommended)**:
+Spring Boot automatically runs Flyway migrations on application startup when `FLYWAY_ENABLED=true` (default). Simply start the application:
+
+```bash
+# Set Supabase database credentials in .env
+SUPABASE_DATABASE_ENABLED=true
+SUPABASE_DATABASE_HOST=db.your-project-ref.supabase.co
+SUPABASE_DATABASE_USERNAME=postgres.your-project-ref
+SUPABASE_DATABASE_PASSWORD=your-password
+
+# Start application - migrations run automatically
+./gradlew bootRun
+```
+
+**Manual Migrations (Optional)**:
+For explicit control, use Gradle Flyway tasks. Export environment variables first:
+
+```bash
+# Export Supabase credentials
+export SUPABASE_DATABASE_ENABLED=true
+export SUPABASE_DATABASE_HOST=db.your-project-ref.supabase.co
+export SUPABASE_DATABASE_PORT=5432
+export SUPABASE_DATABASE_NAME=postgres
+export SUPABASE_DATABASE_USERNAME=postgres.your-project-ref
+export SUPABASE_DATABASE_PASSWORD=your-password
+export SUPABASE_DATABASE_SSL_MODE=require
+
+# Check migration status
+./gradlew flywayInfo
+
+# Run migrations
+./gradlew flywayMigrate
+
+# Validate migrations
+./gradlew flywayValidate
+```
+
+**Available Flyway Tasks**:
+- `flywayInfo` - Shows current migration status and pending migrations
+- `flywayMigrate` - Applies all pending migrations
+- `flywayValidate` - Validates that migrations haven't been modified
+
+**Data Migration** (if migrating from local database):
+1. **Backup Local Data**:
    ```bash
-   # Export local database
    pg_dump -h localhost -U finance_user -d finance_control > backup.sql
    ```
 
-2. **Enable Supabase Database**:
-   ```env
-   SUPABASE_DATABASE_ENABLED=true
-   ```
-
-3. **Run Application**:
+2. **Import to Supabase**:
    ```bash
-   ./gradlew bootRun
-   # Flyway will automatically create/update the schema
-   ```
-
-4. **Migrate Data** (optional):
-   ```bash
-   # Import data into Supabase (if needed)
    psql "postgresql://postgres.your-project-ref:password@db.your-project-ref.supabase.co:5432/postgres" < backup.sql
    ```
 
@@ -360,10 +433,11 @@ cd finance-control
 # Build the project
 ./gradlew build
 
-# Run database migrations
+# Run database migrations (optional - Spring Boot auto-runs migrations on startup)
+# For Supabase: Set SUPABASE_DATABASE_ENABLED=true and Supabase credentials
 ./gradlew flywayMigrate
 
-# Start the application
+# Start the application (migrations run automatically if Flyway is enabled)
 ./gradlew bootRun
 ```
 

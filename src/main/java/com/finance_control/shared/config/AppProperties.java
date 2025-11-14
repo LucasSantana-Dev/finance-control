@@ -1,7 +1,6 @@
 package com.finance_control.shared.config;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -34,13 +33,14 @@ public record AppProperties(
     RateLimit rateLimit,
     Ai ai,
     Supabase supabase,
-    Monitoring monitoring
+    Monitoring monitoring,
+    OpenFinance openFinance
 ) {
 
     public AppProperties() {
         this(false, new Database(), new Security(), new Server(), new Logging(), new Jpa(),
              new Flyway(), new Actuator(), new OpenApi(), new Pagination(),
-             new Redis(), new Cache(), new RateLimit(), new Ai(), new Supabase(), new Monitoring());
+             new Redis(), new Cache(), new RateLimit(), new Ai(), new Supabase(), new Monitoring(), new OpenFinance());
     }
 
     public record Database(
@@ -78,7 +78,14 @@ public record AppProperties(
         List<String> publicEndpoints
     ) {
         public Security() {
-            this(new Jwt(), new Cors(), List.of("/api/auth/**", "/api/users", "/api/monitoring/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**"));
+            this(new Jwt(), new Cors(), List.of(
+                "/api/auth/**",
+                "/api/users",
+                "/api/monitoring/**",
+                "/monitoring/**",
+                "/actuator/health",
+                "/swagger-ui/**",
+                "/v3/api-docs/**"));
         }
     }
 
@@ -375,10 +382,27 @@ public record AppProperties(
         boolean enabled,
         String avatarsBucket,
         String documentsBucket,
-        String transactionsBucket
+        String transactionsBucket,
+        Compression compression
     ) {
         public Storage() {
-            this(true, "avatars", "documents", "transactions");
+            this(true, "avatars", "documents", "transactions", new Compression());
+        }
+    }
+
+    public record Compression(
+        boolean enabled,
+        int level,
+        double minReductionRatio,
+        long minFileSizeBytes,
+        List<String> skipContentTypes
+    ) {
+        public Compression() {
+            this(true, 6, 0.1, 1024, List.of(
+                "image/jpeg", "image/png", "image/gif", "image/webp",
+                "application/pdf", "application/zip", "application/gzip",
+                "application/x-gzip", "application/x-compress"
+            ));
         }
     }
 
@@ -394,10 +418,11 @@ public record AppProperties(
     public record Monitoring(
         boolean enabled,
         Sentry sentry,
-        HealthCheck healthCheck
+        HealthCheck healthCheck,
+        FrontendErrors frontendErrors
     ) {
         public Monitoring() {
-            this(true, new Sentry(), new HealthCheck());
+            this(true, new Sentry(), new HealthCheck(), new FrontendErrors());
         }
     }
 
@@ -423,6 +448,87 @@ public record AppProperties(
     ) {
         public HealthCheck() {
             this(30, true);
+        }
+    }
+
+    public record FrontendErrors(
+        boolean enabled,
+        int alertThreshold,
+        int alertWindowMinutes
+    ) {
+        public FrontendErrors() {
+            this(true, 10, 5);
+        }
+    }
+
+    public record OpenFinance(
+        boolean enabled,
+        String sandboxBaseUrl,
+        String productionBaseUrl,
+        boolean useProduction,
+        OAuth oauth,
+        Certificates certificates,
+        Sync sync,
+        InstitutionRegistry institutionRegistry
+    ) {
+        public OpenFinance() {
+            this(false,
+                 "https://api.sandbox.openfinancebrasil.org.br",
+                 "https://api.openfinancebrasil.org.br",
+                 false,
+                 new OAuth(),
+                 new Certificates(),
+                 new Sync(),
+                 new InstitutionRegistry());
+        }
+    }
+
+    public record OAuth(
+        String clientId,
+        String clientSecret,
+        String redirectUri,
+        List<String> defaultScopes
+    ) {
+        public OAuth() {
+            this("", "", "http://localhost:8080/api/open-finance/consents/callback",
+                 List.of("accounts", "transactions", "payments"));
+        }
+    }
+
+    public record Certificates(
+        String clientCertificatePath,
+        String privateKeyPath,
+        String caCertificatePath,
+        String keystorePath,
+        String keystorePassword,
+        boolean useSupabaseStorage,
+        String supabaseStorageBucket
+    ) {
+        public Certificates() {
+            this("", "", "", "", "", false, "certificates");
+        }
+    }
+
+    public record Sync(
+        boolean enabled,
+        int balanceSyncIntervalMinutes,
+        int transactionSyncIntervalHours,
+        int tokenRefreshBeforeExpirationMinutes,
+        int maxRetryAttempts,
+        long retryDelayMs
+    ) {
+        public Sync() {
+            this(true, 15, 24, 5, 3, 5000);
+        }
+    }
+
+    public record InstitutionRegistry(
+        String endpoint,
+        int refreshIntervalHours,
+        boolean autoRefresh
+    ) {
+        public InstitutionRegistry() {
+            this("https://api.openfinancebrasil.org.br/institutions", 24, true);
         }
     }
 }

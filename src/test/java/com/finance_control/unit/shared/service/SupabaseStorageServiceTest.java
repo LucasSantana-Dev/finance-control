@@ -1,6 +1,7 @@
 package com.finance_control.unit.shared.service;
 
 import com.finance_control.shared.config.AppProperties;
+import com.finance_control.shared.service.FileCompressionService;
 import com.finance_control.shared.service.SupabaseStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,12 +11,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +28,9 @@ class SupabaseStorageServiceTest {
     @Mock
     private AppProperties appProperties;
 
+    @Mock
+    private FileCompressionService compressionService;
+
     @InjectMocks
     private SupabaseStorageService storageService;
 
@@ -36,10 +39,16 @@ class SupabaseStorageServiceTest {
     @BeforeEach
     void setUp() {
         // Setup AppProperties mock
+        AppProperties.Compression compression = new AppProperties.Compression(
+            true, 6, 0.1, 1024L, List.of("image/jpeg", "image/png", "application/pdf")
+        );
+        AppProperties.Storage storage = new AppProperties.Storage(
+            true, "avatars", "documents", "transactions", compression
+        );
         AppProperties.Supabase supabaseRecord = new AppProperties.Supabase(
             true, "https://test.supabase.co", "test-anon-key", "test-jwt-signer", "test-service-role",
             new AppProperties.SupabaseDatabase(),
-            new AppProperties.Storage(true, "avatars", "documents", "transactions"),
+            storage,
             new AppProperties.Realtime(true, new java.util.ArrayList<>())
         );
         when(appProperties.supabase()).thenReturn(supabaseRecord);
@@ -111,5 +120,47 @@ class SupabaseStorageServiceTest {
 
         // Then
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void isCompressedFile_WithCompressedExtension_ShouldReturnTrue() {
+        // When
+        boolean result = compressionService.isCompressedFile("document.pdf.compressed");
+
+        // Then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void isCompressedFile_WithoutCompressedExtension_ShouldReturnFalse() {
+        // When
+        boolean result = compressionService.isCompressedFile("document.pdf");
+
+        // Then
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void shouldCompress_WithTextFileAndLargeSize_ShouldReturnTrue() {
+        // Given
+        when(compressionService.shouldCompress("text/plain", 2048L)).thenReturn(true);
+
+        // When
+        boolean result = compressionService.shouldCompress("text/plain", 2048L);
+
+        // Then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void shouldCompress_WithImageFile_ShouldReturnFalse() {
+        // Given
+        when(compressionService.shouldCompress("image/jpeg", 2048L)).thenReturn(false);
+
+        // When
+        boolean result = compressionService.shouldCompress("image/jpeg", 2048L);
+
+        // Then
+        assertThat(result).isFalse();
     }
 }
