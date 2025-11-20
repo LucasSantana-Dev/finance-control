@@ -1,9 +1,12 @@
 package com.finance_control.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
 import com.finance_control.brazilian_market.model.MarketIndicator;
 import com.finance_control.brazilian_market.service.BrazilianMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
+import com.finance_control.shared.feature.Feature;
+import com.finance_control.shared.feature.FeatureFlagService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,17 +35,20 @@ public class BrazilianMarketController {
     private final BrazilianMarketDataService marketDataService;
     private final InvestmentService investmentService;
     private final UserRepository userRepository;
+    private final FeatureFlagService featureFlagService;
 
-    public BrazilianMarketController(BrazilianMarketDataService marketDataService, InvestmentService investmentService, UserRepository userRepository) {
+    public BrazilianMarketController(BrazilianMarketDataService marketDataService, InvestmentService investmentService, UserRepository userRepository, FeatureFlagService featureFlagService) {
         this.marketDataService = marketDataService;
         this.investmentService = investmentService;
         this.userRepository = userRepository;
+        this.featureFlagService = featureFlagService;
     }
 
     @GetMapping("/indicators/selic")
     @Operation(summary = "Get current Selic rate", description = "Retrieves the current Selic interest rate from BCB")
     public ResponseEntity<BigDecimal> getCurrentSelicRate() {
         log.debug("GET request to retrieve current Selic rate");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         BigDecimal selicRate = marketDataService.getCurrentSelicRate();
         return ResponseEntity.ok(selicRate);
     }
@@ -51,6 +57,7 @@ public class BrazilianMarketController {
     @Operation(summary = "Get current CDI rate", description = "Retrieves the current CDI interest rate from BCB")
     public ResponseEntity<BigDecimal> getCurrentCDIRate() {
         log.debug("GET request to retrieve current CDI rate");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         BigDecimal cdiRate = marketDataService.getCurrentCDIRate();
         return ResponseEntity.ok(cdiRate);
     }
@@ -59,6 +66,7 @@ public class BrazilianMarketController {
     @Operation(summary = "Get current IPCA", description = "Retrieves the current IPCA inflation rate from BCB")
     public ResponseEntity<BigDecimal> getCurrentIPCA() {
         log.debug("GET request to retrieve current IPCA");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         BigDecimal ipca = marketDataService.getCurrentIPCA();
         return ResponseEntity.ok(ipca);
     }
@@ -67,6 +75,7 @@ public class BrazilianMarketController {
     @Operation(summary = "Get key indicators", description = "Retrieves all key economic indicators (Selic, CDI, IPCA, etc.)")
     public ResponseEntity<List<MarketIndicator>> getKeyIndicators() {
         log.debug("GET request to retrieve key economic indicators");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         List<MarketIndicator> indicators = marketDataService.getKeyIndicators();
         return ResponseEntity.ok(indicators);
     }
@@ -75,6 +84,7 @@ public class BrazilianMarketController {
     @Operation(summary = "Update Selic rate", description = "Fetches and updates the current Selic rate from BCB")
     public ResponseEntity<CompletableFuture<MarketIndicator>> updateSelicRate() {
         log.debug("POST request to update Selic rate");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         CompletableFuture<MarketIndicator> future = marketDataService.updateSelicRate();
         return ResponseEntity.ok(future);
     }
@@ -83,6 +93,7 @@ public class BrazilianMarketController {
     @Operation(summary = "Update CDI rate", description = "Fetches and updates the current CDI rate from BCB")
     public ResponseEntity<CompletableFuture<MarketIndicator>> updateCDIRate() {
         log.debug("POST request to update CDI rate");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         CompletableFuture<MarketIndicator> future = marketDataService.updateCDIRate();
         return ResponseEntity.ok(future);
     }
@@ -91,6 +102,7 @@ public class BrazilianMarketController {
     @Operation(summary = "Update IPCA", description = "Fetches and updates the current IPCA from BCB")
     public ResponseEntity<CompletableFuture<MarketIndicator>> updateIPCA() {
         log.debug("POST request to update IPCA");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         CompletableFuture<MarketIndicator> future = marketDataService.updateIPCA();
         return ResponseEntity.ok(future);
     }
@@ -99,6 +111,7 @@ public class BrazilianMarketController {
     @Operation(summary = "Get user investments", description = "Retrieves all investments tracked by the authenticated user")
     public ResponseEntity<List<Investment>> getUserInvestments(Authentication authentication) {
         log.debug("GET request to retrieve user investments");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         List<Investment> investments = investmentService.getAllInvestments(getUserFromAuthentication(authentication));
         return ResponseEntity.ok(investments);
     }
@@ -107,7 +120,8 @@ public class BrazilianMarketController {
     @Operation(summary = "Get user stocks", description = "Retrieves all stocks tracked by the authenticated user")
     public ResponseEntity<List<Investment>> getUserStocks(Authentication authentication) {
         log.debug("GET request to retrieve user stocks");
-        List<Investment> stocks = investmentService.getInvestmentsByType(getUserFromAuthentication(authentication), Investment.InvestmentType.STOCK);
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
+        List<Investment> stocks = investmentService.getInvestmentsByType(getUserFromAuthentication(authentication), InvestmentType.STOCK);
         return ResponseEntity.ok(stocks);
     }
 
@@ -115,7 +129,8 @@ public class BrazilianMarketController {
     @Operation(summary = "Get user FIIs", description = "Retrieves all FIIs tracked by the authenticated user")
     public ResponseEntity<List<Investment>> getUserFIIs(Authentication authentication) {
         log.debug("GET request to retrieve user FIIs");
-        List<Investment> fiis = investmentService.getInvestmentsByType(getUserFromAuthentication(authentication), Investment.InvestmentType.FII);
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
+        List<Investment> fiis = investmentService.getInvestmentsByType(getUserFromAuthentication(authentication), InvestmentType.FII);
         return ResponseEntity.ok(fiis);
     }
 
@@ -125,6 +140,7 @@ public class BrazilianMarketController {
             @Parameter(description = "Search query (ticker or name)") @RequestParam String query,
             Authentication authentication) {
         log.debug("GET request to search user investments (query length: {})", query != null ? query.length() : 0);
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         List<Investment> investments = investmentService.searchInvestments(getUserFromAuthentication(authentication), query);
         return ResponseEntity.ok(investments);
     }
@@ -135,6 +151,7 @@ public class BrazilianMarketController {
             @Parameter(description = "Investment ticker symbol") @PathVariable String ticker,
             Authentication authentication) {
         log.debug("POST request to update investment data (ticker length: {})", ticker != null ? ticker.length() : 0);
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         Investment investment = investmentService.getInvestmentByTicker(ticker, getUserFromAuthentication(authentication))
                 .orElseThrow(() -> new IllegalArgumentException("Investment not found: " + ticker));
         Investment updatedInvestment = investmentService.updateMarketData(investment);
@@ -145,6 +162,7 @@ public class BrazilianMarketController {
     @Operation(summary = "Get market summary", description = "Retrieves overall market summary and statistics")
     public ResponseEntity<Object> getMarketSummary() {
         log.debug("GET request to retrieve market summary");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
         Object summary = marketDataService.getMarketSummary();
         return ResponseEntity.ok(summary);
     }
@@ -153,6 +171,7 @@ public class BrazilianMarketController {
     @Operation(summary = "Update all indicators", description = "Fetches and updates all key economic indicators from BCB")
     public ResponseEntity<Map<String, CompletableFuture<MarketIndicator>>> updateAllIndicators() {
         log.debug("POST request to update all indicators");
+        featureFlagService.requireEnabled(Feature.BRAZILIAN_MARKET);
 
         Map<String, CompletableFuture<MarketIndicator>> futures = Map.of(
             "selic", marketDataService.updateSelicRate(),

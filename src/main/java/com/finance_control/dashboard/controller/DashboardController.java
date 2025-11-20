@@ -3,6 +3,8 @@ package com.finance_control.dashboard.controller;
 import com.finance_control.dashboard.dto.*;
 import com.finance_control.dashboard.service.DashboardService;
 import com.finance_control.dashboard.service.FinancialPredictionService;
+import com.finance_control.shared.feature.Feature;
+import com.finance_control.shared.feature.FeatureFlagService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,6 +34,7 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
     private final ObjectProvider<FinancialPredictionService> financialPredictionServiceProvider;
+    private final FeatureFlagService featureFlagService;
 
     @GetMapping("/summary")
     @Operation(summary = "Get dashboard summary",
@@ -156,6 +159,9 @@ public class DashboardController {
     public ResponseEntity<FinancialPredictionResponse> generateFinancialPredictions(
             @Valid @RequestBody FinancialPredictionRequest request) {
         log.debug("POST request to generate financial predictions");
+
+        featureFlagService.requireEnabled(Feature.FINANCIAL_PREDICTIONS);
+
         FinancialPredictionService predictionService = financialPredictionServiceProvider.getIfAvailable();
         if (predictionService == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
