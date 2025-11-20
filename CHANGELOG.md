@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Feature Flag System**: Centralized feature flag system for controlling feature availability
+  - `Feature` enum with all available features (FINANCIAL_PREDICTIONS, BRAZILIAN_MARKET, OPEN_FINANCE, REPORTS, DATA_EXPORT, REALTIME_NOTIFICATIONS, MONITORING, SUPABASE_AUTH, SUPABASE_STORAGE, SUPABASE_REALTIME)
+  - `FeatureFlagService` for type-safe feature flag checking
+  - `FeatureFlagsProperties` for configuration-based feature flags
+  - `FeatureDisabledException` for handling disabled features (HTTP 503)
+  - Feature flag checks integrated in all major controllers
+  - Configuration via `application.yml` with environment variable support
+  - Documentation in `docs/FEATURE_FLAGS.md`
+- **Reports API**: New `ReportsController` with endpoints for generating financial reports
+  - `GET /api/reports/transactions` - Transaction report with filters (dateFrom, dateTo, type, category)
+  - `GET /api/reports/goals` - Goal report with filters (status)
+  - `GET /api/reports/summary` - Summary report combining transactions and goals
+- **Filtered Data Export**: Enhanced `DataExportController` with filtered export endpoints
+  - `GET /api/data-export/transactions/csv` - Filtered transaction CSV export (dateFrom, dateTo, type, category)
+  - `GET /api/data-export/goals/csv` - Filtered goal CSV export (status)
+- **Monitoring Endpoints**: Completed `MonitoringController` with missing endpoints
+  - `GET /monitoring/health` - Health check endpoint
+  - `GET /monitoring/alerts` - Get active alerts
+  - `GET /monitoring/status` - Get monitoring status (database, cache, external services)
+  - `POST /monitoring/frontend-errors` - Submit frontend error logs
+- **Monitoring Service**: New `MonitoringService` for alert management and status checks
+  - Health status checking with database connectivity verification
+  - Alert storage and retrieval (in-memory, ready for database migration)
+  - Frontend error ingestion with Sentry integration
+  - Component status monitoring (database, cache, external services)
+
+### Changed
+- **Open Finance Feature Flag**: Open Finance feature is now disabled by default (`FEATURE_OPEN_FINANCE_ENABLED=false`) as it's not implemented at the start. Can be enabled via configuration when ready.
+- **Open Finance Controllers**: Added feature flag checks to all Open Finance controllers (`OpenFinanceAccountController`, `OpenFinanceConsentController`, `OpenFinancePaymentController`) for consistency with other controllers
+- **Frontend Investment Service**: Updated `investmentService.ts` to use `/investments` instead of `/api/investments` to match backend API paths
+- **Data Export Service**: Extended `DataExportService` to support filtering by date range, type, category, and status
+  - Added `exportTransactionsAsCsv(LocalDate, LocalDate, String, String)` method
+  - Added `exportFinancialGoalsAsCsv(String)` method
+  - Refactored export methods to support both filtered and unfiltered exports
+
 ### Changed
 - **Monitoring**: Elevated frontend alerting to always trigger for HIGH and CRITICAL severities regardless of rolling thresholds
 - Tests: Added high-yield unit tests to improve coverage towards 80%:

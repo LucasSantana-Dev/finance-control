@@ -200,7 +200,7 @@ app:
     jwt-signer: ${SUPABASE_JWT_SIGNER:}
     service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
     database:
-      enabled: ${SUPABASE_DATABASE_ENABLED:false}
+      enabled: ${SUPABASE_DATABASE_ENABLED:true}
       host: ${SUPABASE_DATABASE_HOST:}
       port: ${SUPABASE_DATABASE_PORT:5432}
       database: ${SUPABASE_DATABASE_NAME:}
@@ -233,7 +233,7 @@ app:
     rate-limit-delay-ms: ${MARKET_DATA_RATE_LIMIT_DELAY_MS:100}
 
   open-finance:
-    enabled: ${OPEN_FINANCE_ENABLED:false}
+    enabled: ${OPEN_FINANCE_ENABLED:true}
     sandbox-base-url: ${OPEN_FINANCE_SANDBOX_BASE_URL:https://api.sandbox.openfinancebrasil.org.br}
     production-base-url: ${OPEN_FINANCE_PRODUCTION_BASE_URL:https://api.openfinancebrasil.org.br}
     use-production: ${OPEN_FINANCE_USE_PRODUCTION:false}
@@ -263,6 +263,26 @@ app:
       endpoint: ${OPEN_FINANCE_INSTITUTION_REGISTRY_ENDPOINT:https://api.openfinancebrasil.org.br/institutions}
       refresh-interval-hours: ${OPEN_FINANCE_INSTITUTION_REFRESH_INTERVAL:24}
       auto-refresh: ${OPEN_FINANCE_INSTITUTION_AUTO_REFRESH:true}
+
+  feature-flags:
+    financial-predictions:
+      enabled: ${FEATURE_FINANCIAL_PREDICTIONS_ENABLED:true}
+    brazilian-market:
+      enabled: ${FEATURE_BRAZILIAN_MARKET_ENABLED:true}
+    open-finance:
+      enabled: ${FEATURE_OPEN_FINANCE_ENABLED:false}
+    reports:
+      enabled: ${FEATURE_REPORTS_ENABLED:true}
+    data-export:
+      enabled: ${FEATURE_DATA_EXPORT_ENABLED:true}
+    realtime-notifications:
+      enabled: ${FEATURE_REALTIME_NOTIFICATIONS_ENABLED:true}
+    monitoring:
+      enabled: ${FEATURE_MONITORING_ENABLED:true}
+    supabase-features:
+      auth: ${FEATURE_SUPABASE_AUTH_ENABLED:true}
+      storage: ${FEATURE_SUPABASE_STORAGE_ENABLED:true}
+      realtime: ${FEATURE_SUPABASE_REALTIME_ENABLED:true}
 
 # Brazilian Market Data Configuration
 brazilian-market:
