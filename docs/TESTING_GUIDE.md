@@ -412,11 +412,11 @@ Follow these steps whenever new scripts appear under `src/main/resources/db/migr
    ```bash
    # Export Supabase credentials
    export SUPABASE_DATABASE_ENABLED=true
-   export SUPABASE_DATABASE_HOST=db.skxnqippsyskqbycqvky.supabase.co
+   export SUPABASE_DATABASE_HOST=db.your-project-ref.supabase.co
    export SUPABASE_DATABASE_PORT=5432
    export SUPABASE_DATABASE_NAME=postgres
-   export SUPABASE_DATABASE_USERNAME=postgres.skxnqippsyskqbycqvky
-   export SUPABASE_DATABASE_PASSWORD='zw^7E6Q6#$zx2A3&'
+   export SUPABASE_DATABASE_USERNAME=postgres.your-project-ref
+   export SUPABASE_DATABASE_PASSWORD='your-database-password'
    export SUPABASE_DATABASE_SSL_MODE=require
 
    # Check migration status
@@ -431,7 +431,7 @@ Follow these steps whenever new scripts appear under `src/main/resources/db/migr
    ```bash
    # Set credentials in .env file
    SUPABASE_DATABASE_ENABLED=true
-   SUPABASE_DATABASE_HOST=db.skxnqippsyskqbycqvky.supabase.co
+   SUPABASE_DATABASE_HOST=db.your-project-ref.supabase.co
    # ... other credentials
 
    # Start application - migrations run automatically
@@ -443,9 +443,9 @@ Follow these steps whenever new scripts appear under `src/main/resources/db/migr
    docker run --rm \
      -v "$PWD/src/main/resources/db/migration:/flyway/sql" \
      flyway/flyway:10 \
-     -url="jdbc:postgresql://db.skxnqippsyskqbycqvky.supabase.co:5432/postgres?sslmode=require" \
-     -user="postgres.skxnqippsyskqbycqvky" \
-     -password='zw^7E6Q6#$zx2A3&' \
+     -url="jdbc:postgresql://db.your-project-ref.supabase.co:5432/postgres?sslmode=require" \
+     -user="postgres.your-project-ref" \
+     -password='your-database-password' \
      -locations=filesystem:/flyway/sql \
      migrate
    ```

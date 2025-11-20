@@ -264,7 +264,7 @@ When the application is running and database is properly configured:
 
 ```bash
 SERVER_PORT=8080
-DB_URL=jdbc:postgresql://db.skxnqippsyskqbycqvky.supabase.co:5432/postgres?sslmode=require
+DB_URL=jdbc:postgresql://db.your-project-ref.supabase.co:5432/postgres?sslmode=require
 JWT_SECRET=testSecretKeyWithMinimumLengthOf256BitsForJWT
 JWT_EXPIRATION_MS=86400000
 SPRING_PROFILES_ACTIVE=dev
