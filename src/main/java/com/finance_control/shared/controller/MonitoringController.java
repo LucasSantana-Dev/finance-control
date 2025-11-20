@@ -1,11 +1,17 @@
 package com.finance_control.shared.controller;
 
-import com.finance_control.shared.monitoring.AlertingService;
-import com.finance_control.shared.monitoring.HealthCheckService;
+import com.finance_control.shared.feature.Feature;
+import com.finance_control.shared.feature.FeatureFlagService;
+import com.finance_control.shared.monitoring.MonitoringService;
+import com.finance_control.shared.monitoring.dto.AlertDTO;
+import com.finance_control.shared.monitoring.dto.FrontendErrorDTO;
+import com.finance_control.shared.monitoring.dto.HealthStatusDTO;
+import com.finance_control.shared.monitoring.dto.MonitoringStatusDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -16,118 +22,76 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * REST controller for monitoring and observability endpoints.
- * Provides access to system health, metrics, and alerting information.
+ * REST controller for monitoring endpoints.
+ * Provides basic monitoring information. For detailed health and metrics, use Spring Actuator endpoints.
  */
 @RestController
 @RequestMapping("/monitoring")
-@Tag(name = "Monitoring", description = "System monitoring and observability endpoints")
+@Tag(name = "Monitoring", description = "Basic monitoring endpoints. Use /actuator for detailed health and metrics")
 @RequiredArgsConstructor
 @Slf4j
 public class MonitoringController {
 
-    private final AlertingService alertingService;
-    private final HealthCheckService healthCheckService;
+    private final MonitoringService monitoringService;
+    private final FeatureFlagService featureFlagService;
 
     @GetMapping("/health")
-    @Operation(summary = "Get basic system health status", description = "Returns basic health information")
+    @Operation(summary = "Get health status", description = "Returns the health status of the application")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Health status retrieved successfully"),
-            @ApiResponse(responseCode = "503", description = "System is unhealthy"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(responseCode = "200", description = "Health status retrieved successfully")
     })
-    public ResponseEntity<Map<String, Object>> getHealthStatus() {
+    public ResponseEntity<HealthStatusDTO> getHealth() {
         log.debug("Health status requested");
-
-        try {
-            Map<String, Object> healthStatus = healthCheckService.getDetailedHealthStatus();
-            return ResponseEntity.ok(healthStatus);
-        } catch (Exception e) {
-            log.error("Error retrieving health status", e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "ERROR");
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(503).body(errorResponse);
-        }
+        featureFlagService.requireEnabled(Feature.MONITORING);
+        HealthStatusDTO health = monitoringService.getHealthStatus();
+        return ResponseEntity.ok(health);
     }
 
     @GetMapping("/alerts")
-    @Operation(summary = "Get active alerts", description = "Returns list of currently active system alerts")
+    @Operation(summary = "Get active alerts", description = "Returns a list of active alerts")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Alerts retrieved successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(responseCode = "200", description = "Active alerts retrieved successfully")
     })
-    public ResponseEntity<List<AlertingService.Alert>> getActiveAlerts() {
+    public ResponseEntity<List<AlertDTO>> getActiveAlerts() {
         log.debug("Active alerts requested");
-
-        try {
-            List<AlertingService.Alert> alerts = alertingService.getActiveAlerts();
-            return ResponseEntity.ok(alerts);
-        } catch (Exception e) {
-            log.error("Error retrieving active alerts", e);
-            return ResponseEntity.status(500).build();
-        }
+        featureFlagService.requireEnabled(Feature.MONITORING);
+        List<AlertDTO> alerts = monitoringService.getActiveAlerts();
+        return ResponseEntity.ok(alerts);
     }
 
-    @DeleteMapping("/alerts/{alertId}")
-    @Operation(summary = "Clear an alert", description = "Manually clear a specific alert by ID")
+    @GetMapping("/status")
+    @Operation(summary = "Get monitoring status", description = "Returns the status of all monitored components")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Alert cleared successfully"),
-            @ApiResponse(responseCode = "404", description = "Alert not found"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(responseCode = "200", description = "Monitoring status retrieved successfully")
     })
-    public ResponseEntity<Map<String, String>> clearAlert(@PathVariable String alertId) {
-        if (alertId == null || alertId.trim().isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        log.info("Clearing alert (ID length: {})", alertId.length());
-
-        try {
-            alertingService.clearAlert(alertId);
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Alert cleared successfully");
-            response.put("alertId", alertId);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Error clearing alert (ID length: {})", alertId.length(), e);
-            return ResponseEntity.status(500).build();
-        }
+    public ResponseEntity<MonitoringStatusDTO> getStatus() {
+        log.debug("Monitoring status requested");
+        featureFlagService.requireEnabled(Feature.MONITORING);
+        MonitoringStatusDTO status = monitoringService.getMonitoringStatus();
+        return ResponseEntity.ok(status);
     }
 
-    @PostMapping("/alerts/clear-all")
-    @Operation(summary = "Clear all alerts", description = "Manually clear all active alerts")
+    @PostMapping("/frontend-errors")
+    @Operation(summary = "Submit frontend error", description = "Submit a frontend error for monitoring and tracking")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "All alerts cleared successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(responseCode = "200", description = "Frontend error submitted successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid error data")
     })
-    public ResponseEntity<Map<String, String>> clearAllAlerts() {
-        log.info("Clearing all alerts");
-
-        try {
-            List<AlertingService.Alert> alerts = alertingService.getActiveAlerts();
-            for (AlertingService.Alert alert : alerts) {
-                alertingService.clearAlert(alert.getId());
-            }
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "All alerts cleared successfully");
-            response.put("clearedCount", String.valueOf(alerts.size()));
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Error clearing all alerts", e);
-            return ResponseEntity.status(500).build();
-        }
+    public ResponseEntity<Void> submitFrontendError(@Valid @RequestBody FrontendErrorDTO error) {
+        log.debug("Frontend error submitted: {}", error.getErrorType());
+        featureFlagService.requireEnabled(Feature.MONITORING);
+        monitoringService.submitFrontendError(error);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/metrics/summary")
-    @Operation(summary = "Get metrics summary", description = "Returns a summary of key application metrics")
+    @Operation(summary = "Get metrics summary", description = "Returns a summary of key application metrics. For detailed metrics, use /actuator/metrics")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Metrics summary retrieved successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(responseCode = "200", description = "Metrics summary retrieved successfully")
     })
     public ResponseEntity<Map<String, Object>> getMetricsSummary() {
         log.debug("Metrics summary requested");
+        featureFlagService.requireEnabled(Feature.MONITORING);
 
         try {
             Map<String, Object> summary = new HashMap<>();
@@ -138,87 +102,14 @@ public class MonitoringController {
                 "memoryUsed", runtime.totalMemory() - runtime.freeMemory(),
                 "memoryTotal", runtime.totalMemory(),
                 "memoryMax", runtime.maxMemory(),
-                "processors", runtime.availableProcessors(),
-                "uptime", System.currentTimeMillis() // This would be actual uptime in production
+                "processors", runtime.availableProcessors()
             ));
 
-            // Add application-specific metrics placeholders
-            summary.put("application", Map.of(
-                "activeUsers", "N/A", // Would be actual count
-                "totalTransactions", "N/A", // Would be actual count
-                "activeGoals", "N/A", // Would be actual count
-                "cacheHitRate", "N/A" // Would be actual rate
-            ));
+            summary.put("note", "For detailed metrics, use /actuator/metrics endpoint");
 
             return ResponseEntity.ok(summary);
         } catch (Exception e) {
             log.error("Error retrieving metrics summary", e);
-            return ResponseEntity.status(500).build();
-        }
-    }
-
-    @PostMapping("/test-alert")
-    @Operation(summary = "Trigger test alert", description = "Triggers a test alert for monitoring system validation")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Test alert triggered successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    public ResponseEntity<Map<String, String>> triggerTestAlert() {
-        log.info("Triggering test alert");
-
-        try {
-            alertingService.alertHighTransactionVolume(1500L);
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Test alert triggered successfully");
-            response.put("alertType", "high_transaction_volume");
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Error triggering test alert", e);
-            return ResponseEntity.status(500).build();
-        }
-    }
-
-    @GetMapping("/status")
-    @Operation(summary = "Get monitoring system status", description = "Returns the current status of monitoring systems")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Monitoring status retrieved successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    public ResponseEntity<Map<String, Object>> getMonitoringStatus() {
-        log.debug("Monitoring status requested");
-
-        try {
-            Map<String, Object> status = new HashMap<>();
-
-            // Check if monitoring systems are active
-            List<AlertingService.Alert> alerts = alertingService.getActiveAlerts();
-            status.put("alerting", Map.of(
-                "active", true,
-                "activeAlerts", alerts.size(),
-                "status", alerts.isEmpty() ? "HEALTHY" : "ALERTS_ACTIVE"
-            ));
-
-            try {
-                Map<String, Object> healthStatus = healthCheckService.getDetailedHealthStatus();
-                status.put("healthCheck", Map.of(
-                    "active", true,
-                    "status", healthStatus.get("overallStatus"),
-                    "message", "Health checks active"
-                ));
-            } catch (Exception e) {
-                status.put("healthCheck", Map.of(
-                    "active", false,
-                    "status", "ERROR",
-                    "message", "Health checks failed: " + e.getMessage()
-                ));
-            }
-
-            status.put("timestamp", System.currentTimeMillis());
-
-            return ResponseEntity.ok(status);
-        } catch (Exception e) {
-            log.error("Error retrieving monitoring status", e);
             return ResponseEntity.status(500).build();
         }
     }

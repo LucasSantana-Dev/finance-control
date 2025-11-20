@@ -3,6 +3,7 @@ package com.finance_control.shared.service;
 import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.goals.repository.FinancialGoalRepository;
 import com.finance_control.shared.context.UserContext;
+import com.finance_control.shared.enums.TransactionType;
 import com.finance_control.transactions.model.Transaction;
 import com.finance_control.transactions.repository.TransactionRepository;
 import com.finance_control.users.model.User;
@@ -19,9 +20,11 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service for exporting user data in various formats.
@@ -157,6 +160,189 @@ public class DataExportService {
         }
     }
 
+    /**
+     * Export transactions as CSV with filters.
+     */
+    public byte[] exportTransactionsAsCsv(LocalDate dateFrom, LocalDate dateTo, String type, String category) {
+        Long userId = UserContext.getCurrentUserId();
+        log.info("Exporting filtered transactions as CSV for user: {} (dateFrom: {}, dateTo: {}, type: {}, category: {})",
+                userId, dateFrom, dateTo, type, category);
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+             PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
+
+            // Write CSV header
+            writer.println("Transaction Export");
+            writer.println("Generated on: " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            writer.println("User ID: " + userId);
+            if (dateFrom != null || dateTo != null) {
+                writer.println("Date Range: " + formatDateRange(dateFrom, dateTo));
+            }
+            if (type != null) {
+                writer.println("Type: " + type);
+            }
+            if (category != null) {
+                writer.println("Category: " + category);
+            }
+            writer.println();
+
+            List<Transaction> transactions = getFilteredTransactions(userId, dateFrom, dateTo, type, category);
+            exportTransactions(writer, transactions);
+            writer.flush();
+            return outputStream.toByteArray();
+
+        } catch (IOException e) {
+            log.error("Error exporting filtered transactions as CSV for user: {}", userId, e);
+            throw new RuntimeException("Failed to export transactions", e);
+        }
+    }
+
+    /**
+     * Export financial goals as CSV with status filter.
+     */
+    public byte[] exportFinancialGoalsAsCsv(String status) {
+        Long userId = UserContext.getCurrentUserId();
+        log.info("Exporting filtered financial goals as CSV for user: {} (status: {})", userId, status);
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+             PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
+
+            // Write CSV header
+            writer.println("Financial Goals Export");
+            writer.println("Generated on: " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            writer.println("User ID: " + userId);
+            if (status != null) {
+                writer.println("Status: " + status);
+            }
+            writer.println();
+
+            List<FinancialGoal> goals = getFilteredGoals(userId, status);
+            exportFinancialGoals(writer, goals);
+            writer.flush();
+            return outputStream.toByteArray();
+
+        } catch (IOException e) {
+            log.error("Error exporting filtered financial goals as CSV for user: {}", userId, e);
+            throw new RuntimeException("Failed to export financial goals", e);
+        }
+    }
+
+    private List<Transaction> getFilteredTransactions(
+            Long userId,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            String type,
+            String category) {
+
+        List<Transaction> allTransactions = transactionRepository.findByUserIdWithResponsibilities(userId);
+
+        return allTransactions.stream()
+                .filter(t -> {
+                    // Date filter
+                    if (dateFrom != null && t.getDate().toLocalDate().isBefore(dateFrom)) {
+                        return false;
+                    }
+                    if (dateTo != null && t.getDate().toLocalDate().isAfter(dateTo)) {
+                        return false;
+                    }
+
+                    // Type filter
+                    if (type != null && !type.isEmpty()) {
+                        TransactionType transactionType = type.equalsIgnoreCase("income")
+                                ? TransactionType.INCOME
+                                : TransactionType.EXPENSE;
+                        if (t.getType() != transactionType) {
+                            return false;
+                        }
+                    }
+
+                    // Category filter
+                    if (category != null && !category.isEmpty()) {
+                        if (t.getCategory() == null || !t.getCategory().getName().equalsIgnoreCase(category)) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<FinancialGoal> getFilteredGoals(Long userId, String status) {
+        Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
+        List<FinancialGoal> allGoals = financialGoalRepository
+                .findByUserIdOrderByCreatedAtDesc(userId, pageable)
+                .getContent();
+
+        if (status == null || status.isEmpty()) {
+            return allGoals;
+        }
+
+        return allGoals.stream()
+                .filter(g -> {
+                    switch (status.toLowerCase()) {
+                        case "active":
+                            return g.getIsActive();
+                        case "completed":
+                            return !g.getIsActive() && g.getCurrentAmount().compareTo(g.getTargetAmount()) >= 0;
+                        case "paused":
+                            return !g.getIsActive() && g.getCurrentAmount().compareTo(g.getTargetAmount()) < 0;
+                        case "cancelled":
+                            return false; // Assuming cancelled goals are marked differently
+                        default:
+                            return true;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    private String formatDateRange(LocalDate dateFrom, LocalDate dateTo) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        String from = dateFrom != null ? dateFrom.format(formatter) : "Beginning";
+        String to = dateTo != null ? dateTo.format(formatter) : "Now";
+        return from + " to " + to;
+    }
+
+    private void exportTransactions(PrintWriter writer, List<Transaction> transactions) {
+        writer.println("=== TRANSACTIONS ===");
+        writer.println("ID,Description,Amount,Type,Date,Category,Subcategory,Source Entity,Reconciled,Created At");
+
+        for (Transaction transaction : transactions) {
+            writer.printf("%d,\"%s\",%s,%s,%s,\"%s\",\"%s\",\"%s\",%s,%s%n",
+                    transaction.getId(),
+                    transaction.getDescription() != null ? transaction.getDescription().replace("\"", "\"\"") : "",
+                    transaction.getAmount(),
+                    transaction.getType(),
+                    transaction.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                    transaction.getCategory() != null ? transaction.getCategory().getName().replace("\"", "\"\"") : "",
+                    transaction.getSubcategory() != null ? transaction.getSubcategory().getName().replace("\"", "\"\"") : "",
+                    transaction.getSourceEntity() != null ? transaction.getSourceEntity().getName().replace("\"", "\"\"") : "",
+                    transaction.getReconciled(),
+                    transaction.getCreatedAt() != null ? transaction.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "");
+        }
+        writer.println();
+    }
+
+    private void exportFinancialGoals(PrintWriter writer, List<FinancialGoal> goals) {
+        writer.println("=== FINANCIAL GOALS ===");
+        writer.println("ID,Name,Description,Target Amount,Current Amount,Progress Percentage,Goal Type,Deadline,Is Active,Created At");
+
+        for (FinancialGoal goal : goals) {
+            writer.printf("%d,\"%s\",\"%s\",%s,%s,%s,%s,%s,%s,%s%n",
+                    goal.getId(),
+                    goal.getName() != null ? goal.getName().replace("\"", "\"\"") : "",
+                    goal.getDescription() != null ? goal.getDescription().replace("\"", "\"\"") : "",
+                    goal.getTargetAmount(),
+                    goal.getCurrentAmount(),
+                    goal.getProgressPercentage(),
+                    goal.getGoalType(),
+                    goal.getDeadline() != null ? goal.getDeadline().format(DateTimeFormatter.ISO_LOCAL_DATE) : "",
+                    goal.getIsActive(),
+                    goal.getCreatedAt() != null ? goal.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "");
+        }
+        writer.println();
+    }
+
     private void exportUserProfile(PrintWriter writer, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -194,24 +380,7 @@ public class DataExportService {
 
     private void exportTransactions(PrintWriter writer, Long userId) {
         List<Transaction> transactions = transactionRepository.findByUserIdWithResponsibilities(userId);
-
-        writer.println("=== TRANSACTIONS ===");
-        writer.println("ID,Description,Amount,Type,Date,Category,Subcategory,Source Entity,Reconciled,Created At");
-
-        for (Transaction transaction : transactions) {
-            writer.printf("%d,\"%s\",%s,%s,%s,\"%s\",\"%s\",\"%s\",%s,%s%n",
-                    transaction.getId(),
-                    transaction.getDescription() != null ? transaction.getDescription().replace("\"", "\"\"") : "",
-                    transaction.getAmount(),
-                    transaction.getType(),
-                    transaction.getDate().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                    transaction.getCategory() != null ? transaction.getCategory().getName().replace("\"", "\"\"") : "",
-                    transaction.getSubcategory() != null ? transaction.getSubcategory().getName().replace("\"", "\"\"") : "",
-                    transaction.getSourceEntity() != null ? transaction.getSourceEntity().getName().replace("\"", "\"\"") : "",
-                    transaction.getReconciled(),
-                    transaction.getCreatedAt() != null ? transaction.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "");
-        }
-        writer.println();
+        exportTransactions(writer, transactions);
     }
 
     /**
@@ -267,24 +436,7 @@ public class DataExportService {
     private void exportFinancialGoals(PrintWriter writer, Long userId) {
         Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
         List<FinancialGoal> goals = financialGoalRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable).getContent();
-
-        writer.println("=== FINANCIAL GOALS ===");
-        writer.println("ID,Name,Description,Target Amount,Current Amount,Progress Percentage,Goal Type,Deadline,Is Active,Created At");
-
-        for (FinancialGoal goal : goals) {
-            writer.printf("%d,\"%s\",\"%s\",%s,%s,%s,%s,%s,%s,%s%n",
-                    goal.getId(),
-                    goal.getName() != null ? goal.getName().replace("\"", "\"\"") : "",
-                    goal.getDescription() != null ? goal.getDescription().replace("\"", "\"\"") : "",
-                    goal.getTargetAmount(),
-                    goal.getCurrentAmount(),
-                    goal.getProgressPercentage(),
-                    goal.getGoalType(),
-                    goal.getDeadline() != null ? goal.getDeadline().format(DateTimeFormatter.ISO_LOCAL_DATE) : "",
-                    goal.getIsActive(),
-                    goal.getCreatedAt() != null ? goal.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : "");
-        }
-        writer.println();
+        exportFinancialGoals(writer, goals);
     }
 
     private String exportFinancialGoalsAsJson(Long userId) {
