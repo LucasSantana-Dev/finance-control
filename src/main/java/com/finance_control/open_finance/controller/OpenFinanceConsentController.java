@@ -2,6 +2,8 @@ package com.finance_control.open_finance.controller;
 
 import com.finance_control.open_finance.dto.ConsentDTO;
 import com.finance_control.open_finance.service.OpenFinanceConsentService;
+import com.finance_control.shared.feature.Feature;
+import com.finance_control.shared.feature.FeatureFlagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,6 +28,7 @@ import java.util.List;
 public class OpenFinanceConsentController {
 
     private final OpenFinanceConsentService consentService;
+    private final FeatureFlagService featureFlagService;
 
     @PostMapping("/initiate")
     @Operation(summary = "Initiate consent flow",
@@ -33,6 +36,7 @@ public class OpenFinanceConsentController {
     public ResponseEntity<ConsentInitiationResponse> initiateConsent(
             @Valid @RequestBody ConsentInitiationRequest request) {
         log.debug("Initiating consent flow for institution: {}", request.getInstitutionId());
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         var serviceResponse = consentService.initiateConsent(
                 request.getInstitutionId(),
                 request.getScopes());
@@ -52,6 +56,7 @@ public class OpenFinanceConsentController {
             @RequestParam @NotNull String code,
             @RequestParam(required = false) String state) {
         log.debug("Handling OAuth callback for consent: {}", consentId);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         ConsentDTO consent = consentService.handleCallback(consentId, code, state);
         return ResponseEntity.ok(consent);
     }
@@ -61,6 +66,7 @@ public class OpenFinanceConsentController {
                description = "Retrieves all consents for the current user.")
     public ResponseEntity<List<ConsentDTO>> getUserConsents() {
         log.debug("Retrieving consents for current user");
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         List<ConsentDTO> consents = consentService.getUserConsents();
         return ResponseEntity.ok(consents);
     }
@@ -70,6 +76,7 @@ public class OpenFinanceConsentController {
                description = "Retrieves a specific consent by its ID.")
     public ResponseEntity<ConsentDTO> getConsent(@PathVariable Long id) {
         log.debug("Retrieving consent: {}", id);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         ConsentDTO consent = consentService.getConsent(id);
         return ResponseEntity.ok(consent);
     }
@@ -79,6 +86,7 @@ public class OpenFinanceConsentController {
                description = "Refreshes the access token for a consent before it expires.")
     public ResponseEntity<ConsentDTO> refreshToken(@PathVariable Long id) {
         log.debug("Refreshing token for consent: {}", id);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         ConsentDTO consent = consentService.refreshToken(id);
         return ResponseEntity.ok(consent);
     }
@@ -88,6 +96,7 @@ public class OpenFinanceConsentController {
                description = "Revokes a consent and disconnects the associated bank account.")
     public ResponseEntity<Void> revokeConsent(@PathVariable Long id) {
         log.debug("Revoking consent: {}", id);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         consentService.revokeConsent(id);
         return ResponseEntity.noContent().build();
     }

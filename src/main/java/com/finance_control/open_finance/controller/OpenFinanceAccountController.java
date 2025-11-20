@@ -3,6 +3,8 @@ package com.finance_control.open_finance.controller;
 import com.finance_control.open_finance.dto.AccountBalanceDTO;
 import com.finance_control.open_finance.dto.ConnectedAccountDTO;
 import com.finance_control.open_finance.service.OpenFinanceAccountService;
+import com.finance_control.shared.feature.Feature;
+import com.finance_control.shared.feature.FeatureFlagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
@@ -26,12 +28,14 @@ import java.util.List;
 public class OpenFinanceAccountController {
 
     private final OpenFinanceAccountService accountService;
+    private final FeatureFlagService featureFlagService;
 
     @PostMapping("/discover/{consentId}")
     @Operation(summary = "Discover accounts",
                description = "Discovers and creates accounts after consent authorization.")
     public ResponseEntity<List<ConnectedAccountDTO>> discoverAccounts(@PathVariable @NotNull Long consentId) {
         log.debug("Discovering accounts for consent: {}", consentId);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         List<ConnectedAccountDTO> accounts = accountService.discoverAccounts(consentId);
         return ResponseEntity.ok(accounts);
     }
@@ -41,6 +45,7 @@ public class OpenFinanceAccountController {
                description = "Retrieves all connected accounts for the current user.")
     public ResponseEntity<List<ConnectedAccountDTO>> getUserAccounts() {
         log.debug("Retrieving accounts for current user");
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         List<ConnectedAccountDTO> accounts = accountService.getUserAccounts();
         return ResponseEntity.ok(accounts);
     }
@@ -50,6 +55,7 @@ public class OpenFinanceAccountController {
                description = "Retrieves a specific connected account by its ID.")
     public ResponseEntity<ConnectedAccountDTO> getAccount(@PathVariable Long id) {
         log.debug("Retrieving account: {}", id);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         ConnectedAccountDTO account = accountService.getAccount(id);
         return ResponseEntity.ok(account);
     }
@@ -59,6 +65,7 @@ public class OpenFinanceAccountController {
                description = "Synchronizes the balance for a specific account.")
     public ResponseEntity<AccountBalanceDTO> syncBalance(@PathVariable @NotNull Long id) {
         log.debug("Syncing balance for account: {}", id);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         AccountBalanceDTO balance = accountService.syncBalance(id);
         return ResponseEntity.ok(balance);
     }
@@ -68,6 +75,7 @@ public class OpenFinanceAccountController {
                description = "Disconnects a connected account.")
     public ResponseEntity<Void> disconnectAccount(@PathVariable @NotNull Long id) {
         log.debug("Disconnecting account: {}", id);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
         accountService.disconnectAccount(id);
         return ResponseEntity.noContent().build();
     }

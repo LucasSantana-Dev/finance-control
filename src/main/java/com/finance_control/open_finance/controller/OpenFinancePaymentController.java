@@ -3,6 +3,8 @@ package com.finance_control.open_finance.controller;
 import com.finance_control.open_finance.client.PaymentInitiationClient;
 import com.finance_control.open_finance.dto.PaymentRequestDTO;
 import com.finance_control.open_finance.service.OpenFinanceConsentService;
+import com.finance_control.shared.feature.Feature;
+import com.finance_control.shared.feature.FeatureFlagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,6 +28,7 @@ public class OpenFinancePaymentController {
 
     private final PaymentInitiationClient paymentClient;
     private final OpenFinanceConsentService consentService;
+    private final FeatureFlagService featureFlagService;
 
     @PostMapping("/initiate/{consentId}")
     @Operation(summary = "Initiate payment",
@@ -34,6 +37,7 @@ public class OpenFinancePaymentController {
             @PathVariable @NotNull Long consentId,
             @Valid @RequestBody PaymentRequestDTO request) {
         log.debug("Initiating payment for consent: {}", consentId);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
 
         String accessToken = consentService.getAccessToken(consentId);
 
@@ -63,6 +67,7 @@ public class OpenFinancePaymentController {
             @PathVariable @NotNull Long consentId,
             @PathVariable @NotNull String paymentId) {
         log.debug("Checking payment status: {}", paymentId);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
 
         String accessToken = consentService.getAccessToken(consentId);
         PaymentInitiationClient.PaymentStatus status = paymentClient.getPaymentStatus(accessToken, paymentId)
@@ -82,6 +87,7 @@ public class OpenFinancePaymentController {
             @PathVariable @NotNull Long consentId,
             @PathVariable @NotNull String paymentId) {
         log.debug("Cancelling payment: {}", paymentId);
+        featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
 
         String accessToken = consentService.getAccessToken(consentId);
         paymentClient.cancelPayment(accessToken, paymentId).block();
