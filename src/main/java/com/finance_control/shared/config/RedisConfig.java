@@ -42,7 +42,7 @@ public class RedisConfig {
      */
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
-        AppProperties.Redis redis = appProperties.redis();
+        com.finance_control.shared.config.properties.RedisProperties redis = appProperties.redis();
 
         log.info("Configuring Redis connection - Host: {}, Port: {}, Database: {}",
                 redis.host(), redis.port(), redis.database());
@@ -88,7 +88,7 @@ public class RedisConfig {
      */
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        AppProperties.Cache cache = appProperties.cache();
+        com.finance_control.shared.config.properties.CacheProperties cache = appProperties.cache();
 
         log.info("Configuring cache manager - Dashboard TTL: {}ms, Market Data TTL: {}ms, User Data TTL: {}ms",
                 cache.ttlDashboard(), cache.ttlMarketData(), cache.ttlUserData());

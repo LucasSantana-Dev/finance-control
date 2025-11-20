@@ -1,7 +1,6 @@
 package com.finance_control.shared.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -25,7 +24,6 @@ public class SupabaseProfileService {
 
     @Qualifier("supabaseWebClient")
     private final WebClient webClient;
-    private final ObjectMapper objectMapper;
 
     /**
      * Updates user metadata in Supabase.

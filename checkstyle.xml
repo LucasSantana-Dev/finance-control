@@ -10,10 +10,46 @@
         <property name="max" value="160" />
     </module>
 
-    <!-- TreeWalker -->
+    <!-- File length check (warning only, not blocking) -->
+    <module name="FileLength">
+        <property name="max" value="500" />
+        <property name="severity" value="warning" />
+    </module>
+
+    <!-- TreeWalker with complexity and design rules -->
     <module name="TreeWalker">
+        <!-- Basic checks -->
         <module name="UnusedImports" />
         <module name="NeedBraces" />
         <module name="EmptyBlock" />
+
+        <!-- Complexity checks (fail build on violation) -->
+        <!-- Note: Production code threshold is 15, test code threshold is 20 -->
+        <!-- Test files will be handled separately via PMD and SonarQube -->
+        <module name="CyclomaticComplexity">
+            <property name="max" value="15" />
+            <property name="severity" value="error" />
+        </module>
+        <module name="NPathComplexity">
+            <property name="max" value="200" />
+            <property name="severity" value="warning" />
+        </module>
+
+        <!-- Method length check (warning only, not blocking) -->
+        <module name="MethodLength">
+            <property name="max" value="150" />
+            <property name="countEmpty" value="false" />
+            <property name="severity" value="warning" />
+        </module>
+
+        <!-- Coupling metrics (warnings only) -->
+        <module name="ClassDataAbstractionCoupling">
+            <property name="max" value="7" />
+            <property name="severity" value="warning" />
+        </module>
+        <module name="ClassFanOutComplexity">
+            <property name="max" value="20" />
+            <property name="severity" value="warning" />
+        </module>
     </module>
-</module> 
+</module>

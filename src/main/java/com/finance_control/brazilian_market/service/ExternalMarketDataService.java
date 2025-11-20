@@ -2,7 +2,7 @@ package com.finance_control.brazilian_market.service;
 
 import com.finance_control.brazilian_market.client.MarketDataProvider;
 import com.finance_control.brazilian_market.client.MarketQuote;
-import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -32,7 +32,7 @@ public class ExternalMarketDataService {
     /**
      * Fetch current market data for an investment from appropriate provider
      */
-    public Optional<MarketQuote> fetchMarketData(String ticker, Investment.InvestmentType investmentType) {
+    public Optional<MarketQuote> fetchMarketData(String ticker, InvestmentType investmentType) {
         try {
             log.debug("Fetching market data for ticker: {} of type: {}", ticker, investmentType);
 
@@ -53,7 +53,7 @@ public class ExternalMarketDataService {
     /**
      * Fetch market data for multiple investments
      */
-    public List<MarketQuote> fetchMarketData(List<String> tickers, Investment.InvestmentType investmentType) {
+    public List<MarketQuote> fetchMarketData(List<String> tickers, InvestmentType investmentType) {
         try {
             log.debug("Fetching market data for {} tickers of type: {}", tickers.size(), investmentType);
 
@@ -75,7 +75,7 @@ public class ExternalMarketDataService {
      * Fetch historical data for an investment
      */
     public Optional<com.finance_control.brazilian_market.client.HistoricalData> fetchHistoricalData(
-            String ticker, Investment.InvestmentType investmentType, String period, String interval) {
+            String ticker, InvestmentType investmentType, String period, String interval) {
         try {
             log.debug("Fetching historical data for ticker: {} of type: {}", ticker, investmentType);
 
@@ -96,7 +96,7 @@ public class ExternalMarketDataService {
     /**
      * Select the appropriate market data provider based on investment type
      */
-    private MarketDataProvider selectProvider(Investment.InvestmentType investmentType) {
+    private MarketDataProvider selectProvider(InvestmentType investmentType) {
         if (brazilianMarketProvider.supportsInvestmentType(investmentType)) {
             return brazilianMarketProvider;
         } else if (usMarketProvider.supportsInvestmentType(investmentType)) {

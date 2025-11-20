@@ -5,6 +5,7 @@ import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import com.finance_control.users.service.UserService;
 import com.finance_control.shared.context.UserContext;
+import com.finance_control.shared.service.EncryptionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
@@ -42,10 +44,17 @@ class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private EncryptionService encryptionService;
+
     @InjectMocks
     private UserService userService;
 
     private User testUser;
+    private String testEmailHash;
+    private String newUserEmailHash;
+    private String nonexistentEmailHash;
+    private String updatedEmailHash;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +63,26 @@ class UserServiceTest {
         testUser.setEmail("test@example.com");
         testUser.setPassword("password123");
         testUser.setIsActive(true);
+
+        // Setup email hashes for consistent testing
+        testEmailHash = "test-email-hash-12345";
+        newUserEmailHash = "newuser-email-hash-67890";
+        nonexistentEmailHash = "nonexistent-email-hash";
+        updatedEmailHash = "updated-email-hash-11111";
+
+        // Mock email hashing with lenient to avoid unnecessary stubbing exceptions
+        lenient().when(encryptionService.hashEmail("test@example.com")).thenReturn(testEmailHash);
+        lenient().when(encryptionService.hashEmail("newuser@example.com")).thenReturn(newUserEmailHash);
+        lenient().when(encryptionService.hashEmail("nonexistent@example.com")).thenReturn(nonexistentEmailHash);
+        lenient().when(encryptionService.hashEmail("updated@example.com")).thenReturn(updatedEmailHash);
+        lenient().when(encryptionService.hashEmail(any(String.class))).thenAnswer(invocation -> {
+            String email = invocation.getArgument(0);
+            if (email.contains("test")) return testEmailHash;
+            if (email.contains("newuser")) return newUserEmailHash;
+            if (email.contains("nonexistent")) return nonexistentEmailHash;
+            if (email.contains("updated")) return updatedEmailHash;
+            return "hash-" + email;
+        });
     }
 
     @Test
@@ -67,12 +96,17 @@ class UserServiceTest {
             dto.setIsActive(true);
 
             when(passwordEncoder.encode("Password123")).thenReturn("encodedPassword");
-            when(userRepository.save(any(User.class))).thenReturn(testUser);
+            when(userRepository.existsByEmailHash(newUserEmailHash)).thenReturn(false);
+            when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+                User savedUser = invocation.getArgument(0);
+                savedUser.setId(1L);
+                return savedUser;
+            });
 
             UserDTO result = userService.create(dto);
 
             assertThat(result).isNotNull();
-            assertThat(result.getEmail()).isEqualTo("test@example.com");
+            assertThat(result.getEmail()).isEqualTo("newuser@example.com");
         }
     }
 
@@ -101,7 +135,7 @@ class UserServiceTest {
 
     @Test
     void shouldFindUserByEmail() {
-        when(userRepository.findOne(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmailHash(testEmailHash)).thenReturn(Optional.of(testUser));
 
         Optional<UserDTO> result = userService.findByEmail("test@example.com");
 
@@ -111,7 +145,7 @@ class UserServiceTest {
 
     @Test
     void shouldFindUserByEmail_WhenUserNotFound() {
-        when(userRepository.findOne(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(Optional.empty());
+        when(userRepository.findByEmailHash(nonexistentEmailHash)).thenReturn(Optional.empty());
 
         Optional<UserDTO> result = userService.findByEmail("nonexistent@example.com");
 
@@ -120,7 +154,7 @@ class UserServiceTest {
 
     @Test
     void shouldExistsByEmail_ReturnTrue_WhenUserExists() {
-        when(userRepository.existsByEmail("test@example.com")).thenReturn(true);
+        when(userRepository.existsByEmailHash(testEmailHash)).thenReturn(true);
 
         boolean result = userService.existsByEmail("test@example.com");
 
@@ -129,7 +163,7 @@ class UserServiceTest {
 
     @Test
     void shouldExistsByEmail_ReturnFalse_WhenUserNotFound() {
-        when(userRepository.existsByEmail("nonexistent@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailHash(nonexistentEmailHash)).thenReturn(false);
 
         boolean result = userService.existsByEmail("nonexistent@example.com");
 
@@ -471,6 +505,8 @@ class UserServiceTest {
         assertThat(testUser.getEmail()).isEqualTo("updated@example.com");
         assertThat(testUser.getPassword()).isEqualTo("password123");
         assertThat(result).isNotNull();
+        // Verify email hash was updated
+        assertThat(testUser.getEmailHash()).isEqualTo(updatedEmailHash);
     }
 
     @Test

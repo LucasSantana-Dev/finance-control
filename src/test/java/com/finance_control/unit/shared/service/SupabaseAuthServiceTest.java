@@ -1,6 +1,7 @@
 package com.finance_control.unit.shared.service;
 
 import com.finance_control.shared.config.AppProperties;
+import com.finance_control.shared.config.properties.SupabaseProperties;
 import com.finance_control.shared.dto.SignupRequest;
 import com.finance_control.shared.dto.LoginRequest;
 import com.finance_control.shared.dto.PasswordResetRequest;
@@ -43,7 +44,7 @@ class SupabaseAuthServiceTest {
     private AppProperties appProperties;
 
     @Mock
-    private AppProperties.Supabase supabaseConfig;
+    private SupabaseProperties supabaseConfig;
 
     private ObjectMapper objectMapper;
     private SupabaseAuthService authService;

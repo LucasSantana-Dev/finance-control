@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.finance_control.shared.context.UserContext;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -55,7 +56,6 @@ public class SupabaseStorageController {
             @Parameter(description = "Avatar image file") @RequestParam("file") MultipartFile avatarFile) {
 
         try {
-            // TODO: Get user ID from security context
             Long userId = getCurrentUserId();
 
             String avatarUrl = storageService.uploadAvatar(userId, avatarFile);
@@ -100,9 +100,7 @@ public class SupabaseStorageController {
         try {
             Long userId = getCurrentUserId();
 
-            // TODO: Implement uploadDocument in SupabaseStorageService
-            // String documentUrl = storageService.uploadDocument(userId, documentFile);
-            String documentUrl = "TODO: Implement uploadDocument";
+            String documentUrl = storageService.uploadDocument(userId, documentFile);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -114,6 +112,9 @@ public class SupabaseStorageController {
 
             return ResponseEntity.ok(response);
 
+        } catch (IOException e) {
+            log.error("Failed to upload document", e);
+            return createErrorResponse("Failed to upload document: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("Unexpected error during document upload", e);
             return createErrorResponse("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -144,9 +145,7 @@ public class SupabaseStorageController {
         try {
             Long userId = getCurrentUserId();
 
-            // TODO: Implement uploadTransactionAttachment in SupabaseStorageService
-            // String attachmentUrl = storageService.uploadTransactionAttachment(userId, transactionId, attachmentFile);
-            String attachmentUrl = "TODO: Implement uploadTransactionAttachment";
+            String attachmentUrl = storageService.uploadTransactionAttachment(userId, transactionId, attachmentFile);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -268,9 +267,7 @@ public class SupabaseStorageController {
             @Parameter(description = "Expiration time in seconds") @RequestParam(defaultValue = "3600") int expiresIn) {
 
         try {
-            // TODO: Implement generateSignedUrl in SupabaseStorageService
-            // String signedUrl = storageService.generateSignedUrl(bucketName, fileName, expiresIn);
-            String signedUrl = "TODO: Implement generateSignedUrl";
+            String signedUrl = storageService.generateSignedUrl(bucketName, fileName, expiresIn);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -354,9 +351,7 @@ public class SupabaseStorageController {
             @Parameter(description = "Maximum number of files") @RequestParam(defaultValue = "100") int limit) {
 
         try {
-            // TODO: Implement listFiles in SupabaseStorageService
-            // String[] files = storageService.listFiles(bucketName, path, limit);
-            String[] files = new String[]{"TODO: Implement listFiles"};
+            String[] files = storageService.listFiles(bucketName, path, limit);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -392,14 +387,16 @@ public class SupabaseStorageController {
     }
 
     /**
-     * Gets the current authenticated user ID.
-     * TODO: Implement proper user ID extraction from security context
+     * Gets the current authenticated user ID from UserContext.
      *
      * @return the current user ID
+     * @throws IllegalStateException if user ID is not available in context
      */
     private Long getCurrentUserId() {
-        // TODO: Extract from security context
-        // For now, return a placeholder - this should be implemented properly
-        return 1L; // Placeholder
+        Long userId = UserContext.getCurrentUserId();
+        if (userId == null) {
+            throw new IllegalStateException("User ID not available in context. User must be authenticated.");
+        }
+        return userId;
     }
 }

@@ -48,21 +48,30 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
 
         log.debug("GET request to retrieve financial goals with filtering");
 
-        // Extract all query parameters as filters (excluding standard ones)
         Map<String, Object> filters = extractFiltersFromRequest(request, search, sortBy, sortDirection);
+        addGoalFiltersFromRequest(request, filters);
 
-        // Add specific goal filters from request parameters
+        Page<FinancialGoalDTO> goals = financialGoalService.findAll(search, filters, sortBy, sortDirection, pageable);
+        return ResponseEntity.ok(goals);
+    }
+
+    private void addGoalFiltersFromRequest(HttpServletRequest request, Map<String, Object> filters) {
+        addGoalTypeFilter(request, filters);
+        addStatusFilter(request, filters);
+        addAmountFilters(request, filters);
+        addDeadlineFilters(request, filters);
+        addActiveFilter(request, filters);
+    }
+
+    private void addGoalTypeFilter(HttpServletRequest request, Map<String, Object> filters) {
         String goalType = request.getParameter("goalType");
-        String status = request.getParameter("status");
-        String minTargetAmountStr = request.getParameter("minTargetAmount");
-        String maxTargetAmountStr = request.getParameter("maxTargetAmount");
-        String deadlineStartStr = request.getParameter("deadlineStart");
-        String deadlineEndStr = request.getParameter("deadlineEnd");
-        String isActiveStr = request.getParameter("isActive");
-
         if (goalType != null && !goalType.trim().isEmpty()) {
             filters.put("goalType", goalType);
         }
+    }
+
+    private void addStatusFilter(HttpServletRequest request, Map<String, Object> filters) {
+        String status = request.getParameter("status");
         if (status != null && !status.trim().isEmpty()) {
             if ("active".equalsIgnoreCase(status)) {
                 filters.put("isActive", true);
@@ -70,40 +79,45 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
                 filters.put("isActive", false);
             }
         }
-        if (minTargetAmountStr != null && !minTargetAmountStr.trim().isEmpty()) {
+    }
+
+    private void addAmountFilters(HttpServletRequest request, Map<String, Object> filters) {
+        addAmountFilter(request, "minTargetAmount", filters);
+        addAmountFilter(request, "maxTargetAmount", filters);
+    }
+
+    private void addAmountFilter(HttpServletRequest request, String paramName, Map<String, Object> filters) {
+        String amountStr = request.getParameter(paramName);
+        if (amountStr != null && !amountStr.trim().isEmpty()) {
             try {
-                filters.put("minTargetAmount", new BigDecimal(minTargetAmountStr));
+                filters.put(paramName, new BigDecimal(amountStr));
             } catch (NumberFormatException e) {
-                log.warn("Invalid minTargetAmount parameter (length: {})", minTargetAmountStr.length());
+                log.warn("Invalid {} parameter (length: {})", paramName, amountStr.length());
             }
         }
-        if (maxTargetAmountStr != null && !maxTargetAmountStr.trim().isEmpty()) {
+    }
+
+    private void addDeadlineFilters(HttpServletRequest request, Map<String, Object> filters) {
+        addDeadlineFilter(request, "deadlineStart", filters);
+        addDeadlineFilter(request, "deadlineEnd", filters);
+    }
+
+    private void addDeadlineFilter(HttpServletRequest request, String paramName, Map<String, Object> filters) {
+        String dateStr = request.getParameter(paramName);
+        if (dateStr != null && !dateStr.trim().isEmpty()) {
             try {
-                filters.put("maxTargetAmount", new BigDecimal(maxTargetAmountStr));
-            } catch (NumberFormatException e) {
-                log.warn("Invalid maxTargetAmount parameter (length: {})", maxTargetAmountStr.length());
-            }
-        }
-        if (deadlineStartStr != null && !deadlineStartStr.trim().isEmpty()) {
-            try {
-                filters.put("deadlineStart", LocalDate.parse(deadlineStartStr));
+                filters.put(paramName, LocalDate.parse(dateStr));
             } catch (Exception e) {
-                log.warn("Invalid deadlineStart parameter (length: {})", deadlineStartStr.length());
+                log.warn("Invalid {} parameter (length: {})", paramName, dateStr.length());
             }
         }
-        if (deadlineEndStr != null && !deadlineEndStr.trim().isEmpty()) {
-            try {
-                filters.put("deadlineEnd", LocalDate.parse(deadlineEndStr));
-            } catch (Exception e) {
-                log.warn("Invalid deadlineEnd parameter (length: {})", deadlineEndStr.length());
-            }
-        }
+    }
+
+    private void addActiveFilter(HttpServletRequest request, Map<String, Object> filters) {
+        String isActiveStr = request.getParameter("isActive");
         if (isActiveStr != null && !isActiveStr.trim().isEmpty()) {
             filters.put("isActive", Boolean.valueOf(isActiveStr));
         }
-
-        Page<FinancialGoalDTO> goals = financialGoalService.findAll(search, filters, sortBy, sortDirection, pageable);
-        return ResponseEntity.ok(goals);
     }
 
     @GetMapping("/filtered")
@@ -127,13 +141,35 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
 
         log.debug("GET request to retrieve financial goals with filtering");
 
-        // Extract all query parameters as filters (excluding standard ones)
         Map<String, Object> filters = extractFiltersFromRequest(request, search, sortBy, sortDirection);
+        addGoalFiltersToMap(goalType, status, minTargetAmount, maxTargetAmount, deadlineStart, deadlineEnd, isActive, filters);
 
-        // Add specific goal filters
-        if (goalType != null && !goalType.trim().isEmpty()) {
-            filters.put("goalType", goalType);
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy != null ? sortBy : "createdAt");
+        Pageable finalPageable = PageRequest.of(page, size, sort);
+
+        Page<FinancialGoalDTO> goals = financialGoalService.findAll(search, filters, sortBy, sortDirection, finalPageable);
+        return ResponseEntity.ok(goals);
+    }
+
+    private void addGoalFiltersToMap(String goalType, String status, BigDecimal minTargetAmount,
+                                     BigDecimal maxTargetAmount, LocalDate deadlineStart,
+                                     LocalDate deadlineEnd, Boolean isActive, Map<String, Object> filters) {
+        addStringFilterToMap("goalType", goalType, filters);
+        addStatusFilterToMap(status, filters);
+        addAmountFilterToMap("minTargetAmount", minTargetAmount, filters);
+        addAmountFilterToMap("maxTargetAmount", maxTargetAmount, filters);
+        addDeadlineFilterToMap("deadlineStart", deadlineStart, filters);
+        addDeadlineFilterToMap("deadlineEnd", deadlineEnd, filters);
+        addBooleanFilterToMap("isActive", isActive, filters);
+    }
+
+    private void addStringFilterToMap(String key, String value, Map<String, Object> filters) {
+        if (value != null && !value.trim().isEmpty()) {
+            filters.put(key, value);
         }
+    }
+
+    private void addStatusFilterToMap(String status, Map<String, Object> filters) {
         if (status != null && !status.trim().isEmpty()) {
             if ("active".equalsIgnoreCase(status)) {
                 filters.put("isActive", true);
@@ -141,28 +177,24 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
                 filters.put("isActive", false);
             }
         }
-        if (minTargetAmount != null) {
-            filters.put("minTargetAmount", minTargetAmount);
-        }
-        if (maxTargetAmount != null) {
-            filters.put("maxTargetAmount", maxTargetAmount);
-        }
-        if (deadlineStart != null) {
-            filters.put("deadlineStart", deadlineStart);
-        }
-        if (deadlineEnd != null) {
-            filters.put("deadlineEnd", deadlineEnd);
-        }
-        if (isActive != null) {
-            filters.put("isActive", isActive);
-        }
+    }
 
-        // Create pageable with sorting
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy != null ? sortBy : "createdAt");
-        Pageable finalPageable = PageRequest.of(page, size, sort);
+    private void addAmountFilterToMap(String key, BigDecimal value, Map<String, Object> filters) {
+        if (value != null) {
+            filters.put(key, value);
+        }
+    }
 
-        Page<FinancialGoalDTO> goals = financialGoalService.findAll(search, filters, sortBy, sortDirection, finalPageable);
-        return ResponseEntity.ok(goals);
+    private void addDeadlineFilterToMap(String key, LocalDate value, Map<String, Object> filters) {
+        if (value != null) {
+            filters.put(key, value);
+        }
+    }
+
+    private void addBooleanFilterToMap(String key, Boolean value, Map<String, Object> filters) {
+        if (value != null) {
+            filters.put(key, value);
+        }
     }
 
     @GetMapping("/active")

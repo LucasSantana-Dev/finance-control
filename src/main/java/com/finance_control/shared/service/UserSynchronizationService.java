@@ -5,10 +5,13 @@ import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -23,6 +26,9 @@ public class UserSynchronizationService {
 
     private final UserRepository userRepository;
     private final SupabaseAuthService supabaseAuthService;
+
+    @Autowired(required = false)
+    private SupabaseProfileService supabaseProfileService;
 
     /**
      * Synchronizes user data from Supabase to the local application.
@@ -146,10 +152,30 @@ public class UserSynchronizationService {
             User user = userOpt.get();
 
             // Prepare metadata to update in Supabase
-            // Note: This would require adding an updateUserMetadata method to SupabaseAuthService
-            // For now, we just log that sync was prepared
-            // TODO: Implement actual Supabase metadata update when SupabaseProfileService.updateUserMetadata is available
-            log.info("Prepared user data for Supabase sync for user: {} (email: {})", localUserId, user.getEmail());
+            Map<String, Object> metadata = new HashMap<>();
+
+            // Add user email (if not already in Supabase)
+            if (user.getEmail() != null) {
+                metadata.put("email", user.getEmail());
+            }
+
+            // Add any other user fields that should be synced to Supabase metadata
+            // Note: Only include fields that are appropriate for Supabase user_metadata
+            // Avoid sensitive data like passwords
+
+            // Update Supabase user metadata using SupabaseProfileService
+            if (supabaseProfileService != null) {
+                try {
+                    supabaseProfileService.updateUserMetadata(accessToken, metadata)
+                            .doOnSuccess(v -> log.info("Successfully synced user metadata to Supabase for user: {} (email: {})", localUserId, user.getEmail()))
+                            .doOnError(error -> log.error("Failed to sync user metadata to Supabase for user {}: {}", localUserId, error.getMessage()))
+                            .block();
+                } catch (Exception e) {
+                    log.error("Error updating Supabase metadata for user {}: {}", localUserId, e.getMessage(), e);
+                }
+            } else {
+                log.warn("SupabaseProfileService not available. Cannot sync user metadata to Supabase for user: {}", localUserId);
+            }
 
         } catch (Exception e) {
             log.error("Error syncing user data to Supabase for user {}: {}", localUserId, e.getMessage(), e);

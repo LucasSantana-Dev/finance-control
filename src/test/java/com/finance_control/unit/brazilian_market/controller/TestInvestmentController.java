@@ -2,6 +2,8 @@ package com.finance_control.unit.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
 import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.users.model.User;
 import org.springframework.context.annotation.Profile;
@@ -67,8 +69,8 @@ public class TestInvestmentController {
             @RequestParam Long userId,
             @RequestParam(required = false) String sort,
             @RequestParam(required = false) String order,
-            @RequestParam(required = false) Investment.InvestmentType type,
-            @RequestParam(required = false) Investment.InvestmentSubtype subtype,
+            @RequestParam(required = false) InvestmentType type,
+            @RequestParam(required = false) InvestmentSubtype subtype,
             @RequestParam(required = false) String sector,
             @RequestParam(required = false) String industry,
             @RequestParam(required = false) String search,
@@ -172,7 +174,7 @@ public class TestInvestmentController {
 
     @GetMapping("/type/{type}")
     public ResponseEntity<List<InvestmentDTO>> getInvestmentsByType(
-            @PathVariable Investment.InvestmentType type,
+            @PathVariable InvestmentType type,
             @RequestParam Long userId) {
 
         User user = new User();
@@ -187,8 +189,8 @@ public class TestInvestmentController {
 
     @GetMapping("/type/{type}/subtype/{subtype}")
     public ResponseEntity<List<InvestmentDTO>> getInvestmentsByTypeAndSubtype(
-            @PathVariable Investment.InvestmentType type,
-            @PathVariable Investment.InvestmentSubtype subtype,
+            @PathVariable InvestmentType type,
+            @PathVariable InvestmentSubtype subtype,
             @RequestParam Long userId) {
 
         User user = new User();
@@ -303,7 +305,7 @@ public class TestInvestmentController {
     public ResponseEntity<?> getInvestmentMetadata(
             @RequestParam Long userId,
             @RequestParam String data,
-            @RequestParam(required = false) Investment.InvestmentType type) {
+            @RequestParam(required = false) InvestmentType type) {
 
         User user = new User();
         user.setId(userId);
@@ -345,15 +347,15 @@ public class TestInvestmentController {
     }
 
     @GetMapping("/types")
-    public ResponseEntity<List<Investment.InvestmentType>> getInvestmentTypes(@RequestParam Long userId) {
+    public ResponseEntity<List<InvestmentType>> getInvestmentTypes(@RequestParam Long userId) {
         User user = new User();
         user.setId(userId);
         return ResponseEntity.ok(investmentService.getInvestmentTypes(user));
     }
 
     @GetMapping("/types/{type}/subtypes")
-    public ResponseEntity<List<Investment.InvestmentSubtype>> getInvestmentSubtypes(
-            @PathVariable Investment.InvestmentType type,
+    public ResponseEntity<List<InvestmentSubtype>> getInvestmentSubtypes(
+            @PathVariable InvestmentType type,
             @RequestParam Long userId) {
         User user = new User();
         user.setId(userId);

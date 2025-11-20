@@ -28,7 +28,7 @@ public class RateLimitConfig {
      */
     @Bean
     public Bucket rateLimitBucket() {
-        AppProperties.RateLimit rateLimit = appProperties.rateLimit();
+        com.finance_control.shared.config.properties.RateLimitProperties rateLimit = appProperties.rateLimit();
 
         log.info("Configuring rate limiting - Requests per minute: {}, Burst capacity: {}, Refresh period: {}s",
                 rateLimit.requestsPerMinute(), rateLimit.burstCapacity(), rateLimit.refreshPeriod());

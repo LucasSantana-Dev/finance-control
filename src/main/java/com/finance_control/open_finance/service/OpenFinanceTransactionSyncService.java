@@ -6,9 +6,6 @@ import com.finance_control.open_finance.model.AccountSyncLog;
 import com.finance_control.open_finance.model.ConnectedAccount;
 import com.finance_control.open_finance.repository.AccountSyncLogRepository;
 import com.finance_control.open_finance.repository.ConnectedAccountRepository;
-import com.finance_control.shared.enums.TransactionSource;
-import com.finance_control.shared.enums.TransactionSubtype;
-import com.finance_control.shared.enums.TransactionType;
 import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.service.SupabaseRealtimeService;
 import com.finance_control.transactions.dto.TransactionDTO;
@@ -18,6 +15,8 @@ import com.finance_control.transactions.repository.TransactionRepository;
 import com.finance_control.transactions.repository.category.TransactionCategoryRepository;
 import com.finance_control.transactions.repository.source.TransactionSourceRepository;
 import com.finance_control.transactions.service.TransactionService;
+import com.finance_control.open_finance.service.mapper.OpenFinanceTransactionMapper;
+import com.finance_control.open_finance.service.helper.OpenFinanceSyncLogHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -46,6 +45,8 @@ public class OpenFinanceTransactionSyncService {
     private final AccountInformationClient accountClient;
     private final OpenFinanceConsentService consentService;
     private final MetricsService metricsService;
+    private final OpenFinanceTransactionMapper transactionMapper;
+    private final OpenFinanceSyncLogHelper syncLogHelper;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private SupabaseRealtimeService realtimeService;
@@ -60,142 +61,162 @@ public class OpenFinanceTransactionSyncService {
      */
     @Transactional
     public SyncStatusDTO syncTransactions(Long accountId, LocalDateTime fromDate, LocalDateTime toDate) {
-        ConnectedAccount account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new RuntimeException("Account not found: " + accountId));
-
-        if (!account.isSyncable()) {
-            throw new IllegalStateException("Account is not syncable");
-        }
-
-        // Determine date range
-        LocalDateTime syncFromDate = fromDate != null ? fromDate :
-                (account.getLastSyncedAt() != null ? account.getLastSyncedAt() :
-                        LocalDateTime.now().minusDays(30));
-        LocalDateTime syncToDate = toDate != null ? toDate : LocalDateTime.now();
-
-        // Create sync log
-        AccountSyncLog syncLog = new AccountSyncLog();
-        syncLog.setAccount(account);
-        syncLog.setSyncType("TRANSACTIONS");
-        syncLog.setStatus("SYNCING");
-        syncLog.setSyncedAt(LocalDateTime.now());
-        syncLog = syncLogRepository.save(syncLog);
+        ConnectedAccount account = validateAndGetAccount(accountId);
+        DateRange dateRange = calculateDateRange(account, fromDate, toDate);
+        AccountSyncLog syncLog = syncLogHelper.createSyncLog(account);
 
         int recordsImported = 0;
         String errorMessage = null;
 
         try {
             String accessToken = consentService.getAccessToken(account.getConsent().getId());
-
-            // Fetch transactions from Open Finance API
-            var transactionResponse = accountClient.getAccountTransactions(
-                    accessToken,
-                    account.getExternalAccountId(),
-                    syncFromDate,
-                    syncToDate,
-                    1,
-                    100
-            ).block();
-
-            if (transactionResponse != null && transactionResponse.getTransactions() != null) {
-                // Get or create default category and source entity
-                TransactionCategory defaultCategory = getOrCreateDefaultCategory();
-                TransactionSourceEntity sourceEntity = getOrCreateSourceEntity(account);
-
-                // Process each transaction
-                for (var ofTransaction : transactionResponse.getTransactions()) {
-                    try {
-                        if (isDuplicate(account.getUser().getId(), ofTransaction.getTransactionId())) {
-                            log.debug("Skipping duplicate transaction: {}", ofTransaction.getTransactionId());
-                            continue;
-                        }
-
-                        TransactionDTO transactionDTO = mapToTransactionDTO(
-                                ofTransaction, account, defaultCategory, sourceEntity);
-                        transactionService.create(transactionDTO);
-                        recordsImported++;
-                        metricsService.incrementOpenFinanceTransactionImported();
-
-                        // Notify realtime
-                        if (realtimeService != null) {
-                            try {
-                                realtimeService.notifyTransactionUpdate(account.getUser().getId(), transactionDTO);
-                            } catch (Exception e) {
-                                log.warn("Failed to send realtime notification: {}", e.getMessage());
-                            }
-                        }
-                    } catch (Exception e) {
-                        log.error("Failed to import transaction {}: {}",
-                                 ofTransaction.getTransactionId(), e.getMessage());
-                    }
-                }
-
-                // Handle pagination if needed
-                if (transactionResponse.getTotalPages() > 1) {
-                    for (int page = 2; page <= transactionResponse.getTotalPages(); page++) {
-                        var pageResponse = accountClient.getAccountTransactions(
-                                accessToken,
-                                account.getExternalAccountId(),
-                                syncFromDate,
-                                syncToDate,
-                                page,
-                                100
-                        ).block();
-
-                        if (pageResponse != null && pageResponse.getTransactions() != null) {
-                            for (var ofTransaction : pageResponse.getTransactions()) {
-                                try {
-                                    if (isDuplicate(account.getUser().getId(), ofTransaction.getTransactionId())) {
-                                        continue;
-                                    }
-
-                                    TransactionDTO transactionDTO = mapToTransactionDTO(
-                                            ofTransaction, account, defaultCategory, sourceEntity);
-                                    transactionService.create(transactionDTO);
-                                    recordsImported++;
-                                } catch (Exception e) {
-                                    log.error("Failed to import transaction {}: {}",
-                                             ofTransaction.getTransactionId(), e.getMessage());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Update account sync status
-            account.setLastSyncedAt(LocalDateTime.now());
-            account.setSyncStatus("SUCCESS");
-            accountRepository.save(account);
-
-            syncLog.setStatus("SUCCESS");
-            syncLog.setRecordsImported(recordsImported);
-
+            recordsImported = processTransactions(account, dateRange, accessToken);
+            updateAccountSyncStatus(account, "SUCCESS");
+            syncLogHelper.updateSyncLogSuccess(syncLog, recordsImported);
             metricsService.incrementOpenFinanceAccountSyncSuccess();
             log.info("Successfully synced {} transactions for account {}", recordsImported, accountId);
-
         } catch (Exception e) {
             errorMessage = e.getMessage();
-            syncLog.setStatus("FAILED");
-            syncLog.setErrorMessage(errorMessage);
-            account.setSyncStatus("FAILED");
-            accountRepository.save(account);
-            metricsService.incrementOpenFinanceAccountSyncFailure();
-            log.error("Failed to sync transactions for account {}: {}", accountId, errorMessage);
+            handleSyncFailure(account, syncLog, errorMessage, accountId);
         } finally {
             syncLogRepository.save(syncLog);
         }
 
-        SyncStatusDTO dto = new SyncStatusDTO();
-        dto.setAccountId(accountId);
-        dto.setSyncStatus(syncLog.getStatus());
-        dto.setSyncType("TRANSACTIONS");
-        dto.setRecordsImported(recordsImported);
-        dto.setErrorMessage(errorMessage);
-        dto.setLastSyncedAt(syncLog.getSyncedAt());
-        dto.setSuccess("SUCCESS".equals(syncLog.getStatus()));
-        return dto;
+        return syncLogHelper.buildSyncStatusDTO(accountId, syncLog, recordsImported, errorMessage);
     }
+
+    private ConnectedAccount validateAndGetAccount(Long accountId) {
+        ConnectedAccount account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Account not found: " + accountId));
+        if (!account.isSyncable()) {
+            throw new IllegalStateException("Account is not syncable");
+        }
+        return account;
+    }
+
+    private DateRange calculateDateRange(ConnectedAccount account, LocalDateTime fromDate, LocalDateTime toDate) {
+        LocalDateTime syncFromDate = fromDate != null ? fromDate :
+                (account.getLastSyncedAt() != null ? account.getLastSyncedAt() :
+                        LocalDateTime.now().minusDays(30));
+        LocalDateTime syncToDate = toDate != null ? toDate : LocalDateTime.now();
+        return new DateRange(syncFromDate, syncToDate);
+    }
+
+
+    private int processTransactions(ConnectedAccount account, DateRange dateRange, String accessToken) {
+        AccountInformationClient.TransactionListResponse transactionResponse = fetchFirstPage(account, dateRange, accessToken);
+        if (transactionResponse == null || transactionResponse.getTransactions() == null) {
+            return 0;
+        }
+
+        TransactionCategory defaultCategory = getOrCreateDefaultCategory();
+        TransactionSourceEntity sourceEntity = getOrCreateSourceEntity(account);
+
+        int recordsImported = processTransactionList(
+                transactionResponse.getTransactions(), account, defaultCategory, sourceEntity);
+
+        if (transactionResponse.getTotalPages() > 1) {
+            recordsImported += processAdditionalPages(
+                    account, dateRange, accessToken, transactionResponse.getTotalPages(),
+                    defaultCategory, sourceEntity);
+        }
+
+        return recordsImported;
+    }
+
+    private AccountInformationClient.TransactionListResponse fetchFirstPage(ConnectedAccount account, DateRange dateRange, String accessToken) {
+        return accountClient.getAccountTransactions(
+                accessToken,
+                account.getExternalAccountId(),
+                dateRange.from(),
+                dateRange.to(),
+                1,
+                100
+        ).block();
+    }
+
+    private int processTransactionList(List<AccountInformationClient.Transaction> transactions, ConnectedAccount account,
+                                      TransactionCategory defaultCategory,
+                                      TransactionSourceEntity sourceEntity) {
+        int recordsImported = 0;
+        for (AccountInformationClient.Transaction ofTransaction : transactions) {
+            if (importTransaction(ofTransaction, account, defaultCategory, sourceEntity)) {
+                recordsImported++;
+            }
+        }
+        return recordsImported;
+    }
+
+    private int processAdditionalPages(ConnectedAccount account, DateRange dateRange,
+                                      String accessToken, int totalPages,
+                                      TransactionCategory defaultCategory,
+                                      TransactionSourceEntity sourceEntity) {
+        int recordsImported = 0;
+        for (int page = 2; page <= totalPages; page++) {
+            AccountInformationClient.TransactionListResponse pageResponse = accountClient.getAccountTransactions(
+                    accessToken,
+                    account.getExternalAccountId(),
+                    dateRange.from(),
+                    dateRange.to(),
+                    page,
+                    100
+            ).block();
+
+            if (pageResponse != null && pageResponse.getTransactions() != null) {
+                recordsImported += processTransactionList(
+                        pageResponse.getTransactions(), account, defaultCategory, sourceEntity);
+            }
+        }
+        return recordsImported;
+    }
+
+    private boolean importTransaction(AccountInformationClient.Transaction ofTransaction, ConnectedAccount account,
+                                     TransactionCategory defaultCategory,
+                                     TransactionSourceEntity sourceEntity) {
+        try {
+            if (isDuplicate(account.getUser().getId(), ofTransaction.getTransactionId())) {
+                log.debug("Skipping duplicate transaction: {}", ofTransaction.getTransactionId());
+                return false;
+            }
+
+            TransactionDTO transactionDTO = transactionMapper.mapToTransactionDTO(
+                    ofTransaction, account, defaultCategory, sourceEntity);
+            transactionService.create(transactionDTO);
+            metricsService.incrementOpenFinanceTransactionImported();
+            notifyRealtimeTransaction(account.getUser().getId(), transactionDTO);
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to import transaction {}: {}",
+                     ofTransaction.getTransactionId(), e.getMessage());
+            return false;
+        }
+    }
+
+    private void notifyRealtimeTransaction(Long userId, TransactionDTO transactionDTO) {
+        if (realtimeService != null) {
+            try {
+                realtimeService.notifyTransactionUpdate(userId, transactionDTO);
+            } catch (Exception e) {
+                log.warn("Failed to send realtime notification: {}", e.getMessage());
+            }
+        }
+    }
+
+    private void updateAccountSyncStatus(ConnectedAccount account, String status) {
+        account.setLastSyncedAt(LocalDateTime.now());
+        account.setSyncStatus(status);
+        accountRepository.save(account);
+    }
+
+    private void handleSyncFailure(ConnectedAccount account, AccountSyncLog syncLog,
+                                  String errorMessage, Long accountId) {
+        syncLogHelper.updateSyncLogFailure(syncLog, errorMessage);
+        updateAccountSyncStatus(account, "FAILED");
+        metricsService.incrementOpenFinanceAccountSyncFailure();
+        log.error("Failed to sync transactions for account {}: {}", accountId, errorMessage);
+    }
+
+    private record DateRange(LocalDateTime from, LocalDateTime to) {}
 
     /**
      * Synchronizes transactions for all syncable accounts.
@@ -221,52 +242,6 @@ public class OpenFinanceTransactionSyncService {
         return transactionRepository.existsByUserIdAndExternalReference(userId, externalTransactionId);
     }
 
-    private TransactionDTO mapToTransactionDTO(
-            AccountInformationClient.Transaction ofTransaction,
-            ConnectedAccount account,
-            TransactionCategory category,
-            TransactionSourceEntity sourceEntity) {
-
-        TransactionDTO dto = new TransactionDTO();
-        dto.setUserId(account.getUser().getId());
-        dto.setDescription(ofTransaction.getDescription() != null ?
-                          ofTransaction.getDescription() : "Open Finance Transaction");
-        dto.setAmount(ofTransaction.getAmount().abs());
-        dto.setDate(ofTransaction.getBookingDate() != null ?
-                   ofTransaction.getBookingDate() : LocalDateTime.now());
-        dto.setExternalReference(ofTransaction.getTransactionId());
-        dto.setBankReference(ofTransaction.getTransactionId());
-
-        // Determine transaction type based on credit/debit indicator
-        if ("CREDIT".equalsIgnoreCase(ofTransaction.getCreditDebitIndicator())) {
-            dto.setType(TransactionType.INCOME);
-            dto.setSubtype(TransactionSubtype.VARIABLE);
-        } else {
-            dto.setType(TransactionType.EXPENSE);
-            dto.setSubtype(TransactionSubtype.VARIABLE);
-        }
-
-        // Set source based on account type
-        dto.setSource(mapAccountTypeToSource(account.getAccountType()));
-
-        // Set category and source entity
-        dto.setCategoryId(category.getId());
-        dto.setSourceEntityId(sourceEntity.getId());
-
-        return dto;
-    }
-
-    private TransactionSource mapAccountTypeToSource(String accountType) {
-        if (accountType == null) {
-            return TransactionSource.OTHER;
-        }
-        return switch (accountType.toUpperCase()) {
-            case "CHECKING", "SAVINGS" -> TransactionSource.BANK_TRANSACTION;
-            case "CREDIT_CARD" -> TransactionSource.CREDIT_CARD;
-            case "DEBIT_CARD" -> TransactionSource.DEBIT_CARD;
-            default -> TransactionSource.OTHER;
-        };
-    }
 
     private TransactionCategory getOrCreateDefaultCategory() {
         return categoryRepository.findByNameIgnoreCase("Open Finance")
@@ -286,7 +261,7 @@ public class OpenFinanceTransactionSyncService {
                     TransactionSourceEntity source = new TransactionSourceEntity();
                     source.setUser(account.getUser());
                     source.setName(sourceName);
-                    source.setSourceType(TransactionSource.BANK_TRANSACTION);
+                    source.setSourceType(com.finance_control.shared.enums.TransactionSource.BANK_TRANSACTION);
                     source.setBankName(account.getInstitution().getName());
                     source.setAccountNumber(account.getAccountNumber());
                     source.setIsActive(true);

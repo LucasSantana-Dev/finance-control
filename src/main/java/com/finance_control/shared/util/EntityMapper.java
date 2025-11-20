@@ -197,32 +197,19 @@ public class EntityMapper {
      * @param primitiveType the primitive type
      * @return the wrapper class
      */
+    private static final java.util.Map<Class<?>, Class<?>> PRIMITIVE_TO_WRAPPER = java.util.Map.of(
+            boolean.class, Boolean.class,
+            byte.class, Byte.class,
+            char.class, Character.class,
+            double.class, Double.class,
+            float.class, Float.class,
+            int.class, Integer.class,
+            long.class, Long.class,
+            short.class, Short.class
+    );
+
     private static Class<?> getWrapperClass(Class<?> primitiveType) {
-        if (primitiveType.equals(boolean.class)) {
-            return Boolean.class;
-        }
-        if (primitiveType.equals(byte.class)) {
-            return Byte.class;
-        }
-        if (primitiveType.equals(char.class)) {
-            return Character.class;
-        }
-        if (primitiveType.equals(double.class)) {
-            return Double.class;
-        }
-        if (primitiveType.equals(float.class)) {
-            return Float.class;
-        }
-        if (primitiveType.equals(int.class)) {
-            return Integer.class;
-        }
-        if (primitiveType.equals(long.class)) {
-            return Long.class;
-        }
-        if (primitiveType.equals(short.class)) {
-            return Short.class;
-        }
-        return primitiveType;
+        return PRIMITIVE_TO_WRAPPER.getOrDefault(primitiveType, primitiveType);
     }
 
     /**

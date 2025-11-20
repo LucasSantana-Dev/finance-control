@@ -1,6 +1,8 @@
 package com.finance_control.unit.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -95,7 +97,7 @@ class InvestmentControllerExampleTest {
     void getFilteredInvestments_WithTypeFilter_ShouldReturnFilteredByType() throws Exception {
         // Given
         Investment testInvestment = createTestInvestment();
-        when(investmentService.getInvestmentsByType(any(), eq(Investment.InvestmentType.STOCK)))
+        when(investmentService.getInvestmentsByType(any(), eq(InvestmentType.STOCK)))
                 .thenReturn(List.of(testInvestment));
 
         // When & Then - Using unified endpoint for type filtering
@@ -158,8 +160,8 @@ class InvestmentControllerExampleTest {
         investment.setId(1L);
         investment.setTicker("PETR4");
         investment.setName("Petrobras");
-        investment.setInvestmentType(Investment.InvestmentType.STOCK);
-        investment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        investment.setInvestmentType(InvestmentType.STOCK);
+        investment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         investment.setCurrentPrice(BigDecimal.valueOf(25.00));
         investment.setDayChangePercent(BigDecimal.valueOf(1.5));
         investment.setDividendYield(BigDecimal.valueOf(0.05));

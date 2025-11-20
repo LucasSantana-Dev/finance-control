@@ -39,11 +39,13 @@ The project implements the following code quality tools:
 ```
 
 **Thresholds**:
-- Maximum line length: 120 characters
-- Maximum method length: 150 lines
-- Maximum class length: 2000 lines
-- Cyclomatic complexity: 10
-- NPath complexity: 200
+- Maximum line length: 160 characters
+- Maximum method length: 150 lines (warning only)
+- Maximum file length: 500 lines (warning only)
+- Cyclomatic complexity: 15 (fails build if exceeded)
+- NPath complexity: 200 (warning only)
+- Class data abstraction coupling: 7 (warning only)
+- Class fan-out complexity: 20 (warning only)
 
 ### 2. PMD
 
@@ -202,20 +204,37 @@ This section describes how code quality tools (SonarLint, PMD, Checkstyle, SpotB
 
 ### Synchronized Rules
 
-#### Cognitive Complexity
-- **Checkstyle**: `CyclomaticComplexity` - max 10
-- **PMD**: `CyclomaticComplexity` - reportLevel 10
-- **SonarQube**: `sonar.complexity.function.threshold=10`
+#### Cognitive Complexity (Primary Metric)
+The project uses **cognitive complexity** as the primary metric for code quality, focusing on maintainability and readability rather than arbitrary line counts.
 
-#### Method Size
-- **Checkstyle**: `MethodLength` - max 150
-- **PMD**: `ExcessiveMethodLength` - minimum 100
-- **SonarQube**: `sonar.size.limit.function=150`
+**Production Code Thresholds**:
+- **Checkstyle**: `CyclomaticComplexity` - max 15 (fails build if exceeded)
+- **PMD**: `CyclomaticComplexity` - methodReportLevel 15, `CognitiveComplexity` - reportLevel 15 (fails build if exceeded)
+- **SonarQube**: `sonar.complexity.function.threshold=15`, `sonar.java.cognitive.complexity.threshold=15`
 
-#### Class Size
-- **Checkstyle**: `FileLength` - max 2000
-- **PMD**: `ExcessiveClassLength` - minimum 1000
-- **SonarQube**: `sonar.size.limit.class=2000`
+**Test Code Thresholds** (higher thresholds for test files):
+- **PMD**: `CyclomaticComplexity` - methodReportLevel 20, `CognitiveComplexity` - reportLevel 20 (fails build if exceeded)
+- **SonarQube**: Test files use threshold of 20
+
+**Rationale**:
+- Cognitive complexity measures how difficult code is to understand, not just how many branches it has
+- Focuses on maintainability and code readability
+- Allows longer files if they remain simple to understand
+- Different thresholds for tests reflect their different purpose (setup/teardown can be verbose)
+
+#### Method Size (Warning Only)
+- **Checkstyle**: `MethodLength` - max 150 lines (warning only, not blocking)
+- **PMD**: `ExcessiveMethodLength` - minimum 150 lines (priority 3, warning only)
+- **SonarQube**: `sonar.size.limit.function=150` (informational)
+
+**Note**: Method length violations are warnings only. If a method exceeds 150 lines but has low cognitive complexity, it may be acceptable. However, consider refactoring for better maintainability.
+
+#### Class/File Size (Warning Only)
+- **Checkstyle**: `FileLength` - max 500 lines (warning only, not blocking)
+- **PMD**: `ExcessiveClassLength` - minimum 500 lines (priority 3, warning only)
+- **SonarQube**: `sonar.size.limit.class=2000` (informational)
+
+**Note**: File length violations are warnings only. Large files with low cognitive complexity may be acceptable, but consider splitting for better organization.
 
 #### Imports
 - **Checkstyle**: Custom rule to avoid inline imports
@@ -652,13 +671,109 @@ class TransactionService {
 - Write self-documenting code
 - Avoid unnecessary comments - code should explain itself
 
-### 5. Code Quality
-- Keep methods small and focused (max 150 lines)
-- Maintain low cyclomatic complexity (max 10)
+### 5. Code Quality (Cognitive Complexity Focus)
+- **Primary Metric**: Keep cognitive complexity low (max 15 for production, max 20 for tests)
+- **Method Size**: Aim for < 150 lines, but prioritize low complexity over strict line limits
+- **File Size**: Aim for < 500 lines, but large files with low complexity are acceptable
+- **Complexity Violations**: Will fail the build - must be addressed
+- **Size Violations**: Warnings only - consider refactoring but not blocking
 - Avoid code duplication (DRY principle)
 - Follow SOLID principles
 - Use meaningful variable and method names
 - Extract magic numbers into constants
+
+#### Refactoring Complex Methods
+
+When a method exceeds complexity thresholds, consider these refactoring strategies:
+
+**Extract Methods**:
+```java
+// ❌ Bad - High complexity (multiple responsibilities)
+public TransactionDTO processTransaction(TransactionDTO dto) {
+    if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        throw new ValidationException("Amount must be positive");
+    }
+    if (dto.getCategoryId() == null) {
+        throw new ValidationException("Category is required");
+    }
+    Category category = categoryRepository.findById(dto.getCategoryId())
+        .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
+    if (!category.isActive()) {
+        throw new ValidationException("Category is not active");
+    }
+    // ... more validation and processing
+    return result;
+}
+
+// ✅ Good - Lower complexity (extracted validation)
+public TransactionDTO processTransaction(TransactionDTO dto) {
+    validateTransaction(dto);
+    Category category = findAndValidateCategory(dto.getCategoryId());
+    return createTransaction(dto, category);
+}
+
+private void validateTransaction(TransactionDTO dto) {
+    if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        throw new ValidationException("Amount must be positive");
+    }
+    if (dto.getCategoryId() == null) {
+        throw new ValidationException("Category is required");
+    }
+}
+
+private Category findAndValidateCategory(Long categoryId) {
+    Category category = categoryRepository.findById(categoryId)
+        .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+    if (!category.isActive()) {
+        throw new ValidationException("Category is not active");
+    }
+    return category;
+}
+```
+
+**Use Strategy Pattern for Complex Conditionals**:
+```java
+// ❌ Bad - High complexity (nested conditionals)
+public BigDecimal calculateFee(Transaction transaction) {
+    if (transaction.getType() == TransactionType.INCOME) {
+        if (transaction.getAmount().compareTo(new BigDecimal("1000")) > 0) {
+            return transaction.getAmount().multiply(new BigDecimal("0.05"));
+        } else {
+            return transaction.getAmount().multiply(new BigDecimal("0.02"));
+        }
+    } else if (transaction.getType() == TransactionType.EXPENSE) {
+        // ... more nested conditions
+    }
+    // ...
+}
+
+// ✅ Good - Lower complexity (strategy pattern)
+public BigDecimal calculateFee(Transaction transaction) {
+    return feeCalculatorFactory.getCalculator(transaction.getType())
+        .calculate(transaction);
+}
+```
+
+**Replace Complex Conditionals with Polymorphism**:
+```java
+// ❌ Bad - High complexity (switch/if-else chain)
+public void processTransaction(Transaction transaction) {
+    switch (transaction.getType()) {
+        case INCOME:
+            processIncome(transaction);
+            break;
+        case EXPENSE:
+            processExpense(transaction);
+            break;
+        // ... many cases
+    }
+}
+
+// ✅ Good - Lower complexity (polymorphism)
+public void processTransaction(Transaction transaction) {
+    transaction.process(); // Delegates to specific implementation
+}
+```
 
 ### 6. Testing
 - Write comprehensive unit tests
@@ -762,10 +877,11 @@ class GlobalExceptionHandler {
 ## Success Metrics and Targets
 
 ### Code Quality Targets
-- **Checkstyle violations**: 0
-- **PMD violations**: 0 (Priority 1-2), < 10 (Priority 3-4)
+- **Checkstyle violations**: 0 (complexity errors), < 100 (warnings for file/method length)
+- **PMD violations**: 0 (Priority 1 - complexity), < 10 (Priority 2-3)
 - **SpotBugs issues**: 0 (High/Critical), < 5 (Medium)
-- **Cyclomatic complexity**: < 10 per method
+- **Cognitive complexity**: < 15 per method (production), < 20 per method (tests)
+- **Cyclomatic complexity**: < 15 per method (production), < 20 per method (tests)
 - **Code duplication**: < 3% (SonarQube)
 
 ### Test Coverage Targets
@@ -802,11 +918,16 @@ Use the provided scripts for quality checks:
 
 ### CI/CD Integration
 Quality gates should be enforced in CI/CD pipeline:
-1. **Checkstyle** - Fail build on violations
-2. **PMD** - Fail build on high-priority violations
+1. **Checkstyle** - Fail build on complexity violations (errors), allow warnings for file/method length
+2. **PMD** - Fail build on high-priority complexity violations (Priority 1), allow warnings for design issues (Priority 2-3)
 3. **SpotBugs** - Fail build on critical issues
 4. **Test Coverage** - Fail build if below threshold
 5. **Security Scan** - Block merge on critical vulnerabilities
+
+**Build Configuration**:
+- `checkstyle.ignoreFailures = false` - Build fails on complexity errors
+- `pmd.ignoreFailures = false` - Build fails on Priority 1 violations
+- File/method length violations are warnings only and don't block the build
 
 ## Maintenance
 

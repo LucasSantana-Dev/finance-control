@@ -1,6 +1,8 @@
 package com.finance_control.unit.brazilian_market.repository;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
 import com.finance_control.brazilian_market.repository.InvestmentRepository;
 import com.finance_control.users.model.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,8 +57,8 @@ class InvestmentRepositoryTest {
         testInvestment.setUser(testUser);
         testInvestment.setName("Test Investment");
         testInvestment.setTicker("TEST4");
-        testInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
-        testInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        testInvestment.setInvestmentType(InvestmentType.STOCK);
+        testInvestment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         testInvestment.setSector("Technology");
         testInvestment.setIndustry("Software");
         testInvestment.setExchange("B3");
@@ -98,7 +100,7 @@ class InvestmentRepositoryTest {
         anotherInvestment.setUser(anotherUser);
         anotherInvestment.setName("Another Investment");
         anotherInvestment.setTicker("ANOTH4");
-        anotherInvestment.setInvestmentType(Investment.InvestmentType.FII);
+        anotherInvestment.setInvestmentType(InvestmentType.FII);
         anotherInvestment.setIsActive(true);
         anotherInvestment.setCreatedAt(LocalDateTime.now());
         anotherInvestment.setUpdatedAt(LocalDateTime.now());
@@ -120,7 +122,7 @@ class InvestmentRepositoryTest {
         inactiveInvestment.setUser(testUser);
         inactiveInvestment.setName("Inactive Investment");
         inactiveInvestment.setTicker("INACT4");
-        inactiveInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        inactiveInvestment.setInvestmentType(InvestmentType.STOCK);
         inactiveInvestment.setIsActive(false);
         inactiveInvestment.setCreatedAt(LocalDateTime.now());
         inactiveInvestment.setUpdatedAt(LocalDateTime.now());
@@ -142,7 +144,7 @@ class InvestmentRepositoryTest {
         fiiInvestment.setUser(testUser);
         fiiInvestment.setName("FII Investment");
         fiiInvestment.setTicker("FII11");
-        fiiInvestment.setInvestmentType(Investment.InvestmentType.FII);
+        fiiInvestment.setInvestmentType(InvestmentType.FII);
         fiiInvestment.setIsActive(true);
         fiiInvestment.setCreatedAt(LocalDateTime.now());
         fiiInvestment.setUpdatedAt(LocalDateTime.now());
@@ -150,11 +152,11 @@ class InvestmentRepositoryTest {
 
         // When
         List<Investment> stockInvestments = investmentRepository.findByUser_IdAndInvestmentTypeAndIsActiveTrue(
-            testUser.getId(), Investment.InvestmentType.STOCK);
+            testUser.getId(), InvestmentType.STOCK);
 
         // Then
         assertThat(stockInvestments).hasSize(1);
-        assertThat(stockInvestments.get(0).getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
+        assertThat(stockInvestments.get(0).getInvestmentType()).isEqualTo(InvestmentType.STOCK);
         assertThat(stockInvestments.get(0).getName()).isEqualTo("Test Investment");
     }
 
@@ -165,8 +167,8 @@ class InvestmentRepositoryTest {
         preferredInvestment.setUser(testUser);
         preferredInvestment.setName("Preferred Investment");
         preferredInvestment.setTicker("PREF4");
-        preferredInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
-        preferredInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.PREFERRED);
+        preferredInvestment.setInvestmentType(InvestmentType.STOCK);
+        preferredInvestment.setInvestmentSubtype(InvestmentSubtype.PREFERRED);
         preferredInvestment.setIsActive(true);
         preferredInvestment.setCreatedAt(LocalDateTime.now());
         preferredInvestment.setUpdatedAt(LocalDateTime.now());
@@ -174,11 +176,11 @@ class InvestmentRepositoryTest {
 
         // When
         List<Investment> commonInvestments = investmentRepository.findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(
-            testUser.getId(), Investment.InvestmentType.STOCK, Investment.InvestmentSubtype.ORDINARY);
+            testUser.getId(), InvestmentType.STOCK, InvestmentSubtype.ORDINARY);
 
         // Then
         assertThat(commonInvestments).hasSize(1);
-        assertThat(commonInvestments.get(0).getInvestmentSubtype()).isEqualTo(Investment.InvestmentSubtype.ORDINARY);
+        assertThat(commonInvestments.get(0).getInvestmentSubtype()).isEqualTo(InvestmentSubtype.ORDINARY);
         assertThat(commonInvestments.get(0).getName()).isEqualTo("Test Investment");
     }
 
@@ -189,7 +191,7 @@ class InvestmentRepositoryTest {
         financeInvestment.setUser(testUser);
         financeInvestment.setName("Finance Investment");
         financeInvestment.setTicker("FINC4");
-        financeInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        financeInvestment.setInvestmentType(InvestmentType.STOCK);
         financeInvestment.setSector("Finance");
         financeInvestment.setIsActive(true);
         financeInvestment.setCreatedAt(LocalDateTime.now());
@@ -213,7 +215,7 @@ class InvestmentRepositoryTest {
         retailInvestment.setUser(testUser);
         retailInvestment.setName("Retail Investment");
         retailInvestment.setTicker("RETAIL4");
-        retailInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        retailInvestment.setInvestmentType(InvestmentType.STOCK);
         retailInvestment.setIndustry("Retail");
         retailInvestment.setIsActive(true);
         retailInvestment.setCreatedAt(LocalDateTime.now());
@@ -249,7 +251,7 @@ class InvestmentRepositoryTest {
         oldInvestment.setUser(testUser);
         oldInvestment.setName("Old Investment");
         oldInvestment.setTicker("OLD4");
-        oldInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        oldInvestment.setInvestmentType(InvestmentType.STOCK);
         oldInvestment.setIsActive(true);
         oldInvestment.setLastUpdated(LocalDateTime.now().minusHours(25)); // Older than cutoff
         oldInvestment.setCreatedAt(LocalDateTime.now());
@@ -272,7 +274,7 @@ class InvestmentRepositoryTest {
         sameSectorInvestment.setUser(testUser);
         sameSectorInvestment.setName("Same Sector Investment");
         sameSectorInvestment.setTicker("SAME4");
-        sameSectorInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        sameSectorInvestment.setInvestmentType(InvestmentType.STOCK);
         sameSectorInvestment.setSector("Technology");
         sameSectorInvestment.setIsActive(true);
         sameSectorInvestment.setCreatedAt(LocalDateTime.now());
@@ -294,7 +296,7 @@ class InvestmentRepositoryTest {
         sameIndustryInvestment.setUser(testUser);
         sameIndustryInvestment.setName("Same Industry Investment");
         sameIndustryInvestment.setTicker("INDUS4");
-        sameIndustryInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        sameIndustryInvestment.setInvestmentType(InvestmentType.STOCK);
         sameIndustryInvestment.setIndustry("Software");
         sameIndustryInvestment.setIsActive(true);
         sameIndustryInvestment.setCreatedAt(LocalDateTime.now());
@@ -316,18 +318,18 @@ class InvestmentRepositoryTest {
         fiiInvestment.setUser(testUser);
         fiiInvestment.setName("FII Investment");
         fiiInvestment.setTicker("FII11");
-        fiiInvestment.setInvestmentType(Investment.InvestmentType.FII);
+        fiiInvestment.setInvestmentType(InvestmentType.FII);
         fiiInvestment.setIsActive(true);
         fiiInvestment.setCreatedAt(LocalDateTime.now());
         fiiInvestment.setUpdatedAt(LocalDateTime.now());
         entityManager.persistAndFlush(fiiInvestment);
 
         // When
-        List<Investment.InvestmentType> types = investmentRepository.findDistinctInvestmentTypesByUserId(testUser.getId());
+        List<InvestmentType> types = investmentRepository.findDistinctInvestmentTypesByUserId(testUser.getId());
 
         // Then
         assertThat(types).hasSize(2);
-        assertThat(types).contains(Investment.InvestmentType.STOCK, Investment.InvestmentType.FII);
+        assertThat(types).contains(InvestmentType.STOCK, InvestmentType.FII);
     }
 
     @Test
@@ -337,20 +339,20 @@ class InvestmentRepositoryTest {
         preferredInvestment.setUser(testUser);
         preferredInvestment.setName("Preferred Investment");
         preferredInvestment.setTicker("PREF4");
-        preferredInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
-        preferredInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.PREFERRED);
+        preferredInvestment.setInvestmentType(InvestmentType.STOCK);
+        preferredInvestment.setInvestmentSubtype(InvestmentSubtype.PREFERRED);
         preferredInvestment.setIsActive(true);
         preferredInvestment.setCreatedAt(LocalDateTime.now());
         preferredInvestment.setUpdatedAt(LocalDateTime.now());
         entityManager.persistAndFlush(preferredInvestment);
 
         // When
-        List<Investment.InvestmentSubtype> subtypes = investmentRepository.findDistinctInvestmentSubtypesByUserIdAndType(
-            testUser.getId(), Investment.InvestmentType.STOCK);
+        List<InvestmentSubtype> subtypes = investmentRepository.findDistinctInvestmentSubtypesByUserIdAndType(
+            testUser.getId(), InvestmentType.STOCK);
 
         // Then
         assertThat(subtypes).hasSize(2);
-        assertThat(subtypes).contains(Investment.InvestmentSubtype.ORDINARY, Investment.InvestmentSubtype.PREFERRED);
+        assertThat(subtypes).contains(InvestmentSubtype.ORDINARY, InvestmentSubtype.PREFERRED);
     }
 
     @Test
@@ -360,7 +362,7 @@ class InvestmentRepositoryTest {
         fiiInvestment.setUser(testUser);
         fiiInvestment.setName("FII Investment");
         fiiInvestment.setTicker("FII11");
-        fiiInvestment.setInvestmentType(Investment.InvestmentType.FII);
+        fiiInvestment.setInvestmentType(InvestmentType.FII);
         fiiInvestment.setCurrentPrice(BigDecimal.valueOf(50.00));
         fiiInvestment.setVolume(500L);
         fiiInvestment.setIsActive(true);
@@ -375,11 +377,11 @@ class InvestmentRepositoryTest {
         assertThat(typeCounts).hasSize(2);
         // Each Object[] contains [InvestmentType, count]
         assertThat(typeCounts).anySatisfy(array -> {
-            assertThat(array[0]).isEqualTo(Investment.InvestmentType.STOCK);
+            assertThat(array[0]).isEqualTo(InvestmentType.STOCK);
             assertThat(array[1]).isEqualTo(1L);
         });
         assertThat(typeCounts).anySatisfy(array -> {
-            assertThat(array[0]).isEqualTo(Investment.InvestmentType.FII);
+            assertThat(array[0]).isEqualTo(InvestmentType.FII);
             assertThat(array[1]).isEqualTo(1L);
         });
     }
@@ -391,7 +393,7 @@ class InvestmentRepositoryTest {
         highYieldInvestment.setUser(testUser);
         highYieldInvestment.setName("High Yield Investment");
         highYieldInvestment.setTicker("HIGH4");
-        highYieldInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        highYieldInvestment.setInvestmentType(InvestmentType.STOCK);
         highYieldInvestment.setDividendYield(BigDecimal.valueOf(8.5));
         highYieldInvestment.setIsActive(true);
         highYieldInvestment.setCreatedAt(LocalDateTime.now());
@@ -416,7 +418,7 @@ class InvestmentRepositoryTest {
         positiveChangeInvestment.setUser(testUser);
         positiveChangeInvestment.setName("Positive Change Investment");
         positiveChangeInvestment.setTicker("POS4");
-        positiveChangeInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        positiveChangeInvestment.setInvestmentType(InvestmentType.STOCK);
         positiveChangeInvestment.setDayChangePercent(BigDecimal.valueOf(5.2));
         positiveChangeInvestment.setIsActive(true);
         positiveChangeInvestment.setCreatedAt(LocalDateTime.now());
@@ -441,7 +443,7 @@ class InvestmentRepositoryTest {
         negativeChangeInvestment.setUser(testUser);
         negativeChangeInvestment.setName("Negative Change Investment");
         negativeChangeInvestment.setTicker("NEG4");
-        negativeChangeInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        negativeChangeInvestment.setInvestmentType(InvestmentType.STOCK);
         negativeChangeInvestment.setDayChangePercent(BigDecimal.valueOf(-2.1));
         negativeChangeInvestment.setIsActive(true);
         negativeChangeInvestment.setCreatedAt(LocalDateTime.now());
@@ -466,7 +468,7 @@ class InvestmentRepositoryTest {
         otherInvestment.setUser(testUser);
         otherInvestment.setName("Other Company Stock");
         otherInvestment.setTicker("OTHER4");
-        otherInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        otherInvestment.setInvestmentType(InvestmentType.STOCK);
         otherInvestment.setIsActive(true);
         otherInvestment.setCreatedAt(LocalDateTime.now());
         otherInvestment.setUpdatedAt(LocalDateTime.now());
@@ -487,7 +489,7 @@ class InvestmentRepositoryTest {
         nasdaqInvestment.setUser(testUser);
         nasdaqInvestment.setName("NASDAQ Investment");
         nasdaqInvestment.setTicker("NASDAQ");
-        nasdaqInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        nasdaqInvestment.setInvestmentType(InvestmentType.STOCK);
         nasdaqInvestment.setExchange("NASDAQ");
         nasdaqInvestment.setIsActive(true);
         nasdaqInvestment.setCreatedAt(LocalDateTime.now());
@@ -529,7 +531,7 @@ class InvestmentRepositoryTest {
         veryOldInvestment.setUser(testUser);
         veryOldInvestment.setName("Very Old Investment");
         veryOldInvestment.setTicker("OLD4");
-        veryOldInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        veryOldInvestment.setInvestmentType(InvestmentType.STOCK);
         veryOldInvestment.setIsActive(true);
         veryOldInvestment.setLastUpdated(LocalDateTime.now().minusDays(10));
         veryOldInvestment.setCreatedAt(LocalDateTime.now());
@@ -567,7 +569,7 @@ class InvestmentRepositoryTest {
         fiiInvestment.setUser(testUser);
         fiiInvestment.setName("FII Investment");
         fiiInvestment.setTicker("FII11");
-        fiiInvestment.setInvestmentType(Investment.InvestmentType.FII);
+        fiiInvestment.setInvestmentType(InvestmentType.FII);
         fiiInvestment.setCurrentPrice(BigDecimal.valueOf(100.00));
         fiiInvestment.setVolume(200L);
         fiiInvestment.setIsActive(true);
@@ -583,18 +585,18 @@ class InvestmentRepositoryTest {
         assertThat(marketValueByType).hasSize(2);
 
         // Collect results into a map for easier verification
-        Map<Investment.InvestmentType, BigDecimal> results = new HashMap<>();
+        Map<InvestmentType, BigDecimal> results = new HashMap<>();
         for (Object[] result : marketValueByType) {
-            results.put((Investment.InvestmentType) result[0], (BigDecimal) result[1]);
+            results.put((InvestmentType) result[0], (BigDecimal) result[1]);
         }
 
         // Verify STOCK total
-        assertThat(results).containsKey(Investment.InvestmentType.STOCK);
-        assertThat(results.get(Investment.InvestmentType.STOCK)).isEqualByComparingTo(BigDecimal.valueOf(100000)); // 1000 * 100.00
+        assertThat(results).containsKey(InvestmentType.STOCK);
+        assertThat(results.get(InvestmentType.STOCK)).isEqualByComparingTo(BigDecimal.valueOf(100000)); // 1000 * 100.00
 
         // Verify FII total
-        assertThat(results).containsKey(Investment.InvestmentType.FII);
-        assertThat(results.get(Investment.InvestmentType.FII)).isEqualByComparingTo(BigDecimal.valueOf(20000)); // 200 * 100.00
+        assertThat(results).containsKey(InvestmentType.FII);
+        assertThat(results.get(InvestmentType.FII)).isEqualByComparingTo(BigDecimal.valueOf(20000)); // 200 * 100.00
     }
 
     @Test
@@ -604,7 +606,7 @@ class InvestmentRepositoryTest {
         newInvestment.setUser(testUser);
         newInvestment.setName("New Investment");
         newInvestment.setTicker("NEW4");
-        newInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
+        newInvestment.setInvestmentType(InvestmentType.STOCK);
         newInvestment.setCurrentPrice(BigDecimal.valueOf(75.00));
         newInvestment.setVolume(50L);
         newInvestment.setIsActive(true);
@@ -660,7 +662,7 @@ class InvestmentRepositoryTest {
             investment.setUser(testUser);
             investment.setName("Investment " + i);
             investment.setTicker("INV" + i + "4");
-            investment.setInvestmentType(Investment.InvestmentType.STOCK);
+            investment.setInvestmentType(InvestmentType.STOCK);
             investment.setCurrentPrice(BigDecimal.valueOf(100.00 * i));
             investment.setVolume(100L * i);
             investment.setIsActive(true);

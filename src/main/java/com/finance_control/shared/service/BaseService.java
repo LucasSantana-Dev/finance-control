@@ -2,25 +2,23 @@ package com.finance_control.shared.service;
 
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.exception.EntityNotFoundException;
-import com.finance_control.shared.exception.ReflectionException;
 import com.finance_control.shared.model.BaseModel;
 import com.finance_control.shared.repository.BaseRepository;
+import com.finance_control.shared.service.helper.BaseServiceNameBasedHelper;
+import com.finance_control.shared.service.helper.BaseServicePageableHelper;
+import com.finance_control.shared.service.helper.BaseServiceReflectionHelper;
+import com.finance_control.shared.service.helper.BaseServiceRepositoryHelper;
+import com.finance_control.shared.service.helper.BaseServiceSpecificationBuilder;
+import com.finance_control.shared.service.helper.BaseServiceValidationHelper;
 import com.finance_control.shared.util.ValidationUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
 
 /**
  * Abstract base service providing common CRUD operations implementation.
@@ -38,12 +36,21 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     /** The repository for data access operations */
     protected final BaseRepository<T, I> repository;
 
+    /** Helper for building specifications */
+    private final BaseServiceSpecificationBuilder<T> specificationBuilder;
+
+    /** Helper for name-based operations */
+    private BaseServiceNameBasedHelper<T, I, D> nameBasedHelper;
+
+    /** Helper for reflection utilities */
+    private final BaseServiceReflectionHelper reflectionHelper;
+
     /** Common field names used across entities */
     protected static final String IS_ACTIVE_FIELD = "isActive";
+    private static final String USER_ID_FIELD = "userId";
 
     /** Error message for missing user context */
     private static final String USER_CONTEXT_UNAVAILABLE = "User context not available for user-aware service";
-    private static final String USER_ID_FIELD = "userId";
     private static final String ACCESS_DENIED_MSG = "Access denied: entity {} does not belong to user {}";
     private static final String USER_OWNERSHIP_VERIFIED_MSG = "User ownership verified for entity {} and user {}";
 
@@ -54,6 +61,8 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      */
     protected BaseService(BaseRepository<T, I> repository) {
         this.repository = repository;
+        this.specificationBuilder = new BaseServiceSpecificationBuilder<>(isUserAware());
+        this.reflectionHelper = new BaseServiceReflectionHelper();
     }
 
     /**
@@ -96,7 +105,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
                 sortBy != null && !sortBy.trim().isEmpty(), sortDirection != null && !sortDirection.trim().isEmpty(),
                 pageable.isUnpaged() ? "unpaged" : pageable.getPageNumber());
 
-        Pageable finalPageable = createPageableWithSort(pageable, sortBy, sortDirection);
+        Pageable finalPageable = BaseServicePageableHelper.createPageableWithSort(pageable, sortBy, sortDirection);
         addUserFilterIfNeeded(filters);
 
         if (hasNoFilters(filters)) {
@@ -147,41 +156,11 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      */
     private Page<D> findAllWithSearchOnly(String search, Pageable pageable) {
         log.debug("Using repository findAll with search");
-        Page<T> entities = executeFindAllWithSearch(search, pageable);
+        Page<T> entities = BaseServiceRepositoryHelper.executeFindAllWithSearch(repository, search, pageable, isUserAware());
         log.debug("Found {} entities", entities.getTotalElements());
         return entities.map(this::mapToResponseDTO);
     }
 
-    /**
-     * Executes the findAll method with search, handling user-aware repositories.
-     *
-     * @param search the search term
-     * @param pageable the pageable parameters
-     * @return a page of entities
-     */
-    @SuppressWarnings("unchecked")
-    private Page<T> executeFindAllWithSearch(String search, Pageable pageable) {
-        if (!isUserAware()) {
-            return repository.findAll(search, pageable);
-        }
-
-        Long currentUserId = UserContext.getCurrentUserId();
-        if (currentUserId == null) {
-            log.error(USER_CONTEXT_UNAVAILABLE);
-            throw new SecurityException("User context not available");
-        }
-
-        try {
-            return (Page<T>) repository.getClass()
-                    .getMethod("findAll", String.class, Long.class, Pageable.class)
-                    .invoke(repository, search, currentUserId, pageable);
-        } catch (NoSuchMethodException e) {
-            return repository.findAll(search, pageable);
-        } catch (Exception e) {
-            log.warn("Error calling findAll with userId, falling back to standard method: {}", e.getMessage());
-            return repository.findAll(search, pageable);
-        }
-    }
 
     /**
      * Finds entities using specifications approach.
@@ -347,27 +326,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
         if (!isNameBased()) {
             throw new UnsupportedOperationException("This service does not support name-based operations");
         }
-
-        ValidationUtils.validateString(name, "Name");
-
-        if (isUserAware()) {
-            Long currentUserId = UserContext.getCurrentUserId();
-            if (currentUserId == null) {
-                throw new SecurityException("User context not available");
-            }
-
-            if (repository instanceof NameBasedRepository) {
-                return ((NameBasedRepository<T, I>) repository).findByNameIgnoreCaseAndUserId(name, currentUserId)
-                        .map(this::mapToResponseDTO);
-            }
-        } else {
-            if (repository instanceof NameBasedRepository) {
-                return ((NameBasedRepository<T, I>) repository).findByNameIgnoreCase(name)
-                        .map(this::mapToResponseDTO);
-            }
-        }
-
-        throw new UnsupportedOperationException("Repository does not support name-based operations");
+        return getNameBasedHelper().findByName(name);
     }
 
     /**
@@ -380,31 +339,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
         if (!isNameBased()) {
             throw new UnsupportedOperationException("This service does not support name-based operations");
         }
-
-        ValidationUtils.validateString(name, "Name");
-
-        if (isUserAware()) {
-            Long currentUserId = UserContext.getCurrentUserId();
-            if (currentUserId == null) {
-                throw new SecurityException("User context not available");
-            }
-
-            // Use reflection to check if the repository has the method
-            try {
-                Method method = repository.getClass().getMethod("existsByNameIgnoreCaseAndUserId", String.class, Long.class);
-                return (Boolean) method.invoke(repository, name, currentUserId);
-            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                throw new UnsupportedOperationException("Repository does not support name-based operations");
-            }
-        } else {
-            // Use reflection to check if the repository has the method
-            try {
-                Method method = repository.getClass().getMethod("existsByNameIgnoreCase", String.class);
-                return (Boolean) method.invoke(repository, name);
-            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                throw new UnsupportedOperationException("Repository does not support name-based operations");
-            }
-        }
+        return getNameBasedHelper().existsByName(name);
     }
 
     /**
@@ -416,29 +351,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
         if (!isNameBased()) {
             throw new UnsupportedOperationException("This service does not support name-based operations");
         }
-
-        if (isUserAware()) {
-            Long currentUserId = UserContext.getCurrentUserId();
-            if (currentUserId == null) {
-                throw new SecurityException("User context not available");
-            }
-
-            if (repository instanceof NameBasedRepository) {
-                return ((NameBasedRepository<T, I>) repository).findAllByUserIdOrderByNameAsc(currentUserId)
-                        .stream()
-                        .map(this::mapToResponseDTO)
-                        .toList();
-            }
-        } else {
-            if (repository instanceof NameBasedRepository) {
-                return ((NameBasedRepository<T, I>) repository).findAllByOrderByNameAsc()
-                        .stream()
-                        .map(this::mapToResponseDTO)
-                        .toList();
-            }
-        }
-
-        throw new UnsupportedOperationException("Repository does not support name-based operations");
+        return getNameBasedHelper().findAllOrderedByName();
     }
 
     /**
@@ -449,15 +362,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * @return the count of entities matching the criteria
      */
     public long count(String search, Map<String, Object> filters) {
-        // Add user filter if user-aware
-        ensureUserFilter(filters);
-
-        if (filters == null || filters.isEmpty()) {
-            // For search-only counting, we need to use specifications
-            Specification<T> spec = createSpecificationFromFilters(search, null);
-            return repository.count(spec);
-        }
-
+        // createSpecificationFromFilters already handles user filter
         Specification<T> spec = createSpecificationFromFilters(search, filters);
         return repository.count(spec);
     }
@@ -571,11 +476,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * @throws IllegalArgumentException if the ID is invalid
      */
     protected void validateId(I id) {
-        if (id instanceof Long longId) {
-            ValidationUtils.validateId(longId);
-        } else if (id == null) {
-            throw new IllegalArgumentException("ID cannot be null");
-        }
+        BaseServiceValidationHelper.validateId(id);
     }
 
     /**
@@ -587,30 +488,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * @return the specification
      */
     protected Specification<T> createSpecificationFromFilters(String search, Map<String, Object> filters) {
-        ensureUserFilter(filters);
-
-        return (root, query, criteriaBuilder) -> {
-            var predicates = new java.util.ArrayList<Predicate>();
-
-            addSearchPredicates(root, criteriaBuilder, predicates, search);
-            addFilterPredicates(root, criteriaBuilder, predicates, filters);
-
-            return predicates.isEmpty() ? null
-                    : criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-        };
-    }
-
-    private void ensureUserFilter(Map<String, Object> filters) {
-        if (isUserAware()) {
-            Long currentUserId = UserContext.getCurrentUserId();
-            if (currentUserId == null) {
-                throw new SecurityException("User context not available");
-            }
-
-            if (filters != null && !filters.containsKey(USER_ID_FIELD)) {
-                filters.put(USER_ID_FIELD, currentUserId);
-            }
-        }
+        return specificationBuilder.createSpecificationFromFilters(search, filters);
     }
 
     /**
@@ -637,93 +515,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
         }
     }
 
-    private void addSearchPredicates(Root<T> root,
-            CriteriaBuilder criteriaBuilder,
-            List<Predicate> predicates,
-            String search) {
-        if (search != null && !search.trim().isEmpty()) {
-            predicates.add(criteriaBuilder.or(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), "%" + search.toLowerCase() + "%"),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get("description")),
-                            "%" + search.toLowerCase() + "%")));
-        }
-    }
 
-    private void addFilterPredicates(Root<T> root,
-            CriteriaBuilder criteriaBuilder,
-            List<Predicate> predicates,
-            Map<String, Object> filters) {
-        if (filters != null) {
-            filters.forEach((key, value) -> {
-                if (value != null) {
-                    addFilterPredicate(root, criteriaBuilder, predicates, key, value);
-                }
-            });
-        }
-    }
-
-    private void addFilterPredicate(Root<T> root,
-            CriteriaBuilder criteriaBuilder,
-            List<Predicate> predicates,
-            String key, Object value) {
-        switch (key) {
-            case USER_ID_FIELD -> predicates.add(createUserIdPredicate(root, criteriaBuilder, value));
-            case "name" -> predicates.add(createNamePredicate(root, criteriaBuilder, value));
-            case IS_ACTIVE_FIELD -> predicates.add(createIsActivePredicate(root, criteriaBuilder, value));
-            default -> log.debug("Ignoring unknown filter key (length: {})", key.length());
-        }
-    }
-
-    /**
-     * Creates a predicate for user ID filtering.
-     */
-    private Predicate createUserIdPredicate(Root<T> root, CriteriaBuilder criteriaBuilder, Object value) {
-        return criteriaBuilder.equal(root.get("user").get("id"), value);
-    }
-
-    /**
-     * Creates a predicate for name filtering with case-insensitive search.
-     */
-    private Predicate createNamePredicate(Root<T> root, CriteriaBuilder criteriaBuilder, Object value) {
-        return criteriaBuilder.like(criteriaBuilder.lower(root.get("name")),
-                "%" + value.toString().toLowerCase() + "%");
-    }
-
-    /**
-     * Creates a predicate for isActive filtering.
-     */
-    private Predicate createIsActivePredicate(Root<T> root, CriteriaBuilder criteriaBuilder, Object value) {
-        return Boolean.TRUE.equals(value) ?
-                criteriaBuilder.isTrue(root.get(IS_ACTIVE_FIELD))
-                : criteriaBuilder.isFalse(root.get(IS_ACTIVE_FIELD));
-    }
-
-    /**
-     * Creates a pageable with sorting.
-     *
-     * @param pageable      the base pageable
-     * @param sortBy        the field to sort by
-     * @param sortDirection the sort direction
-     * @return the pageable with sorting
-     */
-    private Pageable createPageableWithSort(Pageable pageable, String sortBy, String sortDirection) {
-        if (sortBy == null || sortBy.trim().isEmpty()) {
-            return pageable;
-        }
-
-        Sort.Direction direction = Sort.Direction.ASC;
-        if (sortDirection != null && sortDirection.equalsIgnoreCase("desc")) {
-            direction = Sort.Direction.DESC;
-        }
-
-        Sort sort = Sort.by(direction, sortBy);
-
-        if (pageable.isPaged()) {
-            return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-        } else {
-            return PageRequest.of(0, Integer.MAX_VALUE, sort);
-        }
-    }
 
     // Name-based operations (only used if isNameBased() returns true)
 
@@ -760,7 +552,7 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * @return the name
      */
     protected String getNameFromDTO(Object dto) {
-        return getFieldValue(dto, "getName", String.class);
+        return reflectionHelper.getNameFromDTO(dto);
     }
 
     /**
@@ -771,14 +563,8 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
      * @param returnType the expected return type
      * @return the field value
      */
-    @SuppressWarnings("unchecked")
     protected <V> V getFieldValue(Object obj, String methodName, Class<V> returnType) {
-        try {
-            Method method = obj.getClass().getMethod(methodName);
-            return (V) method.invoke(obj);
-        } catch (Exception e) {
-            throw new ReflectionException("Failed to get field value using " + methodName, e);
-        }
+        return reflectionHelper.getFieldValue(obj, methodName, returnType);
     }
 
     // User-aware operations (only used if isUserAware() returns true)
@@ -807,60 +593,15 @@ public abstract class BaseService<T extends BaseModel<I>, I, D> {
     }
 
     /**
-     * Repository interface for name-based operations.
+     * Gets or creates the name-based helper.
      *
-     * @param <T> The entity type
-     * @param <I> The ID type
+     * @return the name-based helper
      */
-    public interface NameBasedRepository<T, I> extends BaseRepository<T, I> {
-
-        /**
-         * Find entity by name (case-insensitive).
-         *
-         * @param name the name to search for
-         * @return an Optional containing the entity if found, empty otherwise
-         */
-        Optional<T> findByNameIgnoreCase(String name);
-
-        /**
-         * Check if entity exists by name (case-insensitive).
-         *
-         * @param name the name to check
-         * @return true if entity exists, false otherwise
-         */
-        boolean existsByNameIgnoreCase(String name);
-
-        /**
-         * Find all entities ordered by name (ascending).
-         *
-         * @return a list of entities ordered by name
-         */
-        List<T> findAllByOrderByNameAsc();
-
-        /**
-         * Find entity by name and user ID (case-insensitive).
-         *
-         * @param name   the name to search for
-         * @param userId the user ID
-         * @return an Optional containing the entity if found, empty otherwise
-         */
-        Optional<T> findByNameIgnoreCaseAndUserId(String name, Long userId);
-
-        /**
-         * Check if entity exists by name and user ID (case-insensitive).
-         *
-         * @param name   the name to check
-         * @param userId the user ID
-         * @return true if entity exists, false otherwise
-         */
-        boolean existsByNameIgnoreCaseAndUserId(String name, Long userId);
-
-        /**
-         * Find all entities by user ID ordered by name (ascending).
-         *
-         * @param userId the user ID
-         * @return a list of entities ordered by name
-         */
-        List<T> findAllByUserIdOrderByNameAsc(Long userId);
+    private BaseServiceNameBasedHelper<T, I, D> getNameBasedHelper() {
+        if (nameBasedHelper == null) {
+            nameBasedHelper = new BaseServiceNameBasedHelper<>(repository, isUserAware(), this::mapToResponseDTO);
+        }
+        return nameBasedHelper;
     }
+
 }

@@ -1,6 +1,8 @@
 package com.finance_control.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
+import com.finance_control.brazilian_market.model.InvestmentType;
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
@@ -26,7 +28,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import com.finance_control.shared.util.RangeUtils;
+import com.finance_control.brazilian_market.controller.helper.InvestmentFilterHelper;
 
 /**
  * REST controller for managing investments.
@@ -40,10 +42,13 @@ public class InvestmentController {
 
     private final InvestmentService investmentService;
     private final ExternalMarketDataService externalMarketDataService;
+    private final InvestmentFilterHelper filterHelper;
 
-    public InvestmentController(InvestmentService investmentService, ExternalMarketDataService externalMarketDataService) {
+    public InvestmentController(InvestmentService investmentService, ExternalMarketDataService externalMarketDataService,
+                                InvestmentFilterHelper filterHelper) {
         this.investmentService = investmentService;
         this.externalMarketDataService = externalMarketDataService;
+        this.filterHelper = filterHelper;
     }
 
     /**
@@ -86,9 +91,9 @@ public class InvestmentController {
                description = "Retrieve investments with flexible filtering, sorting, and pagination options, or metadata")
     public ResponseEntity<Object> getInvestments(
             @Parameter(description = "Investment type filter")
-            @RequestParam(required = false) Investment.InvestmentType type,
+            @RequestParam(required = false) InvestmentType type,
             @Parameter(description = "Investment subtype filter")
-            @RequestParam(required = false) Investment.InvestmentSubtype subtype,
+            @RequestParam(required = false) InvestmentSubtype subtype,
             @Parameter(description = "Sector filter")
             @RequestParam(required = false) String sector,
             @Parameter(description = "Industry filter")
@@ -167,24 +172,18 @@ public class InvestmentController {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         // Apply filters based on parameters
-        List<Investment> investments = getInvestmentsByFilters(user, search, type, subtype, sector, industry);
+        List<Investment> investments = filterHelper.getInvestmentsByFilters(user, search, type, subtype, sector, industry);
 
         // Apply additional filters
-        investments = applyPriceAndDividendFilters(investments, minPrice, maxPrice, minDividendYield, maxDividendYield);
+        investments = filterHelper.applyPriceAndDividendFilters(investments, minPrice, maxPrice, minDividendYield, maxDividendYield);
 
-        // Convert to DTOs and create pagination manually
+        // Convert to DTOs and create pagination
         List<InvestmentDTO> investmentDTOs = investments.stream()
                 .map(investmentService::convertToResponseDTO)
                 .toList();
 
-        // Apply pagination manually
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), investmentDTOs.size());
-        List<InvestmentDTO> pagedDTOs = investmentDTOs.subList(start, end);
-
-        // Create a custom page response
-        Page<InvestmentDTO> result = new org.springframework.data.domain.PageImpl<>(
-                pagedDTOs, pageable, investmentDTOs.size());
+        // Apply pagination
+        Page<InvestmentDTO> result = filterHelper.paginateList(investmentDTOs, pageable);
 
         return ResponseEntity.ok(result);
     }
@@ -349,78 +348,4 @@ public class InvestmentController {
         return ResponseEntity.ok(Map.of("message", "Market data update initiated"));
     }
 
-    /**
-     * Gets investments based on the provided filters.
-     *
-     * @param user the user
-     * @param search search term
-     * @param type investment type
-     * @param subtype investment subtype
-     * @param sector sector filter
-     * @param industry industry filter
-     * @return list of investments matching the filters
-     */
-    private List<Investment> getInvestmentsByFilters(User user, String search, Investment.InvestmentType type,
-                                                   Investment.InvestmentSubtype subtype, String sector, String industry) {
-        if (search != null && !search.trim().isEmpty()) {
-            return investmentService.searchInvestments(user, search);
-        }
-
-        if (type != null && subtype != null) {
-            return investmentService.getInvestmentsByTypeAndSubtype(user, type, subtype);
-        }
-
-        if (type != null) {
-            return investmentService.getInvestmentsByType(user, type);
-        }
-
-        if (sector != null && !sector.trim().isEmpty()) {
-            return investmentService.getInvestmentsBySector(user, sector);
-        }
-
-        if (industry != null && !industry.trim().isEmpty()) {
-            return investmentService.getInvestmentsByIndustry(user, industry);
-        }
-
-        return investmentService.getAllInvestments(user);
-    }
-
-    /**
-     * Applies price and dividend yield filters to the investment list.
-     *
-     * @param investments the list of investments to filter
-     * @param minPrice minimum price filter
-     * @param maxPrice maximum price filter
-     * @param minDividendYield minimum dividend yield filter
-     * @param maxDividendYield maximum dividend yield filter
-     * @return filtered list of investments
-     */
-    private List<Investment> applyPriceAndDividendFilters(List<Investment> investments,
-                                                         BigDecimal minPrice,
-                                                         BigDecimal maxPrice,
-                                                         BigDecimal minDividendYield,
-                                                         BigDecimal maxDividendYield) {
-        if (minPrice == null && maxPrice == null && minDividendYield == null && maxDividendYield == null) {
-            return investments;
-        }
-
-        return investments.stream()
-                .filter(inv -> isPriceInRange(inv.getCurrentPrice(), minPrice, maxPrice))
-                .filter(inv -> isDividendYieldInRange(inv.getDividendYield(), minDividendYield, maxDividendYield))
-                .toList();
-    }
-
-    /**
-     * Checks if the investment price is within the specified range.
-     */
-    private boolean isPriceInRange(BigDecimal currentPrice, BigDecimal minPrice, BigDecimal maxPrice) {
-        return RangeUtils.isInRange(currentPrice, minPrice, maxPrice);
-    }
-
-    /**
-     * Checks if the investment dividend yield is within the specified range.
-     */
-    private boolean isDividendYieldInRange(BigDecimal dividendYield, BigDecimal minDividendYield, BigDecimal maxDividendYield) {
-        return RangeUtils.isInRange(dividendYield, minDividendYield, maxDividendYield);
-    }
 }

@@ -26,27 +26,18 @@ class MonitoringEndpointTest {
     private TestRestTemplate restTemplate;
 
     @Test
-    @DisplayName("Should return 200 for health endpoint")
-    void healthEndpoint_ShouldReturn200() {
-        ResponseEntity<Object> response = restTemplate.getForEntity("/api/monitoring/health", Object.class);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-    }
-
-    @Test
-    @DisplayName("Should return 200 for status endpoint")
-    void statusEndpoint_ShouldReturn200() {
-        ResponseEntity<Object> response = restTemplate.getForEntity("/api/monitoring/status", Object.class);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-    }
-
-    @Test
     @DisplayName("Should return 200 for metrics summary endpoint")
     void metricsSummaryEndpoint_ShouldReturn200() {
-        ResponseEntity<Object> response = restTemplate.getForEntity("/api/monitoring/metrics/summary", Object.class);
+        ResponseEntity<Object> response = restTemplate.getForEntity("/monitoring/metrics/summary", Object.class);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+    }
+
+    @Test
+    @DisplayName("Should return 200 for actuator health endpoint")
+    void actuatorHealthEndpoint_ShouldReturn200() {
+        ResponseEntity<Object> response = restTemplate.getForEntity("/actuator/health", Object.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());

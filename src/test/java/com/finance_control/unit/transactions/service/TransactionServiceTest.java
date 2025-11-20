@@ -20,8 +20,6 @@ import com.finance_control.transactions.repository.responsibles.TransactionRespo
 import com.finance_control.transactions.repository.source.TransactionSourceRepository;
 import com.finance_control.transactions.repository.subcategory.TransactionSubcategoryRepository;
 import com.finance_control.transactions.service.TransactionService;
-import com.finance_control.dashboard.service.DashboardService;
-import com.finance_control.shared.service.SupabaseRealtimeService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -49,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -84,10 +83,7 @@ class TransactionServiceTest {
     private MetricsService metricsService;
 
     @Mock
-    private SupabaseRealtimeService realtimeService;
-
-    @Mock
-    private DashboardService dashboardService;
+    private com.finance_control.transactions.service.TransactionNotificationHelper notificationHelper;
 
     @Mock
     private com.finance_control.shared.monitoring.SentryService sentryService;
@@ -1548,18 +1544,12 @@ class TransactionServiceTest {
             return savedTransaction;
         });
 
-        // Set optional services
-        transactionService.setRealtimeService(realtimeService);
-        transactionService.setDashboardService(dashboardService);
-
         // When
         TransactionDTO result = transactionService.create(createDTO);
 
         // Then
         assertThat(result).isNotNull();
-        verify(realtimeService).notifyTransactionUpdate(1L, result);
-        verify(dashboardService).notifyDashboardUpdate(1L);
-        verify(metricsService).incrementTransactionCreated();
+        verify(notificationHelper).notifyTransactionChange(result, "creation");
     }
 
     @Test
@@ -1595,23 +1585,15 @@ class TransactionServiceTest {
             return savedTransaction;
         });
 
-        // Set optional services
-        transactionService.setRealtimeService(realtimeService);
-        transactionService.setDashboardService(dashboardService);
-
-        doThrow(new RuntimeException("Realtime service error"))
-                .when(realtimeService).notifyTransactionUpdate(anyLong(), any(TransactionDTO.class));
-        doThrow(new RuntimeException("Dashboard service error"))
-                .when(dashboardService).notifyDashboardUpdate(anyLong());
+        doThrow(new RuntimeException("Notification error"))
+                .when(notificationHelper).notifyTransactionChange(any(TransactionDTO.class), anyString());
 
         // When
         TransactionDTO result = transactionService.create(createDTO);
 
         // Then
         assertThat(result).isNotNull();
-        verify(realtimeService).notifyTransactionUpdate(1L, result);
-        verify(dashboardService).notifyDashboardUpdate(1L);
-        verify(metricsService).incrementTransactionCreated();
+        verify(notificationHelper).notifyTransactionChange(result, "creation");
     }
 
     @Test
@@ -1647,18 +1629,12 @@ class TransactionServiceTest {
             return savedTransaction;
         });
 
-        // Set only realtime service
-        transactionService.setRealtimeService(realtimeService);
-        // dashboardService remains null
-
         // When
         TransactionDTO result = transactionService.create(createDTO);
 
         // Then
         assertThat(result).isNotNull();
-        verify(realtimeService).notifyTransactionUpdate(1L, result);
-        verify(dashboardService, never()).notifyDashboardUpdate(anyLong());
-        verify(metricsService).incrementTransactionCreated();
+        verify(notificationHelper).notifyTransactionChange(result, "creation");
     }
 
     @Test
@@ -1694,18 +1670,12 @@ class TransactionServiceTest {
             return savedTransaction;
         });
 
-        // Set only dashboard service
-        // realtimeService remains null
-        transactionService.setDashboardService(dashboardService);
-
         // When
         TransactionDTO result = transactionService.create(createDTO);
 
         // Then
         assertThat(result).isNotNull();
-        verify(realtimeService, never()).notifyTransactionUpdate(anyLong(), any(TransactionDTO.class));
-        verify(dashboardService).notifyDashboardUpdate(1L);
-        verify(metricsService).incrementTransactionCreated();
+        verify(notificationHelper).notifyTransactionChange(result, "creation");
     }
 
     @Test
@@ -1732,18 +1702,12 @@ class TransactionServiceTest {
         });
         when(transactionRepository.save(any(Transaction.class))).thenReturn(existingTransaction);
 
-        // Set optional services
-        transactionService.setRealtimeService(realtimeService);
-        transactionService.setDashboardService(dashboardService);
-
         // When
         TransactionDTO result = transactionService.update(1L, updateDTO);
 
         // Then
         assertThat(result).isNotNull();
-        verify(realtimeService).notifyTransactionUpdate(1L, result);
-        verify(dashboardService).notifyDashboardUpdate(1L);
-        verify(metricsService).incrementTransactionUpdated();
+        verify(notificationHelper).notifyTransactionChange(result, "update");
     }
 
     @Test
@@ -1770,16 +1734,12 @@ class TransactionServiceTest {
         });
         when(transactionRepository.save(any(Transaction.class))).thenReturn(existingTransaction);
 
-        // Optional services remain null
-
         // When
         TransactionDTO result = transactionService.update(1L, updateDTO);
 
         // Then
         assertThat(result).isNotNull();
-        verify(realtimeService, never()).notifyTransactionUpdate(anyLong(), any(TransactionDTO.class));
-        verify(dashboardService, never()).notifyDashboardUpdate(anyLong());
-        verify(metricsService).incrementTransactionUpdated();
+        verify(notificationHelper).notifyTransactionChange(result, "update");
     }
 
     @Test

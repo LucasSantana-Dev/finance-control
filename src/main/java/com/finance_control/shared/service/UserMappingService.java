@@ -20,6 +20,7 @@ import java.util.Optional;
 public class UserMappingService {
 
     private final UserRepository userRepository;
+    private final EncryptionService encryptionService;
 
     /**
      * Finds or creates a local user based on Supabase authentication response.
@@ -44,16 +45,17 @@ public class UserMappingService {
 
         log.debug("Finding or creating local user for Supabase user: {} ({})", supabaseUserId, email);
 
-        // First, try to find by Supabase user ID (if we have a mapping field)
-        Optional<User> existingUser = findBySupabaseUserId(supabaseUserId);
+        // First, try to find by Supabase user ID
+        Optional<User> existingUser = userRepository.findBySupabaseUserId(supabaseUserId);
 
         if (existingUser.isPresent()) {
             log.debug("Found existing user mapped to Supabase user: {}", supabaseUserId);
             return existingUser.get().getId();
         }
 
-        // If not found by Supabase ID, try by email
-        existingUser = userRepository.findByEmail(email);
+        // If not found by Supabase ID, try by email hash
+        String emailHash = encryptionService.hashEmail(email);
+        existingUser = userRepository.findByEmailHash(emailHash);
 
         if (existingUser.isPresent()) {
             log.debug("Found existing user by email: {}", email);
@@ -74,19 +76,25 @@ public class UserMappingService {
 
     /**
      * Finds a user by their Supabase user ID.
-     * This requires a database field to store the Supabase user ID mapping.
      *
      * @param supabaseUserId The Supabase user ID
      * @return Optional containing the user if found
      */
     public Optional<User> findBySupabaseUserId(String supabaseUserId) {
-        // For now, we'll use email-based lookup as a workaround
-        // In a production system, you should add a supabase_user_id field to the User entity
-        // TODO: Add supabase_user_id field to User entity for proper mapping
+        return userRepository.findBySupabaseUserId(supabaseUserId);
+    }
 
-        // This is a temporary solution - in practice, you'd store the Supabase UUID in the user table
-        // For now, we'll return empty and rely on email-based matching during signup/login
-        return Optional.empty();
+    /**
+     * Finds the local user ID by Supabase user ID.
+     * Used by JWT filter to map Supabase tokens to local user IDs.
+     *
+     * @param supabaseUserId The Supabase user ID (UUID)
+     * @return The local user ID, or null if not found
+     */
+    public Long findUserIdBySupabaseId(String supabaseUserId) {
+        return findBySupabaseUserId(supabaseUserId)
+                .map(User::getId)
+                .orElse(null);
     }
 
     /**
@@ -98,13 +106,13 @@ public class UserMappingService {
     private User createUserFromSupabase(AuthResponse.User supabaseUser) {
         User user = new User();
         user.setEmail(supabaseUser.getEmail());
-
+        // Set email hash for efficient lookups
+        user.setEmailHash(encryptionService.hashEmail(supabaseUser.getEmail()));
+        // Set Supabase user ID for mapping
+        user.setSupabaseUserId(supabaseUser.getId());
         // Set default values
         user.setIsActive(true);
-
-        // Note: Password is not set for Supabase users as they authenticate via Supabase
-        // You might want to set a random password or mark them as externally authenticated
-        // The User entity only has email, password, and isActive fields
+        // Password is null for Supabase users as they authenticate via Supabase
 
         return user;
     }
@@ -117,17 +125,20 @@ public class UserMappingService {
      * @param supabaseUser The Supabase user information
      */
     private void updateUserWithSupabaseInfo(User user, AuthResponse.User supabaseUser) {
-        // Update user information from Supabase if needed
-        // This could include updating email confirmation status, metadata, etc.
+        // Update Supabase user ID if not already set
+        if (user.getSupabaseUserId() == null && supabaseUser.getId() != null) {
+            user.setSupabaseUserId(supabaseUser.getId());
+        }
 
         // Update email if it has changed
         if (supabaseUser.getEmail() != null && !supabaseUser.getEmail().equals(user.getEmail())) {
             user.setEmail(supabaseUser.getEmail());
+            // Update email hash when email changes
+            user.setEmailHash(encryptionService.hashEmail(supabaseUser.getEmail()));
         }
 
         // Mark user as confirmed if Supabase says they're confirmed
         if (supabaseUser.getEmailConfirmedAt() != null && !supabaseUser.getEmailConfirmedAt().isEmpty()) {
-            // You could add an emailConfirmed field to User entity
             log.debug("User email confirmed via Supabase for user: {}", user.getId());
         }
 
@@ -137,15 +148,14 @@ public class UserMappingService {
 
     /**
      * Gets the Supabase user ID for a local user.
-     * This requires storing the mapping in the database.
      *
      * @param userId The local user ID
      * @return Optional containing the Supabase user ID if found
      */
     public Optional<String> getSupabaseUserId(Long userId) {
-        // TODO: Add supabase_user_id field to User entity to store the mapping
-        // For now, return empty as this field doesn't exist yet
-        return Optional.empty();
+        return userRepository.findById(userId)
+                .map(User::getSupabaseUserId)
+                .filter(id -> id != null && !id.isEmpty());
     }
 
     /**

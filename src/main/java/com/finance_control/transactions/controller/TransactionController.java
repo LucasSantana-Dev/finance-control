@@ -1,6 +1,8 @@
 package com.finance_control.transactions.controller;
 
 import com.finance_control.shared.controller.BaseController;
+import com.finance_control.transactions.controller.helper.TransactionFilterHelper;
+import com.finance_control.transactions.controller.helper.TransactionPageableHelper;
 import com.finance_control.transactions.dto.TransactionDTO;
 import com.finance_control.transactions.dto.TransactionReconciliationRequest;
 import com.finance_control.transactions.dto.importer.TransactionImportRequest;
@@ -12,9 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +25,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.List;
+import com.finance_control.transactions.dto.TransactionInstallmentRequest;
 
 @RestController
 @Slf4j
@@ -34,12 +36,18 @@ public class TransactionController extends BaseController<Transaction, Long, Tra
 
     private final TransactionService transactionService;
     private final TransactionImportService transactionImportService;
+    private final TransactionFilterHelper filterHelper;
+    private final TransactionPageableHelper pageableHelper;
 
     public TransactionController(TransactionService transactionService,
-            TransactionImportService transactionImportService) {
+            TransactionImportService transactionImportService,
+            TransactionFilterHelper filterHelper,
+            TransactionPageableHelper pageableHelper) {
         super(transactionService);
         this.transactionService = transactionService;
         this.transactionImportService = transactionImportService;
+        this.filterHelper = filterHelper;
+        this.pageableHelper = pageableHelper;
     }
 
     @GetMapping("/filtered")
@@ -65,45 +73,15 @@ public class TransactionController extends BaseController<Transaction, Long, Tra
 
         log.debug("GET request to retrieve transactions with filtering");
 
-        // Extract all query parameters as filters (excluding standard ones)
         Map<String, Object> filters = extractFiltersFromRequest(request, search, sortBy, sortDirection);
+        filterHelper.addTransactionFilters(category, subcategory, source, type, startDate, endDate, minAmount, maxAmount, isActive, filters);
 
-        // Add specific transaction filters
-        if (category != null && !category.trim().isEmpty()) {
-            filters.put("category", category);
-        }
-        if (subcategory != null && !subcategory.trim().isEmpty()) {
-            filters.put("subcategory", subcategory);
-        }
-        if (source != null && !source.trim().isEmpty()) {
-            filters.put("source", source);
-        }
-        if (type != null && !type.trim().isEmpty()) {
-            filters.put("type", type);
-        }
-        if (startDate != null) {
-            filters.put("startDate", startDate);
-        }
-        if (endDate != null) {
-            filters.put("endDate", endDate);
-        }
-        if (minAmount != null) {
-            filters.put("minAmount", minAmount);
-        }
-        if (maxAmount != null) {
-            filters.put("maxAmount", maxAmount);
-        }
-        if (isActive != null) {
-            filters.put("isActive", isActive);
-        }
-
-        // Create pageable with sorting
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy != null ? sortBy : "createdAt");
-        Pageable finalPageable = PageRequest.of(page, size, sort);
+        Pageable finalPageable = pageableHelper.createPageableWithSort(page, size, sortBy, sortDirection);
 
         Page<TransactionDTO> transactions = transactionService.findAll(search, filters, sortBy, sortDirection, finalPageable);
         return ResponseEntity.ok(transactions);
     }
+
 
     @PutMapping("/{id}/reconcile")
     @Operation(summary = "Reconcile transaction", description = "Complete reconciliation of transaction data")
@@ -127,6 +105,13 @@ public class TransactionController extends BaseController<Transaction, Long, Tra
         TransactionImportResponse response = transactionImportService.importStatements(file, request);
         log.info("Transaction import completed - total entries: {}, created: {}", response.getTotalEntries(), response.getCreatedTransactions());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/installments")
+    @Operation(summary = "Create transaction installments", description = "Create a series of installment transactions")
+    public ResponseEntity<List<TransactionDTO>> createInstallments(@Valid @RequestBody TransactionInstallmentRequest request) {
+        log.debug("POST request to create transaction installments");
+        return ResponseEntity.ok(transactionService.createInstallments(request));
     }
 
 

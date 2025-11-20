@@ -1,6 +1,5 @@
 package com.finance_control.transactions.repository.subcategory;
 
-import com.finance_control.shared.repository.BaseRepository;
 import com.finance_control.shared.repository.NameBasedRepository;
 import com.finance_control.transactions.model.subcategory.TransactionSubcategory;
 import org.springframework.data.domain.Page;
@@ -13,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface TransactionSubcategoryRepository extends BaseRepository<TransactionSubcategory, Long>, NameBasedRepository<TransactionSubcategory, Long> {
+public interface TransactionSubcategoryRepository extends NameBasedRepository<TransactionSubcategory, Long> {
 
     List<TransactionSubcategory> findByCategoryIdAndIsActiveTrueOrderByNameAsc(Long categoryId);
 
@@ -40,26 +39,32 @@ public interface TransactionSubcategoryRepository extends BaseRepository<Transac
     Page<TransactionSubcategory> findAll(@Param("search") String search, Pageable pageable);
 
     // NameBasedRepository interface methods
-    // For subcategories, these methods are not applicable as names are scoped to categories
-    // We'll provide default implementations that throw UnsupportedOperationException
+    // For subcategories, these methods are not applicable as names are scoped to
+    // categories
+    // We'll provide default implementations that throw
+    // UnsupportedOperationException
 
     @Override
     default Optional<TransactionSubcategory> findByNameIgnoreCase(String name) {
-        throw new UnsupportedOperationException("Subcategory names are scoped to categories. Use findByCategoryIdAndNameIgnoreCase instead.");
+        throw new UnsupportedOperationException(
+                "Subcategory names are scoped to categories. Use findByCategoryIdAndNameIgnoreCase instead.");
     }
 
     @Override
     default boolean existsByNameIgnoreCase(String name) {
-        throw new UnsupportedOperationException("Subcategory names are scoped to categories. Use existsByCategoryIdAndNameIgnoreCase instead.");
+        throw new UnsupportedOperationException(
+                "Subcategory names are scoped to categories. Use existsByCategoryIdAndNameIgnoreCase instead.");
     }
 
     @Override
     default Optional<TransactionSubcategory> findByNameIgnoreCaseAndUserId(String name, Long userId) {
-        throw new UnsupportedOperationException("Subcategory names are scoped to categories. Use findByCategoryIdAndNameIgnoreCase instead.");
+        throw new UnsupportedOperationException(
+                "Subcategory names are scoped to categories. Use findByCategoryIdAndNameIgnoreCase instead.");
     }
 
     @Override
     default boolean existsByNameIgnoreCaseAndUserId(String name, Long userId) {
-        throw new UnsupportedOperationException("Subcategory names are scoped to categories. Use existsByCategoryIdAndNameIgnoreCase instead.");
+        throw new UnsupportedOperationException(
+                "Subcategory names are scoped to categories. Use existsByCategoryIdAndNameIgnoreCase instead.");
     }
 }

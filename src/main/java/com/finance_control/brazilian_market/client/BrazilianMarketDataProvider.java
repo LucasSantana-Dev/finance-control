@@ -1,6 +1,6 @@
 package com.finance_control.brazilian_market.client;
 
-import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
 import com.finance_control.brazilian_market.util.MarketDataConversionUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,9 +93,9 @@ public class BrazilianMarketDataProvider implements MarketDataProvider {
     }
 
     @Override
-    public boolean supportsInvestmentType(Investment.InvestmentType investmentType) {
-        return investmentType == Investment.InvestmentType.STOCK ||
-               investmentType == Investment.InvestmentType.FII;
+    public boolean supportsInvestmentType(InvestmentType investmentType) {
+        return investmentType == InvestmentType.STOCK ||
+               investmentType == InvestmentType.FII;
     }
 
     @Override
@@ -161,7 +161,7 @@ public class BrazilianMarketDataProvider implements MarketDataProvider {
     /**
      * Convert API quote response to Investment market data (legacy method)
      */
-    public Optional<MarketData> convertToMarketData(QuoteResponse quote, Investment.InvestmentType investmentType) {
+    public Optional<MarketData> convertToMarketData(QuoteResponse quote, InvestmentType investmentType) {
         try {
             if (quote == null || quote.getRegularMarketPrice() == null) {
                 return Optional.empty();

@@ -3,7 +3,10 @@ package com.finance_control.unit.brazilian_market.client;
 import com.finance_control.brazilian_market.client.BrazilianMarketDataProvider;
 import com.finance_control.brazilian_market.client.MarketQuote;
 import com.finance_control.brazilian_market.client.UsMarketDataProvider;
-import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.client.model.ApiResponse;
+import com.finance_control.brazilian_market.client.model.QuoteResponse;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.shared.monitoring.SentryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +23,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 /**
  * Unit tests for Market Data Providers.
@@ -32,15 +37,21 @@ class MarketDataProviderTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private SentryService sentryService;
+
     @InjectMocks
     private BrazilianMarketDataProvider brazilianMarketDataProvider;
 
-    @InjectMocks
     private UsMarketDataProvider usMarketDataProvider;
 
     @BeforeEach
     void setUp() {
         // Setup method - no shared test data needed
+        // UsMarketDataProvider requires SentryService in constructor, so we need to create it manually
+        usMarketDataProvider = new UsMarketDataProvider(restTemplate, sentryService);
+        // Mock SentryService to avoid NPE - use lenient since not all tests will trigger exceptions
+        lenient().doNothing().when(sentryService).captureException(any(Exception.class), anyMap());
     }
 
     @Test
@@ -175,13 +186,13 @@ class MarketDataProviderTest {
         return response;
     }
 
-    private UsMarketDataProvider.ApiResponse createMockYahooResponse() {
+    private ApiResponse createMockYahooResponse() {
         // Mock US Market API response structure
-        UsMarketDataProvider.ApiResponse response = new UsMarketDataProvider.ApiResponse();
-        UsMarketDataProvider.QuoteResponseWrapper wrapper = new UsMarketDataProvider.QuoteResponseWrapper();
-        List<UsMarketDataProvider.QuoteResponse> resultList = new ArrayList<>();
+        ApiResponse response = new ApiResponse();
+        ApiResponse.QuoteResponseWrapper wrapper = new ApiResponse.QuoteResponseWrapper();
+        List<QuoteResponse> resultList = new ArrayList<>();
 
-        UsMarketDataProvider.QuoteResponse quote = new UsMarketDataProvider.QuoteResponse();
+        QuoteResponse quote = new QuoteResponse();
         quote.setSymbol("AAPL");
         quote.setShortName("Apple Inc.");
         quote.setRegularMarketPrice(150.00);
@@ -195,9 +206,9 @@ class MarketDataProviderTest {
         return response;
     }
 
-    private UsMarketDataProvider.ApiResponse createEmptyYahooResponse() {
-        UsMarketDataProvider.ApiResponse response = new UsMarketDataProvider.ApiResponse();
-        UsMarketDataProvider.QuoteResponseWrapper wrapper = new UsMarketDataProvider.QuoteResponseWrapper();
+    private ApiResponse createEmptyYahooResponse() {
+        ApiResponse response = new ApiResponse();
+        ApiResponse.QuoteResponseWrapper wrapper = new ApiResponse.QuoteResponseWrapper();
         wrapper.setResult(new ArrayList<>());
         response.setQuoteResponse(wrapper);
         return response;
@@ -274,21 +285,21 @@ class MarketDataProviderTest {
 
     @Test
     void brazilianMarketDataProvider_SupportsInvestmentType_Stock_ShouldReturnTrue() {
-        boolean result = brazilianMarketDataProvider.supportsInvestmentType(Investment.InvestmentType.STOCK);
+        boolean result = brazilianMarketDataProvider.supportsInvestmentType(InvestmentType.STOCK);
 
         assertThat(result).isTrue();
     }
 
     @Test
     void brazilianMarketDataProvider_SupportsInvestmentType_FII_ShouldReturnTrue() {
-        boolean result = brazilianMarketDataProvider.supportsInvestmentType(Investment.InvestmentType.FII);
+        boolean result = brazilianMarketDataProvider.supportsInvestmentType(InvestmentType.FII);
 
         assertThat(result).isTrue();
     }
 
     @Test
     void brazilianMarketDataProvider_SupportsInvestmentType_Other_ShouldReturnFalse() {
-        boolean result = brazilianMarketDataProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO);
+        boolean result = brazilianMarketDataProvider.supportsInvestmentType(InvestmentType.CRYPTO);
 
         assertThat(result).isFalse();
     }
@@ -360,7 +371,7 @@ class MarketDataProviderTest {
 
     @Test
     void brazilianMarketDataProvider_ConvertToMarketData_WithNullQuote_ShouldReturnEmpty() {
-        Investment.InvestmentType type = Investment.InvestmentType.STOCK;
+        InvestmentType type = InvestmentType.STOCK;
 
         Optional<BrazilianMarketDataProvider.MarketData> result =
                 brazilianMarketDataProvider.convertToMarketData(null, type);
@@ -373,7 +384,7 @@ class MarketDataProviderTest {
         BrazilianMarketDataProvider.QuoteResponse quote = new BrazilianMarketDataProvider.QuoteResponse();
         quote.setSymbol("PETR4");
         quote.setRegularMarketPrice(null);
-        Investment.InvestmentType type = Investment.InvestmentType.STOCK;
+        InvestmentType type = InvestmentType.STOCK;
 
         Optional<BrazilianMarketDataProvider.MarketData> result =
                 brazilianMarketDataProvider.convertToMarketData(quote, type);

@@ -21,7 +21,7 @@ public class LoggingConfig {
 
     @PostConstruct
     public void configureLogging() {
-        AppProperties.Logging logging = appProperties.logging();
+        com.finance_control.shared.config.properties.LoggingProperties logging = appProperties.logging();
 
         log.info("Configuring logging - Level: {}, File: {}, MaxSize: {}MB, History: {} days",
                 logging.level(),

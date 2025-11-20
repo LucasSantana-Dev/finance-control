@@ -2,6 +2,8 @@ package com.finance_control.integration.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
 import com.finance_control.brazilian_market.repository.InvestmentRepository;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
@@ -95,8 +97,8 @@ class InvestmentControllerIntegrationTest {
         testInvestmentDTO = new InvestmentDTO();
         testInvestmentDTO.setTicker("PETR4");
         testInvestmentDTO.setName("Petrobras");
-        testInvestmentDTO.setInvestmentType(Investment.InvestmentType.STOCK);
-        testInvestmentDTO.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        testInvestmentDTO.setInvestmentType(InvestmentType.STOCK);
+        testInvestmentDTO.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
     }
 
     @AfterEach
@@ -155,7 +157,7 @@ class InvestmentControllerIntegrationTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getTicker()).isEqualTo("PETR4");
         assertThat(response.getBody().getName()).isEqualTo("Petrobras");
-        assertThat(response.getBody().getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
+        assertThat(response.getBody().getInvestmentType()).isEqualTo(InvestmentType.STOCK);
 
         assertThat(investmentRepository.findByTickerAndUser_IdAndIsActiveTrue("PETR4", testUser.getId()))
                 .isPresent();
@@ -167,8 +169,8 @@ class InvestmentControllerIntegrationTest {
         Investment investment = new Investment();
         investment.setTicker("PETR4");
         investment.setName("Petrobras");
-        investment.setInvestmentType(Investment.InvestmentType.STOCK);
-        investment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        investment.setInvestmentType(InvestmentType.STOCK);
+        investment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         investment.setCurrentPrice(BigDecimal.valueOf(26.00));
         investment.setIsActive(true);
         investment.setUser(testUser);
@@ -186,7 +188,7 @@ class InvestmentControllerIntegrationTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getTicker()).isEqualTo("PETR4");
         assertThat(response.getBody().getName()).isEqualTo("Petrobras");
-        assertThat(response.getBody().getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
+        assertThat(response.getBody().getInvestmentType()).isEqualTo(InvestmentType.STOCK);
     }
 
     @Test
@@ -195,8 +197,8 @@ class InvestmentControllerIntegrationTest {
         Investment investment1 = new Investment();
         investment1.setTicker("PETR4");
         investment1.setName("Petrobras");
-        investment1.setInvestmentType(Investment.InvestmentType.STOCK);
-        investment1.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        investment1.setInvestmentType(InvestmentType.STOCK);
+        investment1.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         investment1.setCurrentPrice(BigDecimal.valueOf(26.00));
         investment1.setIsActive(true);
         investment1.setUser(testUser);
@@ -207,8 +209,8 @@ class InvestmentControllerIntegrationTest {
         Investment investment2 = new Investment();
         investment2.setTicker("VALE3");
         investment2.setName("Vale");
-        investment2.setInvestmentType(Investment.InvestmentType.STOCK);
-        investment2.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        investment2.setInvestmentType(InvestmentType.STOCK);
+        investment2.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         investment2.setCurrentPrice(BigDecimal.valueOf(62.00));
         investment2.setIsActive(true);
         investment2.setUser(testUser);
@@ -235,8 +237,8 @@ class InvestmentControllerIntegrationTest {
         Investment investment = new Investment();
         investment.setTicker("PETR4");
         investment.setName("Petrobras");
-        investment.setInvestmentType(Investment.InvestmentType.STOCK);
-        investment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        investment.setInvestmentType(InvestmentType.STOCK);
+        investment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         investment.setCurrentPrice(BigDecimal.valueOf(26.00));
         investment.setIsActive(true);
         investment.setUser(testUser);
@@ -263,8 +265,8 @@ class InvestmentControllerIntegrationTest {
         Investment investment = new Investment();
         investment.setTicker("PETR4");
         investment.setName("Petrobras");
-        investment.setInvestmentType(Investment.InvestmentType.STOCK);
-        investment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        investment.setInvestmentType(InvestmentType.STOCK);
+        investment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         investment.setCurrentPrice(BigDecimal.valueOf(26.00));
         investment.setIsActive(true);
         investment.setUser(testUser);
@@ -291,8 +293,8 @@ class InvestmentControllerIntegrationTest {
         Investment stockInvestment = new Investment();
         stockInvestment.setTicker("PETR4");
         stockInvestment.setName("Petrobras");
-        stockInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
-        stockInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        stockInvestment.setInvestmentType(InvestmentType.STOCK);
+        stockInvestment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         stockInvestment.setCurrentPrice(BigDecimal.valueOf(26.00));
         stockInvestment.setIsActive(true);
         stockInvestment.setUser(testUser);
@@ -303,8 +305,8 @@ class InvestmentControllerIntegrationTest {
         Investment fiiInvestment = new Investment();
         fiiInvestment.setTicker("HGLG11");
         fiiInvestment.setName("CSHG Logística");
-        fiiInvestment.setInvestmentType(Investment.InvestmentType.FII);
-        fiiInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.TIJOLO);
+        fiiInvestment.setInvestmentType(InvestmentType.FII);
+        fiiInvestment.setInvestmentSubtype(InvestmentSubtype.TIJOLO);
         fiiInvestment.setCurrentPrice(BigDecimal.valueOf(105.00));
         fiiInvestment.setIsActive(true);
         fiiInvestment.setUser(testUser);
@@ -337,8 +339,8 @@ class InvestmentControllerIntegrationTest {
         Investment commonStock = new Investment();
         commonStock.setTicker("PETR4");
         commonStock.setName("Petrobras");
-        commonStock.setInvestmentType(Investment.InvestmentType.STOCK);
-        commonStock.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        commonStock.setInvestmentType(InvestmentType.STOCK);
+        commonStock.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         commonStock.setCurrentPrice(BigDecimal.valueOf(26.00));
         commonStock.setIsActive(true);
         commonStock.setUser(testUser);
@@ -349,8 +351,8 @@ class InvestmentControllerIntegrationTest {
         Investment preferredStock = new Investment();
         preferredStock.setTicker("PETR3");
         preferredStock.setName("Petrobras");
-        preferredStock.setInvestmentType(Investment.InvestmentType.STOCK);
-        preferredStock.setInvestmentSubtype(Investment.InvestmentSubtype.PREFERRED);
+        preferredStock.setInvestmentType(InvestmentType.STOCK);
+        preferredStock.setInvestmentSubtype(InvestmentSubtype.PREFERRED);
         preferredStock.setCurrentPrice(BigDecimal.valueOf(31.00));
         preferredStock.setIsActive(true);
         preferredStock.setUser(testUser);

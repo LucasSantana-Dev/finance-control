@@ -1,8 +1,11 @@
 package com.finance_control.unit.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.controller.InvestmentController;
+import com.finance_control.brazilian_market.controller.helper.InvestmentFilterHelper;
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.shared.context.UserContext;
@@ -18,6 +21,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -35,8 +41,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -55,6 +60,9 @@ class InvestmentControllerTest {
 
     @Mock
     private ExternalMarketDataService externalMarketDataService;
+
+    @Mock
+    private InvestmentFilterHelper filterHelper;
 
     @Mock
     private SentryService sentryService;
@@ -89,7 +97,7 @@ class InvestmentControllerTest {
             }
         };
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new InvestmentController(investmentService, externalMarketDataService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new InvestmentController(investmentService, externalMarketDataService, filterHelper))
                         .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver(), authPrincipalResolver)
                         .setControllerAdvice(new GlobalExceptionHandler(sentryService))
                         .build();
@@ -109,8 +117,8 @@ class InvestmentControllerTest {
         testInvestment.setId(1L);
         testInvestment.setTicker("PETR4");
         testInvestment.setName("Petrobras");
-        testInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
-        testInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        testInvestment.setInvestmentType(InvestmentType.STOCK);
+        testInvestment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         testInvestment.setCurrentPrice(BigDecimal.valueOf(26.00));
         testInvestment.setDayChangePercent(BigDecimal.valueOf(2.5));
         testInvestment.setDividendYield(BigDecimal.valueOf(8.5));
@@ -126,8 +134,8 @@ class InvestmentControllerTest {
         testInvestmentDTO.setId(1L);
         testInvestmentDTO.setTicker("PETR4");
         testInvestmentDTO.setName("Petrobras");
-        testInvestmentDTO.setInvestmentType(Investment.InvestmentType.STOCK);
-        testInvestmentDTO.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        testInvestmentDTO.setInvestmentType(InvestmentType.STOCK);
+        testInvestmentDTO.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         testInvestmentDTO.setCurrentPrice(BigDecimal.valueOf(26.00));
         testInvestmentDTO.setDayChangePercent(BigDecimal.valueOf(2.5));
         testInvestmentDTO.setDividendYield(BigDecimal.valueOf(8.5));
@@ -146,8 +154,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithValidParameters_ShouldReturnOk() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
+                .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                         .param("page", "0")
@@ -164,9 +179,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithTypeFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getInvestmentsByType(any(User.class), eq(Investment.InvestmentType.STOCK)))
-                        .thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), eq(InvestmentType.STOCK), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
+                .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                         .param("type", "STOCK")
@@ -180,8 +201,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithSearchTerm_ShouldReturnSearchResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.searchInvestments(any(User.class), eq("PETR4"))).thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), eq("PETR4"), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
+                .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("search", "PETR4"))
@@ -194,8 +222,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithPriceRangeFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), eq(BigDecimal.valueOf(20.00)), eq(BigDecimal.valueOf(30.00)), any(), any()))
+                .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("minPrice", "20.00")
@@ -209,8 +244,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithDividendYieldFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), eq(BigDecimal.valueOf(5.0)), eq(BigDecimal.valueOf(10.0))))
+                .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("minDividendYield", "5.0")
@@ -255,10 +297,10 @@ class InvestmentControllerTest {
 
     @Test
     void getInvestments_WithTypesMetadata_ShouldReturnTypes() throws Exception {
-        List<Investment.InvestmentType> types = Arrays.asList(
-                Investment.InvestmentType.STOCK,
-                Investment.InvestmentType.FII,
-                Investment.InvestmentType.BOND
+        List<InvestmentType> types = Arrays.asList(
+                InvestmentType.STOCK,
+                InvestmentType.FII,
+                InvestmentType.BOND
         );
         when(investmentService.getInvestmentTypes(any(User.class))).thenReturn(types);
 
@@ -275,11 +317,11 @@ class InvestmentControllerTest {
 
     @Test
     void getInvestments_WithSubtypesMetadata_ShouldReturnSubtypes() throws Exception {
-        List<Investment.InvestmentSubtype> subtypes = Arrays.asList(
-                Investment.InvestmentSubtype.ORDINARY,
-                Investment.InvestmentSubtype.PREFERRED
+        List<InvestmentSubtype> subtypes = Arrays.asList(
+                InvestmentSubtype.ORDINARY,
+                InvestmentSubtype.PREFERRED
         );
-        when(investmentService.getInvestmentSubtypes(any(User.class), eq(Investment.InvestmentType.STOCK)))
+        when(investmentService.getInvestmentSubtypes(any(User.class), eq(InvestmentType.STOCK)))
                 .thenReturn(subtypes);
 
         mockMvc.perform(get("/investments")
@@ -328,9 +370,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithComplexFiltering_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getInvestmentsByType(any(User.class), eq(Investment.InvestmentType.STOCK)))
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), eq(InvestmentType.STOCK), any(), eq("Energy"), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), eq(BigDecimal.valueOf(20.00)), eq(BigDecimal.valueOf(30.00)), eq(BigDecimal.valueOf(5.0)), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("type", "STOCK")
@@ -351,9 +399,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithTypeAndSubtypeFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getInvestmentsByTypeAndSubtype(any(User.class), eq(Investment.InvestmentType.STOCK), eq(Investment.InvestmentSubtype.ORDINARY)))
-                        .thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), eq(InvestmentType.STOCK), eq(InvestmentSubtype.ORDINARY), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
+                .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("type", "STOCK")
@@ -368,9 +422,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithSectorFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getInvestmentsBySector(any(User.class), eq("Energy")))
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), eq("Energy"), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("sector", "Energy"))
@@ -383,9 +443,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithIndustryFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getInvestmentsByIndustry(any(User.class), eq("Oil & Gas")))
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), eq("Oil & Gas")))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("industry", "Oil & Gas"))
@@ -398,7 +464,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithOnlyMinPriceFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), eq(BigDecimal.valueOf(25.00)), any(), any(), any()))
+                .thenReturn(investments);
+        when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("minPrice", "25.00"))
@@ -410,7 +484,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithOnlyMaxPriceFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), eq(BigDecimal.valueOf(30.00)), any(), any()))
+                .thenReturn(investments);
+        when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("maxPrice", "30.00"))
@@ -422,7 +504,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithOnlyMinDividendYieldFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), eq(BigDecimal.valueOf(5.0)), any()))
+                .thenReturn(investments);
+        when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("minDividendYield", "5.0"))
@@ -434,7 +524,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithOnlyMaxDividendYieldFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), eq(BigDecimal.valueOf(10.0))))
+                .thenReturn(investments);
+        when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("maxDividendYield", "10.0"))
@@ -446,7 +544,15 @@ class InvestmentControllerTest {
     @Test
     void getInvestments_WithPagination_ShouldReturnPagedResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
-        when(investmentService.getAllInvestments(any(User.class))).thenReturn(investments);
+        List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+
+        when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
+                .thenReturn(investments);
+        when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
+        doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
 
         mockMvc.perform(get("/investments")
                 .param("page", "0")

@@ -11,6 +11,7 @@ import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.exception.EntityNotFoundException;
 import com.finance_control.shared.monitoring.MetricsService;
+import com.finance_control.shared.service.EncryptionService;
 import com.finance_control.shared.service.SupabaseRealtimeService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
@@ -22,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -44,6 +44,7 @@ public class OpenFinanceConsentService {
     private final OpenFinanceMapper mapper;
     private final AppProperties appProperties;
     private final MetricsService metricsService;
+    private final EncryptionService encryptionService;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private SupabaseRealtimeService realtimeService;
@@ -300,9 +301,12 @@ public class OpenFinanceConsentService {
         if (!StringUtils.hasText(token)) {
             return null;
         }
-        // Simple Base64 encoding for now - in production, use proper encryption
-        // TODO: Implement proper encryption using AES or similar
-        return Base64.getEncoder().encodeToString(token.getBytes());
+        try {
+            return encryptionService.encrypt(token);
+        } catch (Exception e) {
+            log.error("Failed to encrypt token", e);
+            return null;
+        }
     }
 
     private String decryptToken(String encryptedToken) {
@@ -310,7 +314,7 @@ public class OpenFinanceConsentService {
             return null;
         }
         try {
-            return new String(Base64.getDecoder().decode(encryptedToken));
+            return encryptionService.decrypt(encryptedToken);
         } catch (Exception e) {
             log.error("Failed to decrypt token", e);
             return null;

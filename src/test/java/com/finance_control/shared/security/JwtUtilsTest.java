@@ -1,6 +1,8 @@
 package com.finance_control.shared.security;
 
 import com.finance_control.shared.config.AppProperties;
+import com.finance_control.shared.config.properties.SecurityProperties;
+import com.finance_control.shared.config.properties.SupabaseProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -49,20 +51,21 @@ class JwtUtilsTest {
         testSupabaseSecret = "testSupabaseSecretKeyMustBeAtLeast32CharactersLongForHS256Algorithm";
         testSupabaseUserId = UUID.randomUUID().toString();
 
-        AppProperties.Jwt jwtRecord = new AppProperties.Jwt(
+        SecurityProperties.JwtProperties jwtRecord = new SecurityProperties.JwtProperties(
             testSecret, 86400000L, 604800000L, "finance-control", "finance-control-users"
         );
-        AppProperties.Security securityRecord = new AppProperties.Security(
+        SecurityProperties securityRecord = new SecurityProperties(
             jwtRecord,
-            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
-            List.of()
+            new SecurityProperties.CorsProperties(List.of(), List.of(), List.of(), false, 0),
+            List.of(),
+            new SecurityProperties.EncryptionProperties()
         );
 
-        AppProperties.Supabase supabaseRecord = new AppProperties.Supabase(
+        SupabaseProperties supabaseRecord = new SupabaseProperties(
             true, "https://test.supabase.co", "test-anon-key", testSupabaseSecret, "test-service-role-key",
-            new AppProperties.SupabaseDatabase(),
-            new AppProperties.Storage(true, "avatars", "documents", "transactions", new AppProperties.Compression()),
-            new AppProperties.Realtime(true, List.of("transactions", "dashboard", "goals"))
+            new SupabaseProperties.SupabaseDatabaseProperties(),
+            new SupabaseProperties.StorageProperties(true, "avatars", "documents", "transactions", new SupabaseProperties.CompressionProperties()),
+            new SupabaseProperties.RealtimeProperties(true, List.of("transactions", "dashboard", "goals"))
         );
 
         when(appProperties.security()).thenReturn(securityRecord);
@@ -144,13 +147,14 @@ class JwtUtilsTest {
     @Test
     void validateToken_WithExpiredToken_ShouldReturnFalse() throws Exception {
         // Create a token that expires very soon
-        AppProperties.Jwt shortJwt = new AppProperties.Jwt(
+        SecurityProperties.JwtProperties shortJwt = new SecurityProperties.JwtProperties(
             testSecret, 1L, 604800000L, "finance-control", "finance-control-users"
         );
-        AppProperties.Security shortSecurity = new AppProperties.Security(
+        SecurityProperties shortSecurity = new SecurityProperties(
             shortJwt,
-            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
-            List.of()
+            new SecurityProperties.CorsProperties(List.of(), List.of(), List.of(), false, 0),
+            List.of(),
+            new SecurityProperties.EncryptionProperties()
         );
         when(appProperties.security()).thenReturn(shortSecurity);
 
@@ -200,13 +204,14 @@ class JwtUtilsTest {
     @Test
     void getUserIdFromToken_WithExpiredToken_ShouldReturnNull() throws Exception {
         // Create a token that expires very soon
-        AppProperties.Jwt shortJwt = new AppProperties.Jwt(
+        SecurityProperties.JwtProperties shortJwt = new SecurityProperties.JwtProperties(
             testSecret, 1L, 604800000L, "finance-control", "finance-control-users"
         );
-        AppProperties.Security shortSecurity = new AppProperties.Security(
+        SecurityProperties shortSecurity = new SecurityProperties(
             shortJwt,
-            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
-            List.of()
+            new SecurityProperties.CorsProperties(List.of(), List.of(), List.of(), false, 0),
+            List.of(),
+            new SecurityProperties.EncryptionProperties()
         );
         when(appProperties.security()).thenReturn(shortSecurity);
 
@@ -266,13 +271,14 @@ class JwtUtilsTest {
         // Note: When token is expired, getExpirationFromToken catches JwtException
         // (including ExpiredJwtException) and returns null. Since expiration is null,
         // isTokenExpired returns false (see implementation: expiration != null && expiration.before(new Date()))
-        AppProperties.Jwt shortJwt = new AppProperties.Jwt(
+        SecurityProperties.JwtProperties shortJwt = new SecurityProperties.JwtProperties(
             testSecret, -1000L, 604800000L, "finance-control", "finance-control-users"
         );
-        AppProperties.Security shortSecurity = new AppProperties.Security(
+        SecurityProperties shortSecurity = new SecurityProperties(
             shortJwt,
-            new AppProperties.Cors(List.of(), List.of(), List.of(), false, 0),
-            List.of()
+            new SecurityProperties.CorsProperties(List.of(), List.of(), List.of(), false, 0),
+            List.of(),
+            new SecurityProperties.EncryptionProperties()
         );
         when(appProperties.security()).thenReturn(shortSecurity);
 

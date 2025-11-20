@@ -17,6 +17,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import com.finance_control.transactions.model.category.TransactionCategory;
+import com.finance_control.transactions.model.helper.TransactionResponsibilityHelper;
 import com.finance_control.transactions.model.responsibles.TransactionResponsibles;
 import com.finance_control.transactions.model.responsibles.TransactionResponsibles.TransactionResponsibility;
 import com.finance_control.transactions.model.source.TransactionSourceEntity;
@@ -60,6 +61,21 @@ public class Transaction extends BaseModel<Long> {
 
     @Column(name = "installments")
     private Integer installments;
+
+    @Column(name = "status", length = 20)
+    private String status = "paid"; // planned, pending, paid, cancelled
+
+    @Column(name = "installment_group_id")
+    private String installmentGroupId;
+
+    @Column(name = "installment_number")
+    private Integer installmentNumber;
+
+    @Column(name = "total_installments")
+    private Integer totalInstallments;
+
+    @Column(name = "installment_amount", precision = 10, scale = 2)
+    private BigDecimal installmentAmount;
 
     @Column(name = "date")
     private LocalDateTime date = LocalDateTime.now();
@@ -114,21 +130,14 @@ public class Transaction extends BaseModel<Long> {
     }
 
     public BigDecimal getTotalPercentage() {
-        return responsibilities.stream()
-                .map(TransactionResponsibility::getPercentage)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return TransactionResponsibilityHelper.getTotalPercentage(responsibilities);
     }
 
     public boolean isPercentageValid() {
-        BigDecimal total = getTotalPercentage();
-        // compareTo ignores scale, use constant without String constructor
-        return total.compareTo(BigDecimal.valueOf(100)) == 0;
+        return TransactionResponsibilityHelper.isPercentageValid(responsibilities);
     }
 
     public BigDecimal getAmountForResponsible(TransactionResponsibles responsible) {
-        return responsibilities.stream()
-                .filter(r -> r.getResponsible().equals(responsible))
-                .map(TransactionResponsibility::getCalculatedAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return TransactionResponsibilityHelper.getAmountForResponsible(responsibilities, responsible, amount);
     }
 }

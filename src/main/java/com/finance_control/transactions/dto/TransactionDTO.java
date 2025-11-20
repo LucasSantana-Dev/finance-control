@@ -64,6 +64,8 @@ public class TransactionDTO extends BaseDTO<Long> {
 
     private String bankReference;
 
+    private Boolean reconciled;
+
     @NotEmpty(message = "At least one responsible is required")
     @Valid
     private List<TransactionResponsiblesDTO> responsibilities;

@@ -43,6 +43,8 @@ gradle-app.setting
 ## VS Code & Cursor
 .vscode/
 .cursor/
+.agent/
+.agentignore
 
 # Environment Variables
 .env

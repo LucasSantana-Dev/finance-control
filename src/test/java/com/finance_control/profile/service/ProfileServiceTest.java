@@ -5,6 +5,8 @@ import com.finance_control.profile.dto.ProfileUpdateRequest;
 import com.finance_control.profile.model.Profile;
 import com.finance_control.profile.repository.ProfileRepository;
 import com.finance_control.shared.context.UserContext;
+import com.finance_control.shared.service.EncryptionService;
+import com.finance_control.shared.service.SupabaseStorageService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,13 +15,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +35,12 @@ class ProfileServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private SupabaseStorageService storageService;
+
+    @Mock
+    private EncryptionService encryptionService;
 
     @InjectMocks
     private ProfileService profileService;
@@ -169,7 +180,8 @@ class ProfileServiceTest {
             );
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-            when(userRepository.findByEmail("newemail@example.com")).thenReturn(Optional.empty());
+            when(encryptionService.hashEmail("newemail@example.com")).thenReturn("hashed-newemail");
+            when(userRepository.findByEmailHash("hashed-newemail")).thenReturn(Optional.empty());
             when(userRepository.save(any(User.class))).thenReturn(testUser);
             when(profileRepository.findByUserId(1L)).thenReturn(Optional.of(testProfile));
             when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> {
@@ -181,7 +193,8 @@ class ProfileServiceTest {
             ProfileDTO result = profileService.updateCurrentProfile(request);
 
             assertThat(result).isNotNull();
-            verify(userRepository).findByEmail("newemail@example.com");
+            verify(encryptionService).hashEmail("newemail@example.com");
+            verify(userRepository).findByEmailHash("hashed-newemail");
             verify(userRepository).save(any(User.class));
             assertThat(testUser.getEmail()).isEqualTo("newemail@example.com");
         }
@@ -206,14 +219,16 @@ class ProfileServiceTest {
             );
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-            when(userRepository.findByEmail("existing@example.com")).thenReturn(Optional.of(otherUser));
+            when(encryptionService.hashEmail("existing@example.com")).thenReturn("hashed-existing");
+            when(userRepository.findByEmailHash("hashed-existing")).thenReturn(Optional.of(otherUser));
 
             assertThatThrownBy(() -> profileService.updateCurrentProfile(request))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessage("Email already in use");
 
             verify(userRepository).findById(1L);
-            verify(userRepository).findByEmail("existing@example.com");
+            verify(encryptionService).hashEmail("existing@example.com");
+            verify(userRepository).findByEmailHash("hashed-existing");
             verify(userRepository, never()).save(any(User.class));
             verify(profileRepository, never()).save(any(Profile.class));
         }
@@ -244,7 +259,8 @@ class ProfileServiceTest {
             ProfileDTO result = profileService.updateCurrentProfile(request);
 
             assertThat(result).isNotNull();
-            verify(userRepository, never()).findByEmail(anyString());
+            verify(encryptionService, never()).hashEmail(anyString());
+            verify(userRepository, never()).findByEmailHash(anyString());
             verify(userRepository, never()).save(any(User.class));
             verify(profileRepository).save(any(Profile.class));
         }
@@ -391,8 +407,9 @@ class ProfileServiceTest {
             ProfileDTO result = profileService.updateCurrentProfile(request);
 
             assertThat(result).isNotNull();
-            // Email should not be updated since it's the same, so findByEmail and save should not be called
-            verify(userRepository, never()).findByEmail(anyString());
+            // Email should not be updated since it's the same, so hashEmail and findByEmailHash should not be called
+            verify(encryptionService, never()).hashEmail(anyString());
+            verify(userRepository, never()).findByEmailHash(anyString());
             verify(userRepository, never()).save(any(User.class));
             verify(profileRepository).save(any(Profile.class));
         }
@@ -413,7 +430,8 @@ class ProfileServiceTest {
             );
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-            when(userRepository.findByEmail("newemail@example.com")).thenReturn(Optional.empty());
+            when(encryptionService.hashEmail("newemail@example.com")).thenReturn("hashed-newemail");
+            when(userRepository.findByEmailHash("hashed-newemail")).thenReturn(Optional.empty());
             when(userRepository.save(any(User.class))).thenReturn(testUser);
             when(profileRepository.findByUserId(1L)).thenReturn(Optional.of(testProfile));
             when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> {
@@ -425,9 +443,282 @@ class ProfileServiceTest {
             ProfileDTO result = profileService.updateCurrentProfile(request);
 
             assertThat(result).isNotNull();
-            verify(userRepository).findByEmail("newemail@example.com");
+            verify(encryptionService).hashEmail("newemail@example.com");
+            verify(userRepository).findByEmailHash("hashed-newemail");
             verify(userRepository).save(any(User.class));
             verify(profileRepository).save(any(Profile.class));
+        }
+    }
+
+    @Test
+    void uploadAvatar_WithValidFile_ShouldUploadAndUpdateProfile() throws IOException {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            MultipartFile avatarFile = mock(MultipartFile.class);
+            when(avatarFile.isEmpty()).thenReturn(false);
+            when(avatarFile.getContentType()).thenReturn("image/jpeg");
+            when(avatarFile.getSize()).thenReturn(1024L);
+            lenient().when(avatarFile.getBytes()).thenReturn(new byte[1024]);
+
+            String newAvatarUrl = "https://project.supabase.co/storage/v1/object/public/avatars/user-1/avatar.jpg";
+            when(storageService.uploadAvatar(1L, avatarFile)).thenReturn(newAvatarUrl);
+            when(profileRepository.findByUserId(1L)).thenReturn(Optional.of(testProfile));
+            when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> {
+                Profile saved = invocation.getArgument(0);
+                saved.setId(1L);
+                return saved;
+            });
+
+            // Use reflection to set storageService
+            try {
+                java.lang.reflect.Field field = ProfileService.class.getDeclaredField("storageService");
+                field.setAccessible(true);
+                field.set(profileService, storageService);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set storageService", e);
+            }
+
+            ProfileDTO result = profileService.uploadAvatar(avatarFile);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getAvatarUrl()).isEqualTo(newAvatarUrl);
+            verify(storageService).uploadAvatar(1L, avatarFile);
+            verify(profileRepository).save(any(Profile.class));
+        }
+    }
+
+    @Test
+    void uploadAvatar_WhenUserContextIsNull_ShouldThrowException() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(null);
+
+            MultipartFile avatarFile = mock(MultipartFile.class);
+
+            assertThatThrownBy(() -> profileService.uploadAvatar(avatarFile))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage("No authenticated user found");
+        }
+    }
+
+    @Test
+    void uploadAvatar_WhenStorageServiceIsNull_ShouldThrowException() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            // Use reflection to set storageService to null
+            try {
+                java.lang.reflect.Field field = ProfileService.class.getDeclaredField("storageService");
+                field.setAccessible(true);
+                field.set(profileService, null);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set storageService to null", e);
+            }
+
+            MultipartFile avatarFile = mock(MultipartFile.class);
+
+            assertThatThrownBy(() -> profileService.uploadAvatar(avatarFile))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Supabase Storage service is not available");
+        }
+    }
+
+    @Test
+    void uploadAvatar_WithNullFile_ShouldThrowException() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            // Use reflection to set storageService
+            try {
+                java.lang.reflect.Field field = ProfileService.class.getDeclaredField("storageService");
+                field.setAccessible(true);
+                field.set(profileService, storageService);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set storageService", e);
+            }
+
+            assertThatThrownBy(() -> profileService.uploadAvatar(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Avatar file cannot be empty");
+        }
+    }
+
+    @Test
+    void uploadAvatar_WithEmptyFile_ShouldThrowException() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            MultipartFile avatarFile = mock(MultipartFile.class);
+            when(avatarFile.isEmpty()).thenReturn(true);
+
+            // Use reflection to set storageService
+            try {
+                java.lang.reflect.Field field = ProfileService.class.getDeclaredField("storageService");
+                field.setAccessible(true);
+                field.set(profileService, storageService);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set storageService", e);
+            }
+
+            assertThatThrownBy(() -> profileService.uploadAvatar(avatarFile))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Avatar file cannot be empty");
+        }
+    }
+
+    @Test
+    void uploadAvatar_WithInvalidContentType_ShouldThrowException() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            MultipartFile avatarFile = mock(MultipartFile.class);
+            when(avatarFile.isEmpty()).thenReturn(false);
+            when(avatarFile.getContentType()).thenReturn("application/pdf");
+
+            // Use reflection to set storageService
+            try {
+                java.lang.reflect.Field field = ProfileService.class.getDeclaredField("storageService");
+                field.setAccessible(true);
+                field.set(profileService, storageService);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set storageService", e);
+            }
+
+            assertThatThrownBy(() -> profileService.uploadAvatar(avatarFile))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Invalid file type");
+        }
+    }
+
+    @Test
+    void uploadAvatar_WithFileTooLarge_ShouldThrowException() {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            MultipartFile avatarFile = mock(MultipartFile.class);
+            when(avatarFile.isEmpty()).thenReturn(false);
+            when(avatarFile.getContentType()).thenReturn("image/jpeg");
+            when(avatarFile.getSize()).thenReturn(6 * 1024 * 1024L); // 6MB
+
+            // Use reflection to set storageService
+            try {
+                java.lang.reflect.Field field = ProfileService.class.getDeclaredField("storageService");
+                field.setAccessible(true);
+                field.set(profileService, storageService);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set storageService", e);
+            }
+
+            assertThatThrownBy(() -> profileService.uploadAvatar(avatarFile))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("File size exceeds maximum");
+        }
+    }
+
+    @Test
+    void uploadAvatar_WhenProfileNotFound_ShouldThrowException() throws IOException {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            MultipartFile avatarFile = mock(MultipartFile.class);
+            when(avatarFile.isEmpty()).thenReturn(false);
+            when(avatarFile.getContentType()).thenReturn("image/jpeg");
+            when(avatarFile.getSize()).thenReturn(1024L);
+
+            String newAvatarUrl = "https://project.supabase.co/storage/v1/object/public/avatars/user-1/avatar.jpg";
+            when(storageService.uploadAvatar(1L, avatarFile)).thenReturn(newAvatarUrl);
+            when(profileRepository.findByUserId(1L)).thenReturn(Optional.empty());
+
+            // Use reflection to set storageService
+            try {
+                java.lang.reflect.Field field = ProfileService.class.getDeclaredField("storageService");
+                field.setAccessible(true);
+                field.set(profileService, storageService);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set storageService", e);
+            }
+
+            assertThatThrownBy(() -> profileService.uploadAvatar(avatarFile))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Profile not found");
+        }
+    }
+
+    @Test
+    void uploadAvatar_WithOldSupabaseAvatar_ShouldDeleteOldAvatar() throws IOException {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            testProfile.setAvatarUrl("https://project.supabase.co/storage/v1/object/public/avatars/user-1/old-avatar.jpg");
+
+            MultipartFile avatarFile = mock(MultipartFile.class);
+            when(avatarFile.isEmpty()).thenReturn(false);
+            when(avatarFile.getContentType()).thenReturn("image/png");
+            when(avatarFile.getSize()).thenReturn(1024L);
+            lenient().when(avatarFile.getBytes()).thenReturn(new byte[1024]);
+
+            String newAvatarUrl = "https://project.supabase.co/storage/v1/object/public/avatars/user-1/new-avatar.png";
+            when(storageService.uploadAvatar(1L, avatarFile)).thenReturn(newAvatarUrl);
+            lenient().when(storageService.deleteFile("avatars", "user-1/old-avatar.jpg")).thenReturn(true);
+            when(profileRepository.findByUserId(1L)).thenReturn(Optional.of(testProfile));
+            when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> {
+                Profile saved = invocation.getArgument(0);
+                saved.setId(1L);
+                return saved;
+            });
+
+            // Use reflection to set storageService
+            try {
+                java.lang.reflect.Field field = ProfileService.class.getDeclaredField("storageService");
+                field.setAccessible(true);
+                field.set(profileService, storageService);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set storageService", e);
+            }
+
+            ProfileDTO result = profileService.uploadAvatar(avatarFile);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getAvatarUrl()).isEqualTo(newAvatarUrl);
+            verify(storageService).deleteFile("avatars", "user-1/old-avatar.jpg");
+        }
+    }
+
+    @Test
+    void uploadAvatar_WithNonSupabaseAvatar_ShouldNotDeleteOldAvatar() throws IOException {
+        try (var mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCurrentUserId).thenReturn(1L);
+
+            testProfile.setAvatarUrl("https://example.com/avatar.jpg");
+
+            MultipartFile avatarFile = mock(MultipartFile.class);
+            when(avatarFile.isEmpty()).thenReturn(false);
+            when(avatarFile.getContentType()).thenReturn("image/gif");
+            when(avatarFile.getSize()).thenReturn(1024L);
+            lenient().when(avatarFile.getBytes()).thenReturn(new byte[1024]);
+
+            String newAvatarUrl = "https://project.supabase.co/storage/v1/object/public/avatars/user-1/new-avatar.gif";
+            when(storageService.uploadAvatar(1L, avatarFile)).thenReturn(newAvatarUrl);
+            when(profileRepository.findByUserId(1L)).thenReturn(Optional.of(testProfile));
+            when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> {
+                Profile saved = invocation.getArgument(0);
+                saved.setId(1L);
+                return saved;
+            });
+
+            // Use reflection to set storageService
+            try {
+                java.lang.reflect.Field field = ProfileService.class.getDeclaredField("storageService");
+                field.setAccessible(true);
+                field.set(profileService, storageService);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set storageService", e);
+            }
+
+            ProfileDTO result = profileService.uploadAvatar(avatarFile);
+
+            assertThat(result).isNotNull();
+            verify(storageService, never()).deleteFile(anyString(), anyString());
         }
     }
 }

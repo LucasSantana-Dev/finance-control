@@ -1,7 +1,7 @@
 package com.finance_control.unit.brazilian_market.client;
 
 import com.finance_control.brazilian_market.client.MarketDataProvider;
-import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -29,18 +29,18 @@ class MarketDataProviderIntegrationTest {
 
     @Test
     void testBrazilianProviderSupportsCorrectInvestmentTypes() {
-        assertTrue(brazilianProvider.supportsInvestmentType(Investment.InvestmentType.STOCK));
-        assertTrue(brazilianProvider.supportsInvestmentType(Investment.InvestmentType.FII));
-        assertFalse(brazilianProvider.supportsInvestmentType(Investment.InvestmentType.ETF));
-        assertFalse(brazilianProvider.supportsInvestmentType(Investment.InvestmentType.BOND));
+        assertTrue(brazilianProvider.supportsInvestmentType(InvestmentType.STOCK));
+        assertTrue(brazilianProvider.supportsInvestmentType(InvestmentType.FII));
+        assertFalse(brazilianProvider.supportsInvestmentType(InvestmentType.ETF));
+        assertFalse(brazilianProvider.supportsInvestmentType(InvestmentType.BOND));
     }
 
     @Test
     void testUsProviderSupportsCorrectInvestmentTypes() {
-        assertTrue(usProvider.supportsInvestmentType(Investment.InvestmentType.STOCK));
-        assertTrue(usProvider.supportsInvestmentType(Investment.InvestmentType.ETF));
-        assertFalse(usProvider.supportsInvestmentType(Investment.InvestmentType.FII));
-        assertFalse(usProvider.supportsInvestmentType(Investment.InvestmentType.BOND));
+        assertTrue(usProvider.supportsInvestmentType(InvestmentType.STOCK));
+        assertTrue(usProvider.supportsInvestmentType(InvestmentType.ETF));
+        assertFalse(usProvider.supportsInvestmentType(InvestmentType.FII));
+        assertFalse(usProvider.supportsInvestmentType(InvestmentType.BOND));
     }
 
     @Test

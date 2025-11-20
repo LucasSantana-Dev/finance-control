@@ -1,6 +1,7 @@
 package com.finance_control.unit.shared.service;
 
 import com.finance_control.shared.config.AppProperties;
+import com.finance_control.shared.config.properties.SupabaseProperties;
 import com.finance_control.shared.service.FileCompressionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,13 +26,13 @@ class FileCompressionServiceTest {
     private AppProperties appProperties;
 
     @Mock
-    private AppProperties.Supabase supabase;
+    private SupabaseProperties supabase;
 
     @Mock
-    private AppProperties.Storage storage;
+    private SupabaseProperties.StorageProperties storage;
 
     @Mock
-    private AppProperties.Compression compression;
+    private SupabaseProperties.CompressionProperties compression;
 
     private FileCompressionService compressionService;
 

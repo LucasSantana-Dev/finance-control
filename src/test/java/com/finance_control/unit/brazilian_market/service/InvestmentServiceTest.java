@@ -3,6 +3,8 @@ package com.finance_control.unit.brazilian_market.service;
 import com.finance_control.brazilian_market.client.MarketQuote;
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
 import com.finance_control.brazilian_market.repository.InvestmentRepository;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
@@ -62,8 +64,8 @@ class InvestmentServiceTest {
         testInvestment.setId(1L);
         testInvestment.setTicker("PETR4");
         testInvestment.setName("Petrobras");
-        testInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
-        testInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        testInvestment.setInvestmentType(InvestmentType.STOCK);
+        testInvestment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         testInvestment.setCurrentPrice(BigDecimal.valueOf(26.00));
         testInvestment.setIsActive(true);
         testInvestment.setCreatedAt(LocalDateTime.now());
@@ -73,8 +75,8 @@ class InvestmentServiceTest {
         testInvestmentDTO = new InvestmentDTO();
         testInvestmentDTO.setTicker("PETR4");
         testInvestmentDTO.setName("Petrobras");
-        testInvestmentDTO.setInvestmentType(Investment.InvestmentType.STOCK);
-        testInvestmentDTO.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        testInvestmentDTO.setInvestmentType(InvestmentType.STOCK);
+        testInvestmentDTO.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         testInvestmentDTO.setCurrentPrice(BigDecimal.valueOf(26.00));
         testInvestmentDTO.setIsActive(true);
     }
@@ -98,7 +100,7 @@ class InvestmentServiceTest {
         assertThat(result.getUpdatedAt()).isNotNull();
 
         verify(investmentRepository, times(2)).save(any(Investment.class));
-        verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
+        verify(externalMarketDataService).fetchMarketData("PETR4", InvestmentType.STOCK);
     }
 
     @Test
@@ -259,38 +261,38 @@ class InvestmentServiceTest {
     void getInvestmentsByType_ShouldReturnInvestmentsOfSpecificType() {
         // Given
         when(investmentRepository.findByUser_IdAndInvestmentTypeAndIsActiveTrue(
-                1L, Investment.InvestmentType.STOCK))
+                1L, InvestmentType.STOCK))
                 .thenReturn(List.of(testInvestment));
 
         // When
-        List<Investment> result = investmentService.getInvestmentsByType(testUser, Investment.InvestmentType.STOCK);
+        List<Investment> result = investmentService.getInvestmentsByType(testUser, InvestmentType.STOCK);
 
         // Then
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
+        assertThat(result.get(0).getInvestmentType()).isEqualTo(InvestmentType.STOCK);
 
         verify(investmentRepository).findByUser_IdAndInvestmentTypeAndIsActiveTrue(
-                1L, Investment.InvestmentType.STOCK);
+                1L, InvestmentType.STOCK);
     }
 
     @Test
     void getInvestmentsByTypeAndSubtype_ShouldReturnFilteredInvestments() {
         // Given
         when(investmentRepository.findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(
-                1L, Investment.InvestmentType.STOCK, Investment.InvestmentSubtype.ORDINARY))
+                1L, InvestmentType.STOCK, InvestmentSubtype.ORDINARY))
                 .thenReturn(List.of(testInvestment));
 
         // When
         List<Investment> result = investmentService.getInvestmentsByTypeAndSubtype(
-                testUser, Investment.InvestmentType.STOCK, Investment.InvestmentSubtype.ORDINARY);
+                testUser, InvestmentType.STOCK, InvestmentSubtype.ORDINARY);
 
         // Then
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
-        assertThat(result.get(0).getInvestmentSubtype()).isEqualTo(Investment.InvestmentSubtype.ORDINARY);
+        assertThat(result.get(0).getInvestmentType()).isEqualTo(InvestmentType.STOCK);
+        assertThat(result.get(0).getInvestmentSubtype()).isEqualTo(InvestmentSubtype.ORDINARY);
 
         verify(investmentRepository).findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(
-                1L, Investment.InvestmentType.STOCK, Investment.InvestmentSubtype.ORDINARY);
+                1L, InvestmentType.STOCK, InvestmentSubtype.ORDINARY);
     }
 
     @Test
@@ -309,7 +311,7 @@ class InvestmentServiceTest {
         assertThat(result.getCurrentPrice()).isEqualTo(BigDecimal.valueOf(26.50));
 
         verify(externalMarketDataService).needsUpdate(null);
-        verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
+        verify(externalMarketDataService).fetchMarketData("PETR4", InvestmentType.STOCK);
         verify(investmentRepository).save(testInvestment);
     }
 
@@ -425,7 +427,7 @@ class InvestmentServiceTest {
 
         // Then
         verify(investmentRepository).findInvestmentsNeedingPriceUpdate(eq(1L), any());
-        verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
+        verify(externalMarketDataService).fetchMarketData("PETR4", InvestmentType.STOCK);
         verify(investmentRepository).save(testInvestment);
     }
 
@@ -444,7 +446,7 @@ class InvestmentServiceTest {
         // Then
         assertThat(result).isNotNull();
         verify(externalMarketDataService).needsUpdate(null);
-        verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
+        verify(externalMarketDataService).fetchMarketData("PETR4", InvestmentType.STOCK);
         verify(investmentRepository).save(testInvestment);
     }
 
@@ -466,7 +468,7 @@ class InvestmentServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getCurrentPrice()).isEqualTo(originalPrice);
         verify(externalMarketDataService).needsUpdate(any());
-        verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
+        verify(externalMarketDataService).fetchMarketData("PETR4", InvestmentType.STOCK);
         verify(investmentRepository).save(testInvestment);
     }
 
@@ -491,16 +493,16 @@ class InvestmentServiceTest {
         Investment investment2 = new Investment();
         investment2.setId(2L);
         investment2.setTicker("VALE3");
-        investment2.setInvestmentType(Investment.InvestmentType.STOCK);
+        investment2.setInvestmentType(InvestmentType.STOCK);
         investment2.setUser(testUser);
 
         List<Investment> investmentsToUpdate = List.of(testInvestment, investment2);
         when(investmentRepository.findInvestmentsNeedingPriceUpdate(any(), any()))
                 .thenReturn(investmentsToUpdate);
         when(externalMarketDataService.needsUpdate(any())).thenReturn(true);
-        when(externalMarketDataService.fetchMarketData("PETR4", Investment.InvestmentType.STOCK))
+        when(externalMarketDataService.fetchMarketData("PETR4", InvestmentType.STOCK))
                 .thenReturn(Optional.of(createMarketQuote()));
-        when(externalMarketDataService.fetchMarketData("VALE3", Investment.InvestmentType.STOCK))
+        when(externalMarketDataService.fetchMarketData("VALE3", InvestmentType.STOCK))
                 .thenThrow(new RuntimeException("API error"));
         when(investmentRepository.save(any(Investment.class))).thenReturn(testInvestment);
 
@@ -509,8 +511,8 @@ class InvestmentServiceTest {
 
         // Then
         verify(investmentRepository).findInvestmentsNeedingPriceUpdate(eq(1L), any());
-        verify(externalMarketDataService).fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
-        verify(externalMarketDataService).fetchMarketData("VALE3", Investment.InvestmentType.STOCK);
+        verify(externalMarketDataService).fetchMarketData("PETR4", InvestmentType.STOCK);
+        verify(externalMarketDataService).fetchMarketData("VALE3", InvestmentType.STOCK);
         verify(investmentRepository).save(testInvestment);
     }
 

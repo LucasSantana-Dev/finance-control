@@ -5,8 +5,12 @@
     xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.net/ruleset_2_0_0.xsd">
 
     <description>
-        Basic PMD rules for Finance Control project
+        PMD rules for Finance Control project with cognitive complexity focus
     </description>
+
+    <!-- Exclude patterns -->
+    <exclude-pattern>*/target/*</exclude-pattern>
+    <exclude-pattern>*/generated/*</exclude-pattern>
 
     <!-- Best Practices -->
     <rule ref="category/java/bestpractices.xml/UnusedLocalVariable" />
@@ -20,4 +24,53 @@
     <rule ref="category/java/errorprone.xml/EmptyCatchBlock" />
     <rule ref="category/java/errorprone.xml/NullAssignment" />
 
-</ruleset> 
+    <!-- Complexity Rules for Production Code -->
+    <rule ref="category/java/design.xml/CyclomaticComplexity">
+        <priority>1</priority>
+        <properties>
+            <property name="classReportLevel" value="80" />
+            <property name="methodReportLevel" value="15" />
+        </properties>
+        <exclude-pattern>*/test/*</exclude-pattern>
+    </rule>
+
+    <!-- Note: CognitiveComplexity rule may not be available in PMD 7.0.0 -->
+    <!-- Using CyclomaticComplexity as primary complexity metric -->
+    <!-- Cognitive complexity is also measured by SonarQube -->
+
+    <!-- Complexity Rules for Test Code (higher thresholds) -->
+    <rule ref="category/java/design.xml/CyclomaticComplexity">
+        <priority>1</priority>
+        <properties>
+            <property name="classReportLevel" value="100" />
+            <property name="methodReportLevel" value="20" />
+        </properties>
+        <include-pattern>*/test/*</include-pattern>
+    </rule>
+
+    <!-- Note: ExcessiveMethodLength and ExcessiveClassLength rules not available in PMD 7.0.0 -->
+    <!-- Method and file length checks are handled by Checkstyle -->
+
+    <!-- Design Pattern Rules -->
+    <rule ref="category/java/design.xml/ExcessiveParameterList">
+        <priority>2</priority>
+        <properties>
+            <property name="minimum" value="7" />
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/TooManyMethods">
+        <priority>2</priority>
+        <properties>
+            <property name="maxmethods" value="20" />
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/TooManyFields">
+        <priority>2</priority>
+        <properties>
+            <property name="maxfields" value="15" />
+        </properties>
+    </rule>
+
+</ruleset>

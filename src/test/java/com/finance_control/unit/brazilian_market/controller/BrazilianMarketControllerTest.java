@@ -1,10 +1,13 @@
 package com.finance_control.unit.brazilian_market.controller;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
 import com.finance_control.brazilian_market.model.MarketIndicator;
 import com.finance_control.brazilian_market.service.BrazilianMarketDataService;
 import com.finance_control.brazilian_market.service.InvestmentService;
 import com.finance_control.shared.config.AppProperties;
+import com.finance_control.shared.config.properties.*;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -75,8 +78,8 @@ class BrazilianMarketControllerTest {
         testInvestment.setId(1L);
         testInvestment.setTicker("PETR4");
         testInvestment.setName("Petrobras");
-        testInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
-        testInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        testInvestment.setInvestmentType(InvestmentType.STOCK);
+        testInvestment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         testInvestment.setCurrentPrice(BigDecimal.valueOf(26.00));
         testInvestment.setUser(testUser);
         testInvestment.setIsActive(true);
@@ -263,26 +266,27 @@ class BrazilianMarketControllerTest {
         public AppProperties appProperties() {
             return new AppProperties(
                 false,
-                new AppProperties.Database("jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE", "sa", "", "org.h2.Driver", "", "testdb", new AppProperties.Pool(2, 5, 1, 300000, 10000, 300000, 60000)),
-                new AppProperties.Security(
-                    new AppProperties.Jwt("testSecretKeyWithMinimumLengthOf256BitsForJWT", 86400000L, 604800000L, "test-issuer", "test-audience"),
-                    new AppProperties.Cors(List.of("*"), List.of("GET", "POST", "PUT", "DELETE"), List.of("*"), true, 3600),
-                        List.of("/api/brazilian-market/indicators/**", "/api/brazilian-market/summary")
+                new DatabaseProperties("jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE", "sa", "", "org.h2.Driver", "", "testdb", new DatabaseProperties.PoolProperties(2, 5, 1, 300000, 10000, 300000, 60000)),
+                new SecurityProperties(
+                    new SecurityProperties.JwtProperties("testSecretKeyWithMinimumLengthOf256BitsForJWT", 86400000L, 604800000L, "test-issuer", "test-audience"),
+                    new SecurityProperties.CorsProperties(List.of("*"), List.of("GET", "POST", "PUT", "DELETE"), List.of("*"), true, 3600),
+                        List.of("/api/brazilian-market/indicators/**", "/api/brazilian-market/summary"),
+                        new SecurityProperties.EncryptionProperties()
                 ),
-                new AppProperties.Server(0, "", "/", 8192, 2097152, 20000, 30000, 30000),
-                new AppProperties.Logging("INFO", "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n", "logs", "finance-control.log", "finance-control-error.log", 10, 30, 256, false),
-                new AppProperties.Jpa("create-drop", "org.hibernate.dialect.H2Dialect", false, false, false, "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl", false, new AppProperties.Properties("false", "false", "20", "true", "true", "true", "20", "16")),
-                new AppProperties.Flyway(false, List.of("classpath:db/migration"), "false", "0", "true", "false", "true", "false"),
-                new AppProperties.Actuator(false, List.of("health"), "/actuator", false, false, false),
-                new AppProperties.OpenApi("Finance Control API - Test", "API for managing personal finances - Test Environment", "1.0.0-test", "Finance Control Team", "test@finance-control.com", "https://github.com/LucasSantana/finance-control", "MIT License", "https://opensource.org/licenses/MIT", "http://localhost:0", "Test server"),
-                new AppProperties.Pagination(5, 20, "id", "ASC"),
-                new AppProperties.Redis("localhost", 6379, "", 0, 2000, new AppProperties.RedisPool(8, 8, 0, -1)),
-                new AppProperties.Cache(true, 900000, 300000, 1800000),
-                new AppProperties.RateLimit(true, 100, 200, 60),
-                new AppProperties.Ai(),
-                new AppProperties.Supabase(false, "", "", "", "", new AppProperties.SupabaseDatabase(), new AppProperties.Storage(), new AppProperties.Realtime(false, List.of("transactions", "dashboard", "goals"))),
-                new AppProperties.Monitoring(true, new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30, true), new AppProperties.FrontendErrors()),
-                new AppProperties.OpenFinance()
+                new ServerProperties(0, "", "/", 8192, 2097152, 20000, 30000, 30000),
+                new LoggingProperties("INFO", "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n", "logs", "finance-control.log", "finance-control-error.log", 10, 30, 256, false),
+                new JpaProperties("create-drop", "org.hibernate.dialect.H2Dialect", false, false, false, "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl", false, new JpaProperties.HibernateProperties("false", "false", "20", "true", "true", "true", "20", "16")),
+                new FlywayProperties(false, List.of("classpath:db/migration"), "false", "0", "true", "false", "true", "false"),
+                new ActuatorProperties(false, List.of("health"), "/actuator", false, false, false),
+                new OpenApiProperties("Finance Control API - Test", "API for managing personal finances - Test Environment", "1.0.0-test", "Finance Control Team", "test@finance-control.com", "https://github.com/LucasSantana/finance-control", "MIT License", "https://opensource.org/licenses/MIT", "http://localhost:0", "Test server"),
+                new PaginationProperties(5, 20, "id", "ASC"),
+                new RedisProperties("localhost", 6379, "", 0, 2000, new RedisProperties.RedisPoolProperties(8, 8, 0, -1)),
+                new CacheProperties(true, 900000, 300000, 1800000),
+                new RateLimitProperties(true, 100, 200, 60),
+                new AiProperties(),
+                new SupabaseProperties(false, "", "", "", "", new SupabaseProperties.SupabaseDatabaseProperties(), new SupabaseProperties.StorageProperties(), new SupabaseProperties.RealtimeProperties(false, List.of("transactions", "dashboard", "goals"))),
+                new MonitoringProperties(true, new MonitoringProperties.SentryProperties(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true)),
+                new OpenFinanceProperties()
             );
         }
     }

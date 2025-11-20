@@ -1,6 +1,8 @@
 package com.finance_control.integration.brazilian_market.repository;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
 import com.finance_control.brazilian_market.repository.InvestmentRepository;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
@@ -58,8 +60,8 @@ class InvestmentRepositoryIntegrationTest {
         testInvestment = new Investment();
         testInvestment.setTicker("PETR4");
         testInvestment.setName("Petrobras");
-        testInvestment.setInvestmentType(Investment.InvestmentType.STOCK);
-        testInvestment.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        testInvestment.setInvestmentType(InvestmentType.STOCK);
+        testInvestment.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         testInvestment.setCurrentPrice(BigDecimal.valueOf(26.00));
         testInvestment.setIsActive(true);
         testInvestment.setUser(testUser);
@@ -122,23 +124,23 @@ class InvestmentRepositoryIntegrationTest {
     void findByUser_IdAndInvestmentTypeAndIsActiveTrue_ShouldReturnInvestmentsOfSpecificType() {
         // When
         List<Investment> result = investmentRepository.findByUser_IdAndInvestmentTypeAndIsActiveTrue(
-                testUser.getId(), Investment.InvestmentType.STOCK);
+                testUser.getId(), InvestmentType.STOCK);
 
         // Then
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
+        assertThat(result.get(0).getInvestmentType()).isEqualTo(InvestmentType.STOCK);
     }
 
     @Test
     void findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue_ShouldReturnInvestmentsOfSpecificTypeAndSubtype() {
         // When
         List<Investment> result = investmentRepository.findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(
-                testUser.getId(), Investment.InvestmentType.STOCK, Investment.InvestmentSubtype.ORDINARY);
+                testUser.getId(), InvestmentType.STOCK, InvestmentSubtype.ORDINARY);
 
         // Then
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getInvestmentType()).isEqualTo(Investment.InvestmentType.STOCK);
-        assertThat(result.get(0).getInvestmentSubtype()).isEqualTo(Investment.InvestmentSubtype.ORDINARY);
+        assertThat(result.get(0).getInvestmentType()).isEqualTo(InvestmentType.STOCK);
+        assertThat(result.get(0).getInvestmentSubtype()).isEqualTo(InvestmentSubtype.ORDINARY);
     }
 
     @Test
@@ -194,7 +196,7 @@ class InvestmentRepositoryIntegrationTest {
     void findByUser_IdAndInvestmentTypeAndIsActiveTrue_ShouldReturnEmptyForNonExistentType() {
         // When
         List<Investment> result = investmentRepository.findByUser_IdAndInvestmentTypeAndIsActiveTrue(
-                testUser.getId(), Investment.InvestmentType.FII);
+                testUser.getId(), InvestmentType.FII);
 
         // Then
         assertThat(result).isEmpty();
@@ -204,7 +206,7 @@ class InvestmentRepositoryIntegrationTest {
     void findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue_ShouldReturnEmptyForNonExistentSubtype() {
         // When
         List<Investment> result = investmentRepository.findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(
-                testUser.getId(), Investment.InvestmentType.STOCK, Investment.InvestmentSubtype.PREFERRED);
+                testUser.getId(), InvestmentType.STOCK, InvestmentSubtype.PREFERRED);
 
         // Then
         assertThat(result).isEmpty();

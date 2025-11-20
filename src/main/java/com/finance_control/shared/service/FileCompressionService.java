@@ -110,7 +110,7 @@ public class FileCompressionService {
      * @return true if the file should be compressed
      */
     public boolean shouldCompress(String contentType, long fileSize) {
-        AppProperties.Compression compression = appProperties.supabase().storage().compression();
+        com.finance_control.shared.config.properties.SupabaseProperties.CompressionProperties compression = appProperties.supabase().storage().compression();
 
         if (!compression.enabled()) {
             return false;

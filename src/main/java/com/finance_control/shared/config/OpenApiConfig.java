@@ -25,7 +25,7 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI customOpenAPI() {
-        AppProperties.OpenApi openApi = appProperties.openApi();
+        com.finance_control.shared.config.properties.OpenApiProperties openApi = appProperties.openApi();
 
         log.info("Configuring OpenAPI with title: {}, version: {}",
                 openApi.title(), openApi.version());

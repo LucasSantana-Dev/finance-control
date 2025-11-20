@@ -23,7 +23,7 @@ public class SentryConfig {
 
     @PostConstruct
     public void initializeSentry() {
-        AppProperties.Sentry sentryConfig = appProperties.monitoring().sentry();
+        com.finance_control.shared.config.properties.MonitoringProperties.SentryProperties sentryConfig = appProperties.monitoring().sentry();
 
         if (!sentryConfig.enabled() || sentryConfig.dsn() == null || sentryConfig.dsn().isEmpty()) {
             log.warn("Sentry is disabled or DSN not configured. Error tracking will be disabled.");
@@ -32,50 +32,10 @@ public class SentryConfig {
 
         try {
             Sentry.init(options -> {
-                options.setDsn(sentryConfig.dsn());
-                options.setEnvironment(sentryConfig.environment());
-                options.setRelease(sentryConfig.release());
-                options.setSampleRate(sentryConfig.sampleRate());
-                options.setTracesSampleRate(sentryConfig.tracesSampleRate());
-                options.setSendDefaultPii(sentryConfig.sendDefaultPii());
-                options.setAttachStacktrace(sentryConfig.attachStacktrace());
-                options.setEnableTracing(sentryConfig.enableTracing());
-                options.setServerName("finance-control");
-
-                // Add custom context tags
-                options.setTag("service", "finance-control");
-                options.setTag("version", sentryConfig.release());
-                options.setTag("java.version", System.getProperty("java.version"));
-                options.setTag("spring.profiles.active", sentryConfig.environment());
-
-                // Filter out health check requests and other noise
-                options.setBeforeSend((event, hint) -> {
-                    if (event.getRequest() != null && event.getRequest().getUrl() != null) {
-                        String url = event.getRequest().getUrl();
-                        // Filter out health checks, metrics, and other monitoring endpoints
-                        if (url.contains("/actuator/health") ||
-                            url.contains("/actuator/metrics") ||
-                            url.contains("/actuator/info") ||
-                            url.contains("/swagger-ui") ||
-                            url.contains("/v3/api-docs")) {
-                            return null;
-                        }
-                    }
-                    return event;
-                });
-
-                options.setBeforeBreadcrumb((breadcrumb, hint) -> {
-                    // Filter out noisy breadcrumbs from monitoring endpoints
-                    if (breadcrumb.getCategory() != null && breadcrumb.getCategory().equals("http")) {
-                        String url = (String) breadcrumb.getData("url");
-                        if (url != null && (url.contains("/actuator/health") ||
-                                           url.contains("/actuator/metrics") ||
-                                           url.contains("/swagger-ui"))) {
-                            return null;
-                        }
-                    }
-                    return breadcrumb;
-                });
+                configureBasicOptions(options, sentryConfig);
+                configureTags(options, sentryConfig);
+                options.setBeforeSend(this::filterSentryEvent);
+                options.setBeforeBreadcrumb(this::filterSentryBreadcrumb);
             });
 
             log.info("Sentry initialized successfully for environment: {} with release: {}",
@@ -87,6 +47,53 @@ public class SentryConfig {
         } catch (Exception e) {
             log.error("Failed to initialize Sentry", e);
         }
+    }
+
+    private void configureBasicOptions(io.sentry.SentryOptions options, com.finance_control.shared.config.properties.MonitoringProperties.SentryProperties sentryConfig) {
+        options.setDsn(sentryConfig.dsn());
+        options.setEnvironment(sentryConfig.environment());
+        options.setRelease(sentryConfig.release());
+        options.setSampleRate(sentryConfig.sampleRate());
+        options.setTracesSampleRate(sentryConfig.tracesSampleRate());
+        options.setSendDefaultPii(sentryConfig.sendDefaultPii());
+        options.setAttachStacktrace(sentryConfig.attachStacktrace());
+        options.setEnableTracing(sentryConfig.enableTracing());
+        options.setServerName("finance-control");
+    }
+
+    private void configureTags(io.sentry.SentryOptions options, com.finance_control.shared.config.properties.MonitoringProperties.SentryProperties sentryConfig) {
+        options.setTag("service", "finance-control");
+        options.setTag("version", sentryConfig.release());
+        options.setTag("java.version", System.getProperty("java.version"));
+        options.setTag("spring.profiles.active", sentryConfig.environment());
+    }
+
+    private io.sentry.SentryEvent filterSentryEvent(io.sentry.SentryEvent event, io.sentry.Hint hint) {
+        if (event.getRequest() != null && event.getRequest().getUrl() != null) {
+            String url = event.getRequest().getUrl();
+            if (shouldFilterUrl(url)) {
+                return null;
+            }
+        }
+        return event;
+    }
+
+    private io.sentry.Breadcrumb filterSentryBreadcrumb(io.sentry.Breadcrumb breadcrumb, io.sentry.Hint hint) {
+        if (breadcrumb.getCategory() != null && breadcrumb.getCategory().equals("http")) {
+            String url = (String) breadcrumb.getData("url");
+            if (url != null && shouldFilterUrl(url)) {
+                return null;
+            }
+        }
+        return breadcrumb;
+    }
+
+    private boolean shouldFilterUrl(String url) {
+        return url.contains("/actuator/health") ||
+               url.contains("/actuator/metrics") ||
+               url.contains("/actuator/info") ||
+               url.contains("/swagger-ui") ||
+               url.contains("/v3/api-docs");
     }
 
 }

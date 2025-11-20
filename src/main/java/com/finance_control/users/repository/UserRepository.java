@@ -19,32 +19,85 @@ import java.util.Optional;
 public interface UserRepository extends BaseRepository<User, Long> {
 
     /**
-     * Finds a user by their email address.
-     * 
-     * @param email the email address to search for
+     * Finds a user by their email hash.
+     * Use this method for efficient lookups without decrypting emails.
+     *
+     * @param emailHash the SHA-256 hash of the email address
      * @return an Optional containing the user if found, empty otherwise
      */
+    Optional<User> findByEmailHash(String emailHash);
+
+    /**
+     * Checks if a user exists with the given email hash.
+     *
+     * @param emailHash the SHA-256 hash of the email address
+     * @return true if a user exists with the email hash, false otherwise
+     */
+    boolean existsByEmailHash(String emailHash);
+
+    /**
+     * Finds an active user by their email hash.
+     *
+     * @param emailHash the SHA-256 hash of the email address
+     * @return an Optional containing the active user if found, empty otherwise
+     */
+    Optional<User> findByEmailHashAndIsActiveTrue(String emailHash);
+
+    /**
+     * Finds a user by their Supabase user ID.
+     *
+     * @param supabaseUserId the Supabase Auth user ID (UUID)
+     * @return an Optional containing the user if found, empty otherwise
+     */
+    Optional<User> findBySupabaseUserId(String supabaseUserId);
+
+    /**
+     * Checks if a user exists with the given Supabase user ID.
+     *
+     * @param supabaseUserId the Supabase Auth user ID (UUID)
+     * @return true if a user exists with the Supabase user ID, false otherwise
+     */
+    boolean existsBySupabaseUserId(String supabaseUserId);
+
+    /**
+     * Finds a user by their email address.
+     * NOTE: This method is deprecated for performance reasons.
+     * Use findByEmailHash() instead after hashing the email.
+     *
+     * @param email the email address to search for
+     * @return an Optional containing the user if found, empty otherwise
+     * @deprecated Use findByEmailHash() with hashed email for better performance
+     */
+    @Deprecated
     Optional<User> findByEmail(String email);
 
     /**
      * Checks if a user exists with the given email address.
-     * 
+     * NOTE: This method is deprecated for performance reasons.
+     * Use existsByEmailHash() instead after hashing the email.
+     *
      * @param email the email address to check
      * @return true if a user exists with the email, false otherwise
+     * @deprecated Use existsByEmailHash() with hashed email for better performance
      */
+    @Deprecated
     boolean existsByEmail(String email);
 
     /**
      * Finds an active user by their email address.
-     * 
+     * NOTE: This method is deprecated for performance reasons.
+     * Use findByEmailHashAndIsActiveTrue() instead after hashing the email.
+     *
      * @param email the email address to search for
      * @return an Optional containing the active user if found, empty otherwise
+     * @deprecated Use findByEmailHashAndIsActiveTrue() with hashed email for better performance
      */
+    @Deprecated
     Optional<User> findByEmailAndIsActiveTrue(String email);
 
     @Override
     @Query("SELECT u FROM User u WHERE " +
             "(:search IS NULL OR :search = '' OR " +
-            "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+            "u.emailHash LIKE CONCAT('%', :search, '%'))")
     Page<User> findAll(@Param("search") String search, Pageable pageable);
 }

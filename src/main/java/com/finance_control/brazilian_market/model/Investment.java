@@ -168,67 +168,6 @@ public class Investment extends BaseModel<Long> {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    /**
-     * Investment types enum
-     */
-    public enum InvestmentType {
-        STOCK("Stock"),
-        FII("Real Estate Investment Fund"),
-        BOND("Bond"),
-        ETF("Exchange Traded Fund"),
-        CRYPTO("Cryptocurrency"),
-        COMMODITY("Commodity"),
-        CURRENCY("Currency"),
-        OTHER("Other");
-
-        private final String description;
-
-        InvestmentType(String description) {
-            this.description = description;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-    }
-
-    /**
-     * Investment subtypes enum
-     */
-    public enum InvestmentSubtype {
-        // Stock subtypes
-        ORDINARY("Ordinary Share"),
-        PREFERRED("Preferred Share"),
-        UNIT("Unit"),
-
-        // FII subtypes
-        TIJOLO("Brick (Real Estate)"),
-        PAPEL("Paper (Securities)"),
-        HIBRIDO("Hybrid"),
-        FUNDO_DE_FUNDOS("Fund of Funds"),
-
-        // Bond subtypes
-        CDB("Certificate of Bank Deposit"),
-        RDB("Bank Deposit Receipt"),
-        LCI("Real Estate Credit Bill"),
-        LCA("Agribusiness Credit Bill"),
-        LF("Financial Letter"),
-        DEBENTURE("Debenture"),
-        TESOURO_DIRETO("Treasury Direct"),
-
-        // Generic
-        OTHER("Other");
-
-        private final String description;
-
-        InvestmentSubtype(String description) {
-            this.description = description;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-    }
 
     /**
      * Helper method to check if this is a stock investment

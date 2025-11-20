@@ -28,7 +28,7 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/auth/supabase")
 @RequiredArgsConstructor
 @Slf4j
-@ConditionalOnProperty(value = "app.supabase.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(value = "app.supabase.enabled", havingValue = "true", matchIfMissing = true)
 @Tag(name = "Supabase Authentication", description = "Endpoints for Supabase authentication operations")
 public class SupabaseAuthController {
 

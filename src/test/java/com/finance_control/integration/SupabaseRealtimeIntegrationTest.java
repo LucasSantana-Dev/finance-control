@@ -1,6 +1,5 @@
 package com.finance_control.integration;
 
-import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.service.SupabaseRealtimeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -31,9 +30,6 @@ class SupabaseRealtimeIntegrationTest {
 
     @Autowired
     private SupabaseRealtimeService realtimeService;
-
-    @Autowired
-    private AppProperties appProperties;
 
     @BeforeEach
     void setUp() {

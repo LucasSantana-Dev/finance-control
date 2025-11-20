@@ -1,12 +1,9 @@
 package com.finance_control.transactions.controller;
 
 import com.finance_control.shared.enums.TransactionType;
-import com.finance_control.shared.enums.TransactionSubtype;
-import com.finance_control.shared.enums.TransactionSource;
 import com.finance_control.shared.exception.GlobalExceptionHandler;
 import com.finance_control.shared.monitoring.SentryService;
 import com.finance_control.transactions.dto.TransactionDTO;
-import com.finance_control.transactions.dto.responsibles.TransactionResponsiblesDTO;
 import com.finance_control.transactions.service.TransactionService;
 import com.finance_control.transactions.service.TransactionImportService;
 import org.junit.jupiter.api.BeforeEach;
@@ -427,24 +424,4 @@ class TransactionControllerTest {
                 .andExpect(jsonPath("$.error").value("Internal Server Error"));
     }
 
-    private TransactionDTO createValidTransactionDTO() {
-        TransactionDTO dto = new TransactionDTO();
-        dto.setType(TransactionType.INCOME);
-        dto.setSubtype(TransactionSubtype.FIXED);
-        dto.setSource(TransactionSource.BANK_TRANSACTION);
-        dto.setDescription("Valid Transaction");
-        dto.setAmount(BigDecimal.valueOf(100.00));
-        dto.setCategoryId(1L);
-        dto.setUserId(1L);
-        dto.setDate(LocalDateTime.now());
-
-        // Add responsibilities
-        TransactionResponsiblesDTO resp = new TransactionResponsiblesDTO();
-        resp.setName("User 1");
-        resp.setResponsibleId(1L);
-        resp.setPercentage(BigDecimal.valueOf(100.00));
-        dto.setResponsibilities(List.of(resp));
-
-        return dto;
-    }
 }

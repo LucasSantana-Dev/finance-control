@@ -39,21 +39,37 @@ public class PasswordChangeRequest {
      * @throws IllegalArgumentException if validation fails
      */
     public void validate() {
+        validateCurrentPassword();
+        validateNewPassword();
+        validatePasswordConfirmation();
+        validatePasswordDifference();
+    }
+
+    private void validateCurrentPassword() {
         if (currentPassword == null || currentPassword.trim().isEmpty()) {
             throw new IllegalArgumentException("Current password is required");
         }
+    }
+
+    private void validateNewPassword() {
         if (newPassword == null || newPassword.trim().isEmpty()) {
             throw new IllegalArgumentException("New password is required");
         }
         if (newPassword.length() < 8) {
             throw new IllegalArgumentException("Password must be at least 8 characters long");
         }
+    }
+
+    private void validatePasswordConfirmation() {
         if (confirmPassword == null || confirmPassword.trim().isEmpty()) {
             throw new IllegalArgumentException("Password confirmation is required");
         }
         if (isPasswordConfirmationInvalid()) {
             throw new IllegalArgumentException("Password confirmation does not match");
         }
+    }
+
+    private void validatePasswordDifference() {
         if (currentPassword.equals(newPassword)) {
             throw new IllegalArgumentException("New password must be different from current password");
         }

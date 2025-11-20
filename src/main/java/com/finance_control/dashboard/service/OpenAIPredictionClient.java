@@ -36,7 +36,7 @@ public class OpenAIPredictionClient implements PredictionModelClient {
 
     @Override
     public String generateForecast(String prompt) {
-        AppProperties.Ai aiConfig = appProperties.ai();
+        com.finance_control.shared.config.properties.AiProperties aiConfig = appProperties.ai();
         if (aiConfig == null || aiConfig.openai() == null || !aiConfig.openai().enabled()) {
             throw new IllegalStateException("OpenAI predictions are not enabled");
         }
@@ -88,7 +88,7 @@ public class OpenAIPredictionClient implements PredictionModelClient {
     }
 
     private Mono<JsonNode> handleWebClientException(WebClientResponseException exception) {
-        log.error("OpenAI API error: status={} body={}", exception.getRawStatusCode(), exception.getResponseBodyAsString());
+        log.error("OpenAI API error: status={} body={}", exception.getStatusCode().value(), exception.getResponseBodyAsString());
         return Mono.error(new IllegalStateException("OpenAI API returned an error: " + exception.getStatusText(), exception));
     }
 

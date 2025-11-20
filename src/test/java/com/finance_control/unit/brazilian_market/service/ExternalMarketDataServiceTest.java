@@ -3,6 +3,8 @@ package com.finance_control.unit.brazilian_market.service;
 import com.finance_control.brazilian_market.client.MarketDataProvider;
 import com.finance_control.brazilian_market.client.MarketQuote;
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
 import com.finance_control.brazilian_market.service.ExternalMarketDataService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,36 +51,36 @@ class ExternalMarketDataServiceTest {
         brazilianStock = new Investment();
         brazilianStock.setTicker("PETR4");
         brazilianStock.setName("Petrobras");
-        brazilianStock.setInvestmentType(Investment.InvestmentType.STOCK);
-        brazilianStock.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        brazilianStock.setInvestmentType(InvestmentType.STOCK);
+        brazilianStock.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         brazilianStock.setCurrentPrice(BigDecimal.valueOf(25.50));
 
         usStock = new Investment();
         usStock.setTicker("AAPL");
         usStock.setName("Apple Inc.");
-        usStock.setInvestmentType(Investment.InvestmentType.STOCK);
-        usStock.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        usStock.setInvestmentType(InvestmentType.STOCK);
+        usStock.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         usStock.setCurrentPrice(BigDecimal.valueOf(150.00));
 
         fii = new Investment();
         fii.setTicker("HGLG11");
         fii.setName("CSHG Logística");
-        fii.setInvestmentType(Investment.InvestmentType.FII);
-        fii.setInvestmentSubtype(Investment.InvestmentSubtype.TIJOLO);
+        fii.setInvestmentType(InvestmentType.FII);
+        fii.setInvestmentSubtype(InvestmentSubtype.TIJOLO);
         fii.setCurrentPrice(BigDecimal.valueOf(100.00));
 
         etf = new Investment();
         etf.setTicker("BOVA11");
         etf.setName("iShares Ibovespa");
-        etf.setInvestmentType(Investment.InvestmentType.ETF);
-        etf.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        etf.setInvestmentType(InvestmentType.ETF);
+        etf.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         etf.setCurrentPrice(BigDecimal.valueOf(80.00));
 
         usEtf = new Investment();
         usEtf.setTicker("SPY");
         usEtf.setName("SPDR S&P 500 ETF");
-        usEtf.setInvestmentType(Investment.InvestmentType.ETF);
-        usEtf.setInvestmentSubtype(Investment.InvestmentSubtype.ORDINARY);
+        usEtf.setInvestmentType(InvestmentType.ETF);
+        usEtf.setInvestmentSubtype(InvestmentSubtype.ORDINARY);
         usEtf.setCurrentPrice(BigDecimal.valueOf(400.00));
 
         marketQuote = MarketQuote.builder()
@@ -95,18 +97,18 @@ class ExternalMarketDataServiceTest {
     @Test
     void fetchMarketData_ShouldUseBrazilianProviderForBrazilianStocks() {
         // Given
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.STOCK)).thenReturn(true);
         when(brazilianMarketProvider.getQuote("PETR4")).thenReturn(Optional.of(marketQuote));
 
         // When
-        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("PETR4", Investment.InvestmentType.STOCK);
+        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("PETR4", InvestmentType.STOCK);
 
         // Then
         assertThat(result).isPresent();
         assertThat(result.get().getSymbol()).isEqualTo("PETR4");
         assertThat(result.get().getCurrentPrice()).isEqualTo(BigDecimal.valueOf(26.00));
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.STOCK);
         verify(brazilianMarketProvider).getQuote("PETR4");
         verify(usMarketProvider, never()).getQuote(anyString());
     }
@@ -114,19 +116,19 @@ class ExternalMarketDataServiceTest {
     @Test
     void fetchMarketData_ShouldUseUSProviderForUSStocks() {
         // Given
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(false);
-        when(usMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.STOCK)).thenReturn(false);
+        when(usMarketProvider.supportsInvestmentType(InvestmentType.STOCK)).thenReturn(true);
         when(usMarketProvider.getQuote("AAPL")).thenReturn(Optional.of(marketQuote));
 
         // When
-        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("AAPL", Investment.InvestmentType.STOCK);
+        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("AAPL", InvestmentType.STOCK);
 
         // Then
         assertThat(result).isPresent();
         assertThat(result.get().getSymbol()).isEqualTo("PETR4");
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
-        verify(usMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.STOCK);
+        verify(usMarketProvider).supportsInvestmentType(InvestmentType.STOCK);
         verify(usMarketProvider).getQuote("AAPL");
         verify(brazilianMarketProvider, never()).getQuote(anyString());
     }
@@ -134,17 +136,17 @@ class ExternalMarketDataServiceTest {
     @Test
     void fetchMarketData_ShouldReturnEmptyWhenNoProviderSupportsInvestmentType() {
         // Given
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO)).thenReturn(false);
-        when(usMarketProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO)).thenReturn(false);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.CRYPTO)).thenReturn(false);
+        when(usMarketProvider.supportsInvestmentType(InvestmentType.CRYPTO)).thenReturn(false);
 
         // When
-        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("BTC", Investment.InvestmentType.CRYPTO);
+        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("BTC", InvestmentType.CRYPTO);
 
         // Then
         assertThat(result).isEmpty();
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.CRYPTO);
-        verify(usMarketProvider).supportsInvestmentType(Investment.InvestmentType.CRYPTO);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.CRYPTO);
+        verify(usMarketProvider).supportsInvestmentType(InvestmentType.CRYPTO);
         verify(brazilianMarketProvider, never()).getQuote(anyString());
         verify(usMarketProvider, never()).getQuote(anyString());
     }
@@ -152,32 +154,32 @@ class ExternalMarketDataServiceTest {
     @Test
     void fetchMarketData_ShouldReturnEmptyWhenProviderThrowsException() {
         // Given
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.STOCK)).thenReturn(true);
         when(brazilianMarketProvider.getQuote("INVALID")).thenThrow(new RuntimeException("API Error"));
 
         // When
-        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("INVALID", Investment.InvestmentType.STOCK);
+        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("INVALID", InvestmentType.STOCK);
 
         // Then
         assertThat(result).isEmpty();
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.STOCK);
         verify(brazilianMarketProvider).getQuote("INVALID");
     }
 
     @Test
     void fetchMarketData_ShouldReturnEmptyWhenProviderReturnsEmpty() {
         // Given
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.STOCK)).thenReturn(true);
         when(brazilianMarketProvider.getQuote("UNKNOWN")).thenReturn(Optional.empty());
 
         // When
-        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("UNKNOWN", Investment.InvestmentType.STOCK);
+        Optional<MarketQuote> result = externalMarketDataService.fetchMarketData("UNKNOWN", InvestmentType.STOCK);
 
         // Then
         assertThat(result).isEmpty();
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.STOCK);
         verify(brazilianMarketProvider).getQuote("UNKNOWN");
     }
 
@@ -185,17 +187,17 @@ class ExternalMarketDataServiceTest {
     void fetchMarketData_WithMultipleTickers_ShouldUseCorrectProvider() {
         // Given
         List<String> tickers = List.of("PETR4", "VALE3");
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.STOCK)).thenReturn(true);
         when(brazilianMarketProvider.getQuotes(tickers)).thenReturn(List.of(marketQuote));
 
         // When
-        List<MarketQuote> result = externalMarketDataService.fetchMarketData(tickers, Investment.InvestmentType.STOCK);
+        List<MarketQuote> result = externalMarketDataService.fetchMarketData(tickers, InvestmentType.STOCK);
 
         // Then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getSymbol()).isEqualTo("PETR4");
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.STOCK);
         verify(brazilianMarketProvider).getQuotes(tickers);
         verify(usMarketProvider, never()).getQuotes(any());
     }
@@ -204,17 +206,17 @@ class ExternalMarketDataServiceTest {
     void fetchMarketData_WithMultipleTickers_ShouldReturnEmptyWhenNoProviderSupports() {
         // Given
         List<String> tickers = List.of("BTC", "ETH");
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO)).thenReturn(false);
-        when(usMarketProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO)).thenReturn(false);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.CRYPTO)).thenReturn(false);
+        when(usMarketProvider.supportsInvestmentType(InvestmentType.CRYPTO)).thenReturn(false);
 
         // When
-        List<MarketQuote> result = externalMarketDataService.fetchMarketData(tickers, Investment.InvestmentType.CRYPTO);
+        List<MarketQuote> result = externalMarketDataService.fetchMarketData(tickers, InvestmentType.CRYPTO);
 
         // Then
         assertThat(result).isEmpty();
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.CRYPTO);
-        verify(usMarketProvider).supportsInvestmentType(Investment.InvestmentType.CRYPTO);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.CRYPTO);
+        verify(usMarketProvider).supportsInvestmentType(InvestmentType.CRYPTO);
         verify(brazilianMarketProvider, never()).getQuotes(any());
         verify(usMarketProvider, never()).getQuotes(any());
     }
@@ -222,18 +224,18 @@ class ExternalMarketDataServiceTest {
     @Test
     void fetchHistoricalData_ShouldUseCorrectProvider() {
         // Given
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.STOCK)).thenReturn(true);
         when(brazilianMarketProvider.getHistoricalData("PETR4", "1d", "1h"))
                 .thenReturn(Optional.empty());
 
         // When
         Optional<com.finance_control.brazilian_market.client.HistoricalData> result =
-                externalMarketDataService.fetchHistoricalData("PETR4", Investment.InvestmentType.STOCK, "1d", "1h");
+                externalMarketDataService.fetchHistoricalData("PETR4", InvestmentType.STOCK, "1d", "1h");
 
         // Then
         assertThat(result).isEmpty();
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.STOCK);
         verify(brazilianMarketProvider).getHistoricalData("PETR4", "1d", "1h");
         verify(usMarketProvider, never()).getHistoricalData(anyString(), anyString(), anyString());
     }
@@ -319,18 +321,18 @@ class ExternalMarketDataServiceTest {
     @Test
     void fetchHistoricalData_ShouldReturnEmptyWhenNoProviderSupports() {
         // Given
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO)).thenReturn(false);
-        when(usMarketProvider.supportsInvestmentType(Investment.InvestmentType.CRYPTO)).thenReturn(false);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.CRYPTO)).thenReturn(false);
+        when(usMarketProvider.supportsInvestmentType(InvestmentType.CRYPTO)).thenReturn(false);
 
         // When
         Optional<com.finance_control.brazilian_market.client.HistoricalData> result =
-                externalMarketDataService.fetchHistoricalData("BTC", Investment.InvestmentType.CRYPTO, "1d", "1h");
+                externalMarketDataService.fetchHistoricalData("BTC", InvestmentType.CRYPTO, "1d", "1h");
 
         // Then
         assertThat(result).isEmpty();
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.CRYPTO);
-        verify(usMarketProvider).supportsInvestmentType(Investment.InvestmentType.CRYPTO);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.CRYPTO);
+        verify(usMarketProvider).supportsInvestmentType(InvestmentType.CRYPTO);
         verify(brazilianMarketProvider, never()).getHistoricalData(anyString(), anyString(), anyString());
         verify(usMarketProvider, never()).getHistoricalData(anyString(), anyString(), anyString());
     }
@@ -338,18 +340,18 @@ class ExternalMarketDataServiceTest {
     @Test
     void fetchHistoricalData_ShouldReturnEmptyWhenProviderThrowsException() {
         // Given
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.STOCK)).thenReturn(true);
         when(brazilianMarketProvider.getHistoricalData("INVALID", "1d", "1h"))
                 .thenThrow(new RuntimeException("API Error"));
 
         // When
         Optional<com.finance_control.brazilian_market.client.HistoricalData> result =
-                externalMarketDataService.fetchHistoricalData("INVALID", Investment.InvestmentType.STOCK, "1d", "1h");
+                externalMarketDataService.fetchHistoricalData("INVALID", InvestmentType.STOCK, "1d", "1h");
 
         // Then
         assertThat(result).isEmpty();
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.STOCK);
         verify(brazilianMarketProvider).getHistoricalData("INVALID", "1d", "1h");
     }
 
@@ -357,24 +359,24 @@ class ExternalMarketDataServiceTest {
     void fetchMarketData_WithMultipleTickers_ShouldReturnEmptyWhenProviderThrowsException() {
         // Given
         List<String> tickers = List.of("PETR4", "VALE3");
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.STOCK)).thenReturn(true);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.STOCK)).thenReturn(true);
         when(brazilianMarketProvider.getQuotes(tickers)).thenThrow(new RuntimeException("API Error"));
 
         // When
-        List<MarketQuote> result = externalMarketDataService.fetchMarketData(tickers, Investment.InvestmentType.STOCK);
+        List<MarketQuote> result = externalMarketDataService.fetchMarketData(tickers, InvestmentType.STOCK);
 
         // Then
         assertThat(result).isEmpty();
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.STOCK);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.STOCK);
         verify(brazilianMarketProvider).getQuotes(tickers);
     }
 
     @Test
     void fetchHistoricalData_ShouldUseUSProviderWhenUSMarketSupports() {
         // Given
-        when(brazilianMarketProvider.supportsInvestmentType(Investment.InvestmentType.ETF)).thenReturn(false);
-        when(usMarketProvider.supportsInvestmentType(Investment.InvestmentType.ETF)).thenReturn(true);
+        when(brazilianMarketProvider.supportsInvestmentType(InvestmentType.ETF)).thenReturn(false);
+        when(usMarketProvider.supportsInvestmentType(InvestmentType.ETF)).thenReturn(true);
         com.finance_control.brazilian_market.client.HistoricalData historicalData =
                 com.finance_control.brazilian_market.client.HistoricalData.builder().build();
         when(usMarketProvider.getHistoricalData("SPY", "1d", "1h"))
@@ -382,13 +384,13 @@ class ExternalMarketDataServiceTest {
 
         // When
         Optional<com.finance_control.brazilian_market.client.HistoricalData> result =
-                externalMarketDataService.fetchHistoricalData("SPY", Investment.InvestmentType.ETF, "1d", "1h");
+                externalMarketDataService.fetchHistoricalData("SPY", InvestmentType.ETF, "1d", "1h");
 
         // Then
         assertThat(result).isPresent();
 
-        verify(brazilianMarketProvider).supportsInvestmentType(Investment.InvestmentType.ETF);
-        verify(usMarketProvider).supportsInvestmentType(Investment.InvestmentType.ETF);
+        verify(brazilianMarketProvider).supportsInvestmentType(InvestmentType.ETF);
+        verify(usMarketProvider).supportsInvestmentType(InvestmentType.ETF);
         verify(usMarketProvider).getHistoricalData("SPY", "1d", "1h");
         verify(brazilianMarketProvider, never()).getHistoricalData(anyString(), anyString(), anyString());
     }

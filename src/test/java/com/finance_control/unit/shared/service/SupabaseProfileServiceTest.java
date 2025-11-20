@@ -33,34 +33,27 @@ class SupabaseProfileServiceTest {
     @Mock
     private WebClient webClient;
 
-    @Mock
-    private ObjectMapper objectMapper;
-
     @InjectMocks
     private SupabaseProfileService supabaseProfileService;
 
-    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
     private WebClient.RequestBodySpec requestBodySpec;
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
     private WebClient.ResponseSpec responseSpec;
 
     @BeforeEach
     void setUp() {
-        requestHeadersUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
         requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
         requestBodySpec = mock(WebClient.RequestBodySpec.class);
-        requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
         responseSpec = mock(WebClient.ResponseSpec.class);
 
         ReflectionTestUtils.setField(supabaseProfileService, "webClient", webClient);
-        ReflectionTestUtils.setField(supabaseProfileService, "objectMapper", objectMapper);
     }
 
     @Test
     @DisplayName("updateUserMetadata - should call Supabase API")
     void updateUserMetadata_ShouldCallSupabaseApi() {
         Map<String, Object> metadata = Map.of("key", "value");
+        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
 
         when(webClient.put()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
@@ -84,6 +77,8 @@ class SupabaseProfileServiceTest {
     @Test
     @DisplayName("updateUserEmail - should call Supabase API")
     void updateUserEmail_ShouldCallSupabaseApi() {
+        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+
         when(webClient.put()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
         when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
@@ -105,6 +100,8 @@ class SupabaseProfileServiceTest {
     @Test
     @DisplayName("updateUserPassword - should call Supabase API")
     void updateUserPassword_ShouldCallSupabaseApi() {
+        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+
         when(webClient.put()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
         when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
@@ -128,8 +125,10 @@ class SupabaseProfileServiceTest {
     void getUserProfile_ShouldReturnUserProfile() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode profileData = mapper.readTree("{\"id\":\"123\",\"email\":\"test@example.com\"}");
+        var requestHeadersUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
+        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
 
-        when(webClient.get()).thenReturn(requestHeadersUriSpec);
+        doReturn(requestHeadersUriSpec).when(webClient).get();
         when(requestHeadersUriSpec.uri("/auth/v1/user")).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.header(eq("Authorization"), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
@@ -150,6 +149,7 @@ class SupabaseProfileServiceTest {
     @DisplayName("updateUserPreferences - should add timestamp and call updateUserMetadata")
     void updateUserPreferences_ShouldAddTimestampAndCallUpdateUserMetadata() {
         Map<String, Object> preferences = new java.util.HashMap<>(Map.of("theme", "dark"));
+        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
 
         when(webClient.put()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
@@ -170,6 +170,8 @@ class SupabaseProfileServiceTest {
     @Test
     @DisplayName("linkLocalUser - should call updateUserMetadata with link data")
     void linkLocalUser_ShouldCallUpdateUserMetadataWithLinkData() {
+        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+
         when(webClient.put()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
         when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
@@ -189,6 +191,8 @@ class SupabaseProfileServiceTest {
     @Test
     @DisplayName("updateUserAvatar - should call updateUserMetadata with avatar URL")
     void updateUserAvatar_ShouldCallUpdateUserMetadataWithAvatarUrl() {
+        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+
         when(webClient.put()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
         when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
@@ -208,6 +212,8 @@ class SupabaseProfileServiceTest {
     @Test
     @DisplayName("updateDisplayName - should call updateUserMetadata with display name")
     void updateDisplayName_ShouldCallUpdateUserMetadataWithDisplayName() {
+        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+
         when(webClient.put()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
         when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);

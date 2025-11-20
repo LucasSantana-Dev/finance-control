@@ -1,6 +1,7 @@
 package com.finance_control.brazilian_market.dto;
 
-import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
+import com.finance_control.brazilian_market.model.InvestmentType;
 import com.finance_control.shared.dto.BaseDTO;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -35,9 +36,9 @@ public class InvestmentDTO extends BaseDTO<Long> {
     private String description;
 
     @NotNull(message = "Investment type is required")
-    private Investment.InvestmentType investmentType;
+    private InvestmentType investmentType;
 
-    private Investment.InvestmentSubtype investmentSubtype;
+    private InvestmentSubtype investmentSubtype;
 
     @Size(max = 50, message = "Market segment must not exceed 50 characters")
     private String marketSegment;
@@ -122,21 +123,21 @@ public class InvestmentDTO extends BaseDTO<Long> {
      * Helper method to check if this is a stock investment
      */
     public boolean isStock() {
-        return Investment.InvestmentType.STOCK.equals(investmentType);
+        return InvestmentType.STOCK.equals(investmentType);
     }
 
     /**
      * Helper method to check if this is a FII investment
      */
     public boolean isFii() {
-        return Investment.InvestmentType.FII.equals(investmentType);
+        return InvestmentType.FII.equals(investmentType);
     }
 
     /**
      * Helper method to check if this is a bond investment
      */
     public boolean isBond() {
-        return Investment.InvestmentType.BOND.equals(investmentType);
+        return InvestmentType.BOND.equals(investmentType);
     }
 
     /**

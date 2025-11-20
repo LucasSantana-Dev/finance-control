@@ -30,6 +30,8 @@ public interface UserMapper {
     @Mapping(target = "profile", ignore = true)
     @Mapping(target = "transactions", ignore = true)
     @Mapping(target = "financialGoals", ignore = true)
+    @Mapping(target = "emailHash", ignore = true)
+    @Mapping(target = "supabaseUserId", ignore = true)
     User toEntity(UserDTO dto);
 
     /**
@@ -43,6 +45,8 @@ public interface UserMapper {
     @Mapping(target = "profile", ignore = true)
     @Mapping(target = "transactions", ignore = true)
     @Mapping(target = "financialGoals", ignore = true)
+    @Mapping(target = "emailHash", ignore = true)
+    @Mapping(target = "supabaseUserId", ignore = true)
     void updateEntityFromDTO(UserDTO dto, @MappingTarget User entity);
 
     /**

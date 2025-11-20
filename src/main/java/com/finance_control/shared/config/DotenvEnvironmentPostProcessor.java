@@ -28,77 +28,100 @@ public class DotenvEnvironmentPostProcessor implements EnvironmentPostProcessor 
     }
 
     private void loadDotenvFile(ConfigurableEnvironment environment) {
-        try {
-            // Try multiple possible locations for .env file
-            File envFile = Paths.get(".env").toFile();
-            if (!envFile.exists()) {
-                // Try relative to user.dir
-                String userDir = System.getProperty("user.dir");
-                envFile = Paths.get(userDir, ".env").toFile();
-            }
+        File envFile = findEnvFile();
+        if (envFile == null) {
+            return;
+        }
 
-            if (!envFile.exists()) {
-                System.out.println("WARNING: .env file not found. Tried: " + Paths.get(".env").toAbsolutePath());
-                log.warn(".env file not found in project root. Skipping dotenv loading.");
-                return;
-            }
+        System.out.println("Loading .env file from: " + envFile.getAbsolutePath());
+        Map<String, Object> envMap = parseEnvFile(envFile);
 
-            System.out.println("Loading .env file from: " + envFile.getAbsolutePath());
+        if (!envMap.isEmpty()) {
+            addToEnvironment(environment, envMap);
+            printDebugInfo(envMap);
+        } else {
+            System.out.println("WARNING: No environment variables found in .env file");
+            log.warn("No environment variables found in .env file");
+        }
+    }
 
-            Map<String, Object> envMap = new HashMap<>();
+    private File findEnvFile() {
+        File envFile = Paths.get(".env").toFile();
+        if (!envFile.exists()) {
+            String userDir = System.getProperty("user.dir");
+            envFile = Paths.get(userDir, ".env").toFile();
+        }
 
-            try (BufferedReader reader = new BufferedReader(new FileReader(envFile))) {
-                String line;
-                int lineNumber = 0;
+        if (!envFile.exists()) {
+            System.out.println("WARNING: .env file not found. Tried: " + Paths.get(".env").toAbsolutePath());
+            log.warn(".env file not found in project root. Skipping dotenv loading.");
+            return null;
+        }
+        return envFile;
+    }
 
-                while ((line = reader.readLine()) != null) {
-                    lineNumber++;
-                    line = line.trim();
+    private Map<String, Object> parseEnvFile(File envFile) {
+        Map<String, Object> envMap = new HashMap<>();
 
-                    // Skip empty lines and comments
-                    if (line.isEmpty() || line.startsWith("#")) {
-                        continue;
-                    }
+        try (BufferedReader reader = new BufferedReader(new FileReader(envFile))) {
+            String line;
+            int lineNumber = 0;
 
-                    // Parse key=value format
-                    int equalsIndex = line.indexOf('=');
-                    if (equalsIndex > 0) {
-                        String key = line.substring(0, equalsIndex).trim();
-                        String value = line.substring(equalsIndex + 1).trim();
+            while ((line = reader.readLine()) != null) {
+                lineNumber++;
+                line = line.trim();
 
-                        // Remove quotes if present
-                        if ((value.startsWith("\"") && value.endsWith("\"")) ||
-                            (value.startsWith("'") && value.endsWith("'"))) {
-                            value = value.substring(1, value.length() - 1);
-                        }
-
-                        envMap.put(key, value);
-                        log.debug("Loaded environment variable: {}={}", key, maskSensitiveValue(key, value));
-                    } else {
-                        log.warn("Skipping invalid line {} in .env file: {}", lineNumber, line);
-                    }
+                if (shouldSkipLine(line)) {
+                    continue;
                 }
-            }
 
-            if (!envMap.isEmpty()) {
-                MapPropertySource propertySource = new MapPropertySource("dotenv", envMap);
-                environment.getPropertySources().addFirst(propertySource);
-                System.out.println("SUCCESS: Loaded " + envMap.size() + " environment variables from .env file");
-                log.info("Successfully loaded {} environment variables from .env file", envMap.size());
-
-                // Debug: Print some Supabase variables
-                if (envMap.containsKey("SUPABASE_DATABASE_ENABLED")) {
-                    System.out.println("SUPABASE_DATABASE_ENABLED=" + envMap.get("SUPABASE_DATABASE_ENABLED"));
-                }
-                if (envMap.containsKey("SUPABASE_DATABASE_HOST")) {
-                    System.out.println("SUPABASE_DATABASE_HOST=" + envMap.get("SUPABASE_DATABASE_HOST"));
-                }
-            } else {
-                System.out.println("WARNING: No environment variables found in .env file");
-                log.warn("No environment variables found in .env file");
+                parseLine(line, lineNumber, envMap);
             }
         } catch (IOException e) {
             log.error("Failed to load .env file: {}", e.getMessage(), e);
+        }
+
+        return envMap;
+    }
+
+    private boolean shouldSkipLine(String line) {
+        return line.isEmpty() || line.startsWith("#");
+    }
+
+    private void parseLine(String line, int lineNumber, Map<String, Object> envMap) {
+        int equalsIndex = line.indexOf('=');
+        if (equalsIndex > 0) {
+            String key = line.substring(0, equalsIndex).trim();
+            String value = line.substring(equalsIndex + 1).trim();
+            value = removeQuotes(value);
+            envMap.put(key, value);
+            log.debug("Loaded environment variable: {}={}", key, maskSensitiveValue(key, value));
+        } else {
+            log.warn("Skipping invalid line {} in .env file: {}", lineNumber, line);
+        }
+    }
+
+    private String removeQuotes(String value) {
+        if ((value.startsWith("\"") && value.endsWith("\"")) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+            return value.substring(1, value.length() - 1);
+        }
+        return value;
+    }
+
+    private void addToEnvironment(ConfigurableEnvironment environment, Map<String, Object> envMap) {
+        MapPropertySource propertySource = new MapPropertySource("dotenv", envMap);
+        environment.getPropertySources().addFirst(propertySource);
+        System.out.println("SUCCESS: Loaded " + envMap.size() + " environment variables from .env file");
+        log.info("Successfully loaded {} environment variables from .env file", envMap.size());
+    }
+
+    private void printDebugInfo(Map<String, Object> envMap) {
+        if (envMap.containsKey("SUPABASE_DATABASE_ENABLED")) {
+            System.out.println("SUPABASE_DATABASE_ENABLED=" + envMap.get("SUPABASE_DATABASE_ENABLED"));
+        }
+        if (envMap.containsKey("SUPABASE_DATABASE_HOST")) {
+            System.out.println("SUPABASE_DATABASE_HOST=" + envMap.get("SUPABASE_DATABASE_HOST"));
         }
     }
 

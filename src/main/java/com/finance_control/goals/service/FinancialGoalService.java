@@ -156,6 +156,13 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
 
     @Override
     protected void updateEntityFromDTO(FinancialGoal entity, FinancialGoalDTO updateDTO) {
+        updateBasicFields(entity, updateDTO);
+        updateAmountFields(entity, updateDTO);
+        updateDateFields(entity, updateDTO);
+        updateAccountField(entity, updateDTO);
+    }
+
+    private void updateBasicFields(FinancialGoal entity, FinancialGoalDTO updateDTO) {
         if (updateDTO.getName() != null) {
             entity.setName(updateDTO.getName());
         }
@@ -165,18 +172,27 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
         if (updateDTO.getGoalType() != null) {
             entity.setGoalType(updateDTO.getGoalType());
         }
+        if (updateDTO.getAutoCalculate() != null) {
+            entity.setAutoCalculate(updateDTO.getAutoCalculate());
+        }
+    }
+
+    private void updateAmountFields(FinancialGoal entity, FinancialGoalDTO updateDTO) {
         if (updateDTO.getTargetAmount() != null) {
             entity.setTargetAmount(updateDTO.getTargetAmount());
         }
         if (updateDTO.getCurrentAmount() != null) {
             entity.setCurrentAmount(updateDTO.getCurrentAmount());
         }
+    }
+
+    private void updateDateFields(FinancialGoal entity, FinancialGoalDTO updateDTO) {
         if (updateDTO.getDeadline() != null) {
             entity.setDeadline(updateDTO.getDeadline().toLocalDate());
         }
-        if (updateDTO.getAutoCalculate() != null) {
-            entity.setAutoCalculate(updateDTO.getAutoCalculate());
-        }
+    }
+
+    private void updateAccountField(FinancialGoal entity, FinancialGoalDTO updateDTO) {
         if (updateDTO.getAccountId() != null) {
             TransactionSourceEntity account = transactionSourceRepository.findById(updateDTO.getAccountId())
                     .orElseThrow(() -> new RuntimeException("Account not found"));

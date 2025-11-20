@@ -1,6 +1,12 @@
 package com.finance_control.brazilian_market.client;
 
-import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.client.model.ApiResponse;
+import com.finance_control.brazilian_market.client.model.ChartResponse;
+import com.finance_control.brazilian_market.client.model.MarketData;
+import com.finance_control.brazilian_market.client.model.Meta;
+import com.finance_control.brazilian_market.client.model.Quote;
+import com.finance_control.brazilian_market.client.model.QuoteResponse;
+import com.finance_control.brazilian_market.model.InvestmentType;
 import com.finance_control.brazilian_market.util.MarketDataConversionUtils;
 import com.finance_control.shared.monitoring.SentryService;
 import lombok.RequiredArgsConstructor;
@@ -105,7 +111,8 @@ public class UsMarketDataProvider implements MarketDataProvider {
                     .build()
                     .toUriString();
 
-            ChartResponse response = restTemplate.getForObject(url, ChartResponse.class);
+            com.finance_control.brazilian_market.client.model.ChartResponse response =
+                restTemplate.getForObject(url, com.finance_control.brazilian_market.client.model.ChartResponse.class);
             if (response == null) {
                 return Optional.empty();
             }
@@ -125,9 +132,9 @@ public class UsMarketDataProvider implements MarketDataProvider {
     }
 
     @Override
-    public boolean supportsInvestmentType(Investment.InvestmentType investmentType) {
-        return investmentType == Investment.InvestmentType.STOCK ||
-               investmentType == Investment.InvestmentType.ETF;
+    public boolean supportsInvestmentType(InvestmentType investmentType) {
+        return investmentType == InvestmentType.STOCK ||
+               investmentType == InvestmentType.ETF;
     }
 
     @Override
@@ -195,59 +202,190 @@ public class UsMarketDataProvider implements MarketDataProvider {
      */
     private HistoricalData convertToHistoricalData(ChartResponse response) {
         try {
-            if (response == null || response.getChart() == null ||
-                response.getChart().getResult() == null || response.getChart().getResult().isEmpty()) {
+            ChartResponse.ChartResultItem result = extractChartResultItem(response);
+            if (result == null) {
                 return null;
             }
 
-            ChartResultItem result = response.getChart().getResult().get(0);
-            Meta meta = result.getMeta();
-            Indicators indicators = result.getIndicators();
-
-            if (meta == null || indicators == null || indicators.getQuote() == null ||
-                indicators.getQuote().isEmpty()) {
+            Meta meta = validateAndExtractMeta(result);
+            if (meta == null) {
                 return null;
             }
 
-            // Check if quote arrays are null or empty
-            com.finance_control.brazilian_market.client.UsMarketDataProvider.Quote quote = indicators.getQuote().get(0);
+            Quote quote = validateAndExtractQuote(result);
             if (quote == null) {
                 return null;
             }
 
-            // Check if timestamp is null or empty (required for historical data)
-            List<Long> timestamps = result.getTimestamp();
+            List<Long> timestamps = validateAndExtractTimestamps(result);
             if (timestamps == null || timestamps.isEmpty()) {
                 return null;
             }
 
-            // Check if critical price arrays are null or empty
-            // At least open prices should be present for valid historical data
-            if (quote.getOpen() == null || quote.getOpen().isEmpty()) {
+            if (!hasValidPriceData(quote)) {
                 return null;
             }
 
-            // Use first quote series if needed in the future; currently we don't process detailed points
-            List<HistoricalPoint> dataPoints = List.of(); // TODO: process timestamp and quote OHLCV arrays
+            List<HistoricalPoint> dataPoints = processHistoricalDataPoints(timestamps, quote);
 
-            return HistoricalData.builder()
-                    .symbol(meta.getSymbol())
-                    .currency(meta.getCurrency())
-                    .exchange(meta.getExchangeName())
-                    .timezone(meta.getTimezone())
-                    .data(dataPoints)
-                    .lastUpdated(LocalDateTime.now())
-                    .build();
+            return buildHistoricalData(meta, dataPoints);
         } catch (Exception e) {
             log.error("Error converting API chart to HistoricalData", e);
             return null;
         }
     }
 
+    private ChartResponse.ChartResultItem extractChartResultItem(ChartResponse response) {
+        if (response == null || response.getChart() == null) {
+            return null;
+        }
+        List<ChartResponse.ChartResultItem> results = response.getChart().getResult();
+        if (results == null || results.isEmpty()) {
+            return null;
+        }
+        return results.get(0);
+    }
+
+    private Meta validateAndExtractMeta(ChartResponse.ChartResultItem result) {
+        if (result == null) {
+            return null;
+        }
+        return result.getMeta();
+    }
+
+    private Quote validateAndExtractQuote(ChartResponse.ChartResultItem result) {
+        if (result == null) {
+            return null;
+        }
+        com.finance_control.brazilian_market.client.model.Indicators indicators = result.getIndicators();
+        if (indicators == null) {
+            return null;
+        }
+        List<Quote> quotes = indicators.getQuote();
+        if (quotes == null || quotes.isEmpty()) {
+            return null;
+        }
+        return quotes.get(0);
+    }
+
+    private List<Long> validateAndExtractTimestamps(ChartResponse.ChartResultItem result) {
+        if (result == null) {
+            return null;
+        }
+        return result.getTimestamp();
+    }
+
+    private boolean hasValidPriceData(Quote quote) {
+        if (quote == null) {
+            return false;
+        }
+        List<Double> openPrices = quote.getOpen();
+        return openPrices != null && !openPrices.isEmpty();
+    }
+
+    private HistoricalData buildHistoricalData(Meta meta, List<HistoricalPoint> dataPoints) {
+        return HistoricalData.builder()
+                .symbol(meta.getSymbol())
+                .currency(meta.getCurrency())
+                .exchange(meta.getExchangeName())
+                .timezone(meta.getTimezone())
+                .data(dataPoints)
+                .lastUpdated(LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * Processes timestamp and quote arrays to create historical data points.
+     *
+     * @param timestamps List of Unix timestamps (seconds since epoch)
+     * @param quote Quote object containing OHLCV arrays
+     * @return List of HistoricalPoint objects
+     */
+    private List<HistoricalPoint> processHistoricalDataPoints(List<Long> timestamps, Quote quote) {
+        if (timestamps == null || timestamps.isEmpty()) {
+            return List.of();
+        }
+
+        int size = timestamps.size();
+        List<HistoricalPoint> dataPoints = new java.util.ArrayList<>(size);
+
+        List<Double> openPrices = quote.getOpen();
+        List<Double> highPrices = quote.getHigh();
+        List<Double> lowPrices = quote.getLow();
+        List<Double> closePrices = quote.getClose();
+        List<Long> volumes = quote.getVolume();
+
+        for (int i = 0; i < size; i++) {
+            Long timestamp = timestamps.get(i);
+            if (timestamp == null) {
+                continue; // Skip null timestamps
+            }
+
+            LocalDateTime dateTime = convertTimestampToDateTime(timestamp);
+            OHLCVValues values = extractOHLCVValues(openPrices, highPrices, lowPrices, closePrices, volumes, i);
+
+            if (hasAtLeastOnePrice(values)) {
+                HistoricalPoint point = buildHistoricalPoint(dateTime, values);
+                dataPoints.add(point);
+            }
+        }
+
+        log.debug("Processed {} historical data points from {} timestamps", dataPoints.size(), size);
+        return dataPoints;
+    }
+
+    private LocalDateTime convertTimestampToDateTime(Long timestamp) {
+        return java.time.LocalDateTime.ofEpochSecond(timestamp, 0, java.time.ZoneOffset.UTC);
+    }
+
+    private OHLCVValues extractOHLCVValues(List<Double> openPrices, List<Double> highPrices,
+                                           List<Double> lowPrices, List<Double> closePrices,
+                                           List<Long> volumes, int index) {
+        return new OHLCVValues(
+                extractPriceValue(openPrices, index),
+                extractPriceValue(highPrices, index),
+                extractPriceValue(lowPrices, index),
+                extractPriceValue(closePrices, index),
+                extractVolumeValue(volumes, index)
+        );
+    }
+
+    private BigDecimal extractPriceValue(List<Double> prices, int index) {
+        if (prices == null || index >= prices.size() || prices.get(index) == null) {
+            return null;
+        }
+        return BigDecimal.valueOf(prices.get(index));
+    }
+
+    private Long extractVolumeValue(List<Long> volumes, int index) {
+        if (volumes == null || index >= volumes.size()) {
+            return null;
+        }
+        return volumes.get(index);
+    }
+
+    private boolean hasAtLeastOnePrice(OHLCVValues values) {
+        return values.open() != null || values.high() != null
+            || values.low() != null || values.close() != null;
+    }
+
+    private HistoricalPoint buildHistoricalPoint(LocalDateTime dateTime, OHLCVValues values) {
+        return HistoricalPoint.builder()
+                .timestamp(dateTime)
+                .open(values.open())
+                .high(values.high())
+                .low(values.low())
+                .close(values.close())
+                .volume(values.volume())
+                .build();
+    }
+
+    private record OHLCVValues(BigDecimal open, BigDecimal high, BigDecimal low, BigDecimal close, Long volume) {}
+
     /**
      * Convert API quote response to Investment market data (legacy method)
      */
-    public Optional<MarketData> convertToMarketData(QuoteResponse quote, Investment.InvestmentType investmentType) {
+    public Optional<MarketData> convertToMarketData(QuoteResponse quote, InvestmentType investmentType) {
         try {
             if (quote == null || quote.getRegularMarketPrice() == null) {
                 return Optional.empty();
@@ -259,7 +397,7 @@ public class UsMarketDataProvider implements MarketDataProvider {
                             quote.getPreviousClose()
                     );
 
-            return Optional.of(MarketData.builder()
+            return Optional.of(com.finance_control.brazilian_market.client.model.MarketData.builder()
                     .currentPrice(prices.getCurrentPrice())
                     .previousClose(prices.getPreviousClose())
                     .dayChange(prices.getDayChange())
@@ -276,330 +414,4 @@ public class UsMarketDataProvider implements MarketDataProvider {
         }
     }
 
-    /**
-     * Response wrapper for API
-     */
-    public static class ApiResponse {
-        private QuoteResponseWrapper quoteResponse;
-
-        public QuoteResponseWrapper getQuoteResponse() { return quoteResponse; }
-        public void setQuoteResponse(QuoteResponseWrapper quoteResponse) { this.quoteResponse = quoteResponse; }
-    }
-
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    public static class QuoteResponseWrapper {
-        private List<QuoteResponse> result;
-        private Object error;
-
-        public List<QuoteResponse> getResult() {
-            return result != null ? java.util.Collections.unmodifiableList(result) : null;
-        }
-        public void setResult(List<QuoteResponse> result) { this.result = result; }
-        public Object getError() { return error; }
-        public void setError(Object error) { this.error = error; }
-    }
-
-    /**
-     * Quote response from API
-     */
-    // EI_EXPOSE_REP suppression needed: This DTO is used for JSON deserialization from external APIs
-    // Jackson requires direct field access for proper deserialization of API responses
-    public static class QuoteResponse {
-        private String symbol;
-        private String shortName;
-        private String longName;
-        private String currency;
-        private Double regularMarketPrice;
-        private Double previousClose;
-        private Long regularMarketVolume;
-        private Double marketCap;
-        private Double dividendYield;
-        private Double pe;
-        private Double eps;
-        private String exchange;
-        private String timezone;
-        private String exchangeTimezoneName;
-        private Long regularMarketTime;
-        private Double regularMarketDayHigh;
-        private Double regularMarketDayLow;
-        private Double regularMarketOpen;
-        private Double twoHundredDayAverage;
-        private Double fiftyDayAverage;
-        private Double priceToBook;
-        private Double priceToSales;
-        private Double enterpriseToRevenue;
-        private Double enterpriseToEbitda;
-        private Double profitMargins;
-        private Double grossMargins;
-        private Double operatingMargins;
-        private Double returnOnAssets;
-        private Double returnOnEquity;
-        private Double totalCash;
-        private Double totalDebt;
-        private Double totalRevenue;
-        private Double revenueGrowth;
-        private Double earningsGrowth;
-        private Double targetMeanPrice;
-        private Double targetHighPrice;
-        private Double targetLowPrice;
-        private Double recommendationMean;
-        private String recommendationKey;
-        private Long numberOfAnalystOpinions;
-        private Double bookValue;
-        private Double priceToBookValue;
-        private Double netIncomeToCommon;
-        private Double trailingEps;
-        private Double forwardEps;
-        private Double pegRatio;
-        private Double lastDividendValue;
-        private String lastDividendDate;
-        private Double lastCapGain;
-        private Double annualDividendRate;
-        private Double annualDividendYield;
-        private Double beta;
-        private Double impliedSharesOutstanding;
-        private Double floatShares;
-
-        // Getters and setters
-        public String getSymbol() { return symbol; }
-        public void setSymbol(String symbol) { this.symbol = symbol; }
-        public String getShortName() { return shortName; }
-        public void setShortName(String shortName) { this.shortName = shortName; }
-        public String getLongName() { return longName; }
-        public void setLongName(String longName) { this.longName = longName; }
-        public String getCurrency() { return currency; }
-        public void setCurrency(String currency) { this.currency = currency; }
-        public Double getRegularMarketPrice() { return regularMarketPrice; }
-        public void setRegularMarketPrice(Double regularMarketPrice) { this.regularMarketPrice = regularMarketPrice; }
-        public Double getPreviousClose() { return previousClose; }
-        public void setPreviousClose(Double previousClose) { this.previousClose = previousClose; }
-        public Long getRegularMarketVolume() { return regularMarketVolume; }
-        public void setRegularMarketVolume(Long regularMarketVolume) { this.regularMarketVolume = regularMarketVolume; }
-        public Double getMarketCap() { return marketCap; }
-        public void setMarketCap(Double marketCap) { this.marketCap = marketCap; }
-        public Double getDividendYield() { return dividendYield; }
-        public void setDividendYield(Double dividendYield) { this.dividendYield = dividendYield; }
-        public Double getPe() { return pe; }
-        public void setPe(Double pe) { this.pe = pe; }
-        public Double getEps() { return eps; }
-        public void setEps(Double eps) { this.eps = eps; }
-        public String getExchange() { return exchange; }
-        public void setExchange(String exchange) { this.exchange = exchange; }
-        public String getTimezone() { return timezone; }
-        public void setTimezone(String timezone) { this.timezone = timezone; }
-        public String getExchangeTimezoneName() { return exchangeTimezoneName; }
-        public void setExchangeTimezoneName(String exchangeTimezoneName) { this.exchangeTimezoneName = exchangeTimezoneName; }
-        public Long getRegularMarketTime() { return regularMarketTime; }
-        public void setRegularMarketTime(Long regularMarketTime) { this.regularMarketTime = regularMarketTime; }
-        public Double getRegularMarketDayHigh() { return regularMarketDayHigh; }
-        public void setRegularMarketDayHigh(Double regularMarketDayHigh) { this.regularMarketDayHigh = regularMarketDayHigh; }
-        public Double getRegularMarketDayLow() { return regularMarketDayLow; }
-        public void setRegularMarketDayLow(Double regularMarketDayLow) { this.regularMarketDayLow = regularMarketDayLow; }
-        public Double getRegularMarketOpen() { return regularMarketOpen; }
-        public void setRegularMarketOpen(Double regularMarketOpen) { this.regularMarketOpen = regularMarketOpen; }
-        public Double getTwoHundredDayAverage() { return twoHundredDayAverage; }
-        public void setTwoHundredDayAverage(Double twoHundredDayAverage) { this.twoHundredDayAverage = twoHundredDayAverage; }
-        public Double getFiftyDayAverage() { return fiftyDayAverage; }
-        public void setFiftyDayAverage(Double fiftyDayAverage) { this.fiftyDayAverage = fiftyDayAverage; }
-        public Double getPriceToBook() { return priceToBook; }
-        public void setPriceToBook(Double priceToBook) { this.priceToBook = priceToBook; }
-        public Double getPriceToSales() { return priceToSales; }
-        public void setPriceToSales(Double priceToSales) { this.priceToSales = priceToSales; }
-        public Double getEnterpriseToRevenue() { return enterpriseToRevenue; }
-        public void setEnterpriseToRevenue(Double enterpriseToRevenue) { this.enterpriseToRevenue = enterpriseToRevenue; }
-        public Double getEnterpriseToEbitda() { return enterpriseToEbitda; }
-        public void setEnterpriseToEbitda(Double enterpriseToEbitda) { this.enterpriseToEbitda = enterpriseToEbitda; }
-        public Double getProfitMargins() { return profitMargins; }
-        public void setProfitMargins(Double profitMargins) { this.profitMargins = profitMargins; }
-        public Double getGrossMargins() { return grossMargins; }
-        public void setGrossMargins(Double grossMargins) { this.grossMargins = grossMargins; }
-        public Double getOperatingMargins() { return operatingMargins; }
-        public void setOperatingMargins(Double operatingMargins) { this.operatingMargins = operatingMargins; }
-        public Double getReturnOnAssets() { return returnOnAssets; }
-        public void setReturnOnAssets(Double returnOnAssets) { this.returnOnAssets = returnOnAssets; }
-        public Double getReturnOnEquity() { return returnOnEquity; }
-        public void setReturnOnEquity(Double returnOnEquity) { this.returnOnEquity = returnOnEquity; }
-        public Double getTotalCash() { return totalCash; }
-        public void setTotalCash(Double totalCash) { this.totalCash = totalCash; }
-        public Double getTotalDebt() { return totalDebt; }
-        public void setTotalDebt(Double totalDebt) { this.totalDebt = totalDebt; }
-        public Double getTotalRevenue() { return totalRevenue; }
-        public void setTotalRevenue(Double totalRevenue) { this.totalRevenue = totalRevenue; }
-        public Double getRevenueGrowth() { return revenueGrowth; }
-        public void setRevenueGrowth(Double revenueGrowth) { this.revenueGrowth = revenueGrowth; }
-        public Double getEarningsGrowth() { return earningsGrowth; }
-        public void setEarningsGrowth(Double earningsGrowth) { this.earningsGrowth = earningsGrowth; }
-        public Double getTargetMeanPrice() { return targetMeanPrice; }
-        public void setTargetMeanPrice(Double targetMeanPrice) { this.targetMeanPrice = targetMeanPrice; }
-        public Double getTargetHighPrice() { return targetHighPrice; }
-        public void setTargetHighPrice(Double targetHighPrice) { this.targetHighPrice = targetHighPrice; }
-        public Double getTargetLowPrice() { return targetLowPrice; }
-        public void setTargetLowPrice(Double targetLowPrice) { this.targetLowPrice = targetLowPrice; }
-        public Double getRecommendationMean() { return recommendationMean; }
-        public void setRecommendationMean(Double recommendationMean) { this.recommendationMean = recommendationMean; }
-        public String getRecommendationKey() { return recommendationKey; }
-        public void setRecommendationKey(String recommendationKey) { this.recommendationKey = recommendationKey; }
-        public Long getNumberOfAnalystOpinions() { return numberOfAnalystOpinions; }
-        public void setNumberOfAnalystOpinions(Long numberOfAnalystOpinions) { this.numberOfAnalystOpinions = numberOfAnalystOpinions; }
-        public Double getBookValue() { return bookValue; }
-        public void setBookValue(Double bookValue) { this.bookValue = bookValue; }
-        public Double getPriceToBookValue() { return priceToBookValue; }
-        public void setPriceToBookValue(Double priceToBookValue) { this.priceToBookValue = priceToBookValue; }
-        public Double getNetIncomeToCommon() { return netIncomeToCommon; }
-        public void setNetIncomeToCommon(Double netIncomeToCommon) { this.netIncomeToCommon = netIncomeToCommon; }
-        public Double getTrailingEps() { return trailingEps; }
-        public void setTrailingEps(Double trailingEps) { this.trailingEps = trailingEps; }
-        public Double getForwardEps() { return forwardEps; }
-        public void setForwardEps(Double forwardEps) { this.forwardEps = forwardEps; }
-        public Double getPegRatio() { return pegRatio; }
-        public void setPegRatio(Double pegRatio) { this.pegRatio = pegRatio; }
-        public Double getLastDividendValue() { return lastDividendValue; }
-        public void setLastDividendValue(Double lastDividendValue) { this.lastDividendValue = lastDividendValue; }
-        public String getLastDividendDate() { return lastDividendDate; }
-        public void setLastDividendDate(String lastDividendDate) { this.lastDividendDate = lastDividendDate; }
-        public Double getLastCapGain() { return lastCapGain; }
-        public void setLastCapGain(Double lastCapGain) { this.lastCapGain = lastCapGain; }
-        public Double getAnnualDividendRate() { return annualDividendRate; }
-        public void setAnnualDividendRate(Double annualDividendRate) { this.annualDividendRate = annualDividendRate; }
-        public Double getAnnualDividendYield() { return annualDividendYield; }
-        public void setAnnualDividendYield(Double annualDividendYield) { this.annualDividendYield = annualDividendYield; }
-        public Double getBeta() { return beta; }
-        public void setBeta(Double beta) { this.beta = beta; }
-        public Double getImpliedSharesOutstanding() { return impliedSharesOutstanding; }
-        public void setImpliedSharesOutstanding(Double impliedSharesOutstanding) { this.impliedSharesOutstanding = impliedSharesOutstanding; }
-        public Double getFloatShares() { return floatShares; }
-        public void setFloatShares(Double floatShares) { this.floatShares = floatShares; }
-    }
-
-    /**
-     * Chart response from API
-     */
-    public static class ChartResponse {
-        private ChartResult chart;
-
-        public ChartResult getChart() { return chart; }
-        public void setChart(ChartResult chart) { this.chart = chart; }
-    }
-
-    public static class ChartResult {
-        private List<ChartResultItem> result;
-        private Object error;
-
-        public List<ChartResultItem> getResult() { return result; }
-        public void setResult(List<ChartResultItem> result) { this.result = result; }
-        public Object getError() { return error; }
-        public void setError(Object error) { this.error = error; }
-    }
-
-    public static class ChartResultItem {
-        private Meta meta;
-        private List<Long> timestamp;
-        private Indicators indicators;
-
-        public Meta getMeta() { return meta; }
-        public void setMeta(Meta meta) { this.meta = meta; }
-        public List<Long> getTimestamp() { return timestamp; }
-        public void setTimestamp(List<Long> timestamp) { this.timestamp = timestamp; }
-        public Indicators getIndicators() { return indicators; }
-        public void setIndicators(Indicators indicators) { this.indicators = indicators; }
-    }
-
-    public static class Meta {
-        private String currency;
-        private String symbol;
-        private String exchangeName;
-        private String instrumentType;
-        private Long firstTradeDate;
-        private Long regularMarketTime;
-        private Long gmtoffset;
-        private String timezone;
-        private String exchangeTimezoneName;
-        private Double regularMarketPrice;
-        private Double previousClose;
-        private Long scale;
-        private Long priceHint;
-        private Double currentTradingPeriod;
-        private String dataGranularity;
-        private String range;
-        private List<String> validRanges;
-
-        // Getters and setters
-        public String getCurrency() { return currency; }
-        public void setCurrency(String currency) { this.currency = currency; }
-        public String getSymbol() { return symbol; }
-        public void setSymbol(String symbol) { this.symbol = symbol; }
-        public String getExchangeName() { return exchangeName; }
-        public void setExchangeName(String exchangeName) { this.exchangeName = exchangeName; }
-        public String getInstrumentType() { return instrumentType; }
-        public void setInstrumentType(String instrumentType) { this.instrumentType = instrumentType; }
-        public Long getFirstTradeDate() { return firstTradeDate; }
-        public void setFirstTradeDate(Long firstTradeDate) { this.firstTradeDate = firstTradeDate; }
-        public Long getRegularMarketTime() { return regularMarketTime; }
-        public void setRegularMarketTime(Long regularMarketTime) { this.regularMarketTime = regularMarketTime; }
-        public Long getGmtoffset() { return gmtoffset; }
-        public void setGmtoffset(Long gmtoffset) { this.gmtoffset = gmtoffset; }
-        public String getTimezone() { return timezone; }
-        public void setTimezone(String timezone) { this.timezone = timezone; }
-        public String getExchangeTimezoneName() { return exchangeTimezoneName; }
-        public void setExchangeTimezoneName(String exchangeTimezoneName) { this.exchangeTimezoneName = exchangeTimezoneName; }
-        public Double getRegularMarketPrice() { return regularMarketPrice; }
-        public void setRegularMarketPrice(Double regularMarketPrice) { this.regularMarketPrice = regularMarketPrice; }
-        public Double getPreviousClose() { return previousClose; }
-        public void setPreviousClose(Double previousClose) { this.previousClose = previousClose; }
-        public Long getScale() { return scale; }
-        public void setScale(Long scale) { this.scale = scale; }
-        public Long getPriceHint() { return priceHint; }
-        public void setPriceHint(Long priceHint) { this.priceHint = priceHint; }
-        public Double getCurrentTradingPeriod() { return currentTradingPeriod; }
-        public void setCurrentTradingPeriod(Double currentTradingPeriod) { this.currentTradingPeriod = currentTradingPeriod; }
-        public String getDataGranularity() { return dataGranularity; }
-        public void setDataGranularity(String dataGranularity) { this.dataGranularity = dataGranularity; }
-        public String getRange() { return range; }
-        public void setRange(String range) { this.range = range; }
-        public List<String> getValidRanges() { return validRanges; }
-        public void setValidRanges(List<String> validRanges) { this.validRanges = validRanges; }
-    }
-
-    public static class Indicators {
-        private List<Quote> quote;
-
-        public List<Quote> getQuote() { return quote; }
-        public void setQuote(List<Quote> quote) { this.quote = quote; }
-    }
-
-    public static class Quote {
-        private List<Double> open;
-        private List<Double> high;
-        private List<Double> low;
-        private List<Double> close;
-        private List<Long> volume;
-
-        public List<Double> getOpen() { return open; }
-        public void setOpen(List<Double> open) { this.open = open; }
-        public List<Double> getHigh() { return high; }
-        public void setHigh(List<Double> high) { this.high = high; }
-        public List<Double> getLow() { return low; }
-        public void setLow(List<Double> low) { this.low = low; }
-        public List<Double> getClose() { return close; }
-        public void setClose(List<Double> close) { this.close = close; }
-        public List<Long> getVolume() { return volume; }
-        public void setVolume(List<Long> volume) { this.volume = volume; }
-    }
-
-    /**
-     * Market data structure for internal use
-     */
-    @lombok.Data
-    @lombok.Builder
-    public static class MarketData {
-        private BigDecimal currentPrice;
-        private BigDecimal previousClose;
-        private BigDecimal dayChange;
-        private BigDecimal dayChangePercent;
-        private Long volume;
-        private BigDecimal marketCap;
-        private BigDecimal dividendYield;
-        private LocalDateTime lastUpdated;
-    }
 }

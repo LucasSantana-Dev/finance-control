@@ -159,10 +159,6 @@ public class DashboardService {
 
         int colorIndex = 0;
         for (Map.Entry<String, BigDecimal> entry : categoryTotals.entrySet()) {
-            if (categories.size() >= limit) {
-                break;
-            }
-
             BigDecimal amount = entry.getValue();
             BigDecimal percentage;
             if (totalExpenses.compareTo(BigDecimal.ZERO) > 0) {
@@ -184,7 +180,8 @@ public class DashboardService {
             colorIndex++;
         }
 
-        return sortCategoriesByAmount(categories);
+        List<CategorySpendingDTO> sortedCategories = sortCategoriesByAmount(categories);
+        return sortedCategories.stream().limit(limit).collect(Collectors.toList());
     }
 
     /**

@@ -10,6 +10,7 @@
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transactions_user_type_date_amount
 ON transactions(user_id, type, date DESC, amount DESC);
 
+-- Note: Using category_id (FK) as per the actual schema
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transactions_user_date_type_category
 ON transactions(user_id, date DESC, type, category_id);
 
@@ -30,6 +31,7 @@ WHERE is_active = true;
 -- These indexes will be created in V8 migration for the unified investments table
 
 -- Indexes for dashboard and analytics queries
+-- Note: Using category_id and subcategory_id (FKs) as per the actual schema
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transactions_user_category_type_date
 ON transactions(user_id, category_id, type, date DESC);
 

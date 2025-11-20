@@ -27,15 +27,11 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.mockito.Mockito;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -76,6 +72,44 @@ class DashboardPredictionControllerTest {
         UserContext.clear();
     }
 
+    /**
+     * Creates a simple ObjectProvider implementation for testing.
+     * Only implements the methods actually used by the controller.
+     */
+    private ObjectProvider<FinancialPredictionService> createObjectProvider(FinancialPredictionService service) {
+        return new ObjectProvider<FinancialPredictionService>() {
+            @Override
+            public FinancialPredictionService getObject() {
+                return service;
+            }
+
+            @Override
+            public FinancialPredictionService getObject(Object... args) {
+                return service;
+            }
+
+            @Override
+            public FinancialPredictionService getIfAvailable() {
+                return service;
+            }
+
+            @Override
+            public FinancialPredictionService getIfUnique() {
+                return service;
+            }
+
+            @Override
+            public java.util.stream.Stream<FinancialPredictionService> stream() {
+                return service != null ? java.util.stream.Stream.of(service) : java.util.stream.Stream.empty();
+            }
+
+            @Override
+            public java.util.Iterator<FinancialPredictionService> iterator() {
+                return service != null ? java.util.Collections.singletonList(service).iterator() : java.util.Collections.emptyIterator();
+            }
+        };
+    }
+
     @Test
     void generateFinancialPredictions_ShouldReturnOk() throws Exception {
         FinancialPredictionResponse response = FinancialPredictionResponse.builder()
@@ -97,9 +131,8 @@ class DashboardPredictionControllerTest {
         // Use reflection to set the ObjectProvider in the controller
         java.lang.reflect.Field field = DashboardController.class.getDeclaredField("financialPredictionServiceProvider");
         field.setAccessible(true);
-        ObjectProvider<FinancialPredictionService> mockProvider = Mockito.mock(ObjectProvider.class);
-        when(mockProvider.getIfAvailable()).thenReturn(financialPredictionService);
-        field.set(dashboardController, mockProvider);
+        ObjectProvider<FinancialPredictionService> provider = createObjectProvider(financialPredictionService);
+        field.set(dashboardController, provider);
 
         when(financialPredictionService.generatePrediction(any(FinancialPredictionRequest.class))).thenReturn(response);
 
@@ -124,9 +157,8 @@ class DashboardPredictionControllerTest {
         // Use reflection to set the ObjectProvider in the controller to return null
         java.lang.reflect.Field field = DashboardController.class.getDeclaredField("financialPredictionServiceProvider");
         field.setAccessible(true);
-        ObjectProvider<FinancialPredictionService> mockProvider = Mockito.mock(ObjectProvider.class);
-        when(mockProvider.getIfAvailable()).thenReturn(null);
-        field.set(dashboardController, mockProvider);
+        ObjectProvider<FinancialPredictionService> provider = createObjectProvider(null);
+        field.set(dashboardController, provider);
 
         FinancialPredictionRequest request = FinancialPredictionRequest.builder()
                 .historyMonths(6)

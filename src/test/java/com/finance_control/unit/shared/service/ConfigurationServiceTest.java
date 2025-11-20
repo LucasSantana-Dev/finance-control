@@ -5,6 +5,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.finance_control.shared.config.AppProperties;
+import com.finance_control.shared.config.properties.*;
 import com.finance_control.shared.config.EnvironmentConfig;
 import com.finance_control.shared.service.ConfigurationService;
 import java.util.List;
@@ -45,36 +46,37 @@ class ConfigurationServiceTest {
         // Create AppProperties instance using constructor binding
         appPropertiesInstance = new AppProperties(
             false,
-            new AppProperties.Database(
+            new DatabaseProperties(
                 "jdbc:postgresql://localhost:5432/testdb",
                 "testuser",
                 "testpass",
                 "org.postgresql.Driver",
                 "5432",
                 "testdb",
-                new AppProperties.Pool(5, 20, 5, 300000, 20000, 300000, 60000)
+                new DatabaseProperties.PoolProperties(5, 20, 5, 300000, 20000, 300000, 60000)
             ),
-            new AppProperties.Security(
-                new AppProperties.Jwt(
+            new SecurityProperties(
+                new SecurityProperties.JwtProperties(
                     "test-secret-key",
                     86400000L,
                     604800000L,
                     "finance-control",
                     "finance-control-users"
                 ),
-                new AppProperties.Cors(
+                new SecurityProperties.CorsProperties(
                     List.of("http://localhost:3000"),
                     List.of("GET", "POST"),
                     List.of("*"),
                     true,
                     3600
                 ),
-                List.of("/api/auth/**")
+                List.of("/api/auth/**"),
+                new SecurityProperties.EncryptionProperties()
             ),
-            new AppProperties.Server(
+            new ServerProperties(
                 8080, "", "/", 8192, 2097152, 20000, 30000, 30000
             ),
-            new AppProperties.Logging(
+            new LoggingProperties(
                 "INFO",
                 "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n",
                 "logs",
@@ -85,7 +87,7 @@ class ConfigurationServiceTest {
                 512,
                 true
             ),
-            new AppProperties.Jpa(
+            new JpaProperties(
                 "validate",
                 "org.hibernate.dialect.PostgreSQLDialect",
                 false,
@@ -93,11 +95,11 @@ class ConfigurationServiceTest {
                 false,
                 "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl",
                 false,
-                new AppProperties.Properties(
+                new JpaProperties.HibernateProperties(
                     "false", "false", "20", "true", "true", "true", "20", "16"
                 )
             ),
-            new AppProperties.Flyway(
+            new FlywayProperties(
                 true,
                 List.of("classpath:db/migration"),
                 "false",
@@ -107,7 +109,7 @@ class ConfigurationServiceTest {
                 "true",
                 "false"
             ),
-            new AppProperties.Actuator(
+            new ActuatorProperties(
                 true,
                 List.of("health", "info"),
                 "/actuator",
@@ -115,7 +117,7 @@ class ConfigurationServiceTest {
                 true,
                 true
             ),
-            new AppProperties.OpenApi(
+            new OpenApiProperties(
                 "Finance Control API",
                 "API for managing personal finances",
                 "1.0.0",
@@ -127,14 +129,14 @@ class ConfigurationServiceTest {
                 "http://localhost:8080",
                 "Development server"
             ),
-            new AppProperties.Pagination(10, 100, "id", "ASC"),
-            new AppProperties.Redis("localhost", 6379, "", 0, 2000, new AppProperties.RedisPool(8, 8, 0, -1)),
-            new AppProperties.Cache(true, 900000, 300000, 1800000),
-            new AppProperties.RateLimit(true, 100, 200, 60),
-            new AppProperties.Ai(),
-            new AppProperties.Supabase(false, "", "", "", "", new AppProperties.SupabaseDatabase(), new AppProperties.Storage(), new AppProperties.Realtime(false, List.of("transactions", "dashboard", "goals"))),
-            new AppProperties.Monitoring(true, new AppProperties.Sentry(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true), new AppProperties.HealthCheck(30, true), new AppProperties.FrontendErrors()),
-            new AppProperties.OpenFinance()
+            new PaginationProperties(10, 100, "id", "ASC"),
+            new RedisProperties("localhost", 6379, "", 0, 2000, new RedisProperties.RedisPoolProperties(8, 8, 0, -1)),
+            new CacheProperties(true, 900000, 300000, 1800000),
+            new RateLimitProperties(true, 100, 200, 60),
+            new AiProperties(),
+            new SupabaseProperties(false, "", "", "", "", new SupabaseProperties.SupabaseDatabaseProperties(), new SupabaseProperties.StorageProperties(), new SupabaseProperties.RealtimeProperties(false, List.of("transactions", "dashboard", "goals"))),
+            new MonitoringProperties(true, new MonitoringProperties.SentryProperties(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true)),
+            new OpenFinanceProperties()
         );
 
         // Mock AppProperties using record accessors
@@ -408,13 +410,14 @@ class ConfigurationServiceTest {
     @DisplayName("getSecurityConfig_WithNullSecret_ShouldReturnFalseForSecretConfigured")
     void getSecurityConfig_WithNullSecret_ShouldReturnFalseForSecretConfigured() {
         // Create a new JWT with null secret and create new security config
-        AppProperties.Jwt nullSecretJwt = new AppProperties.Jwt(
+        SecurityProperties.JwtProperties nullSecretJwt = new SecurityProperties.JwtProperties(
             null, 86400000L, 604800000L, "finance-control", "finance-control-users"
         );
-        AppProperties.Security nullSecretSecurity = new AppProperties.Security(
+        SecurityProperties nullSecretSecurity = new SecurityProperties(
             nullSecretJwt,
             appPropertiesInstance.security().cors(),
-            appPropertiesInstance.security().publicEndpoints()
+            appPropertiesInstance.security().publicEndpoints(),
+            new SecurityProperties.EncryptionProperties()
         );
 
         // Create new AppProperties with the null secret security

@@ -1,6 +1,7 @@
 package com.finance_control.unit.shared.config;
 
 import com.finance_control.shared.config.AppProperties;
+import com.finance_control.shared.config.properties.MonitoringProperties;
 import com.finance_control.shared.config.SentryConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,11 +26,9 @@ class SentryConfigTest {
 
     @BeforeEach
     void setUp() {
-        AppProperties.Monitoring monitoring = new AppProperties.Monitoring(
+        MonitoringProperties monitoring = new MonitoringProperties(
             true,
-            new AppProperties.Sentry(true, "https://test@sentry.io/test", "test", "1.0.0", 0.1, 0.1, false, true, true),
-            new AppProperties.HealthCheck(),
-            new AppProperties.FrontendErrors()
+            new MonitoringProperties.SentryProperties(true, "https://test@sentry.io/test", "test", "1.0.0", 0.1, 0.1, false, true, true)
         );
         when(appProperties.monitoring()).thenReturn(monitoring);
     }
@@ -58,11 +57,9 @@ class SentryConfigTest {
     @Test
     void initializeSentry_WithEmptyDsn_ShouldNotInitializeSentry() {
         // Given
-        AppProperties.Monitoring monitoring = new AppProperties.Monitoring(
+        MonitoringProperties monitoring = new MonitoringProperties(
             true,
-            new AppProperties.Sentry(true, "", "test", "1.0.0", 0.1, 0.1, false, true, true),
-            new AppProperties.HealthCheck(),
-            new AppProperties.FrontendErrors()
+            new MonitoringProperties.SentryProperties(true, "", "test", "1.0.0", 0.1, 0.1, false, true, true)
         );
         when(appProperties.monitoring()).thenReturn(monitoring);
         SentryConfig sentryConfig = new SentryConfig(appProperties);
@@ -79,11 +76,9 @@ class SentryConfigTest {
     @Test
     void initializeSentry_WithNullDsn_ShouldNotInitializeSentry() {
         // Given
-        AppProperties.Monitoring monitoring = new AppProperties.Monitoring(
+        MonitoringProperties monitoring = new MonitoringProperties(
             true,
-            new AppProperties.Sentry(true, null, "test", "1.0.0", 0.1, 0.1, false, true, true),
-            new AppProperties.HealthCheck(),
-            new AppProperties.FrontendErrors()
+            new MonitoringProperties.SentryProperties(true, null, "test", "1.0.0", 0.1, 0.1, false, true, true)
         );
         when(appProperties.monitoring()).thenReturn(monitoring);
         SentryConfig sentryConfig = new SentryConfig(appProperties);

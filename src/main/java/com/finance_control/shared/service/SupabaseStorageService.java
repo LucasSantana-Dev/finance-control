@@ -7,14 +7,19 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -29,17 +34,20 @@ public class SupabaseStorageService {
 
     private final AppProperties appProperties;
     private final FileCompressionService compressionService;
+    private final ObjectMapper objectMapper;
 
     @Qualifier("supabaseWebClient")
     private final WebClient webClient;
 
     private String supabaseUrl;
     private String anonKey;
+    private String serviceRoleKey;
 
     @PostConstruct
     public void initialize() {
         this.supabaseUrl = appProperties.supabase().url();
         this.anonKey = appProperties.supabase().anonKey();
+        this.serviceRoleKey = appProperties.supabase().serviceRoleKey();
 
         if (!StringUtils.hasText(supabaseUrl) || !StringUtils.hasText(anonKey)) {
             log.warn("Supabase Storage service not configured. URL or anon key is missing.");
@@ -238,6 +246,7 @@ public class SupabaseStorageService {
 
     /**
      * Generates a signed URL for private file access with expiration.
+     * Uses Supabase Storage API with service role key for authentication.
      *
      * @param bucketName the bucket name
      * @param fileName the file name
@@ -247,12 +256,52 @@ public class SupabaseStorageService {
     public String generateSignedUrl(String bucketName, String fileName, int expiresIn) {
         validateConfiguration();
 
+        if (!StringUtils.hasText(serviceRoleKey)) {
+            log.warn("Service role key not configured. Cannot generate signed URL.");
+            throw new IllegalStateException("Service role key not configured for signed URL generation");
+        }
+
         try {
-            // Supabase signed URL generation requires service role key
-            // For now, return a placeholder - this would need Supabase Storage API implementation
-            // TODO: Implement actual signed URL generation using Supabase Storage API
-            log.warn("Signed URL generation not fully implemented. Using placeholder.");
-            return String.format("%s/storage/v1/object/sign/%s/%s?expiresIn=%d", supabaseUrl, bucketName, fileName, expiresIn);
+            // Supabase Storage API: POST /storage/v1/object/sign/{bucket}/{path}
+            // Returns a signed URL that can be used to access the file
+            String response = webClient.post()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/storage/v1/object/sign/{bucket}/{path}");
+                        uriBuilder.queryParam("expiresIn", expiresIn);
+                        return uriBuilder.build(bucketName, fileName);
+                    })
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + serviceRoleKey)
+                    .header("apikey", serviceRoleKey)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            if (response == null || response.isEmpty()) {
+                throw new RuntimeException("Empty response from Supabase Storage API");
+            }
+
+            // Parse JSON response to extract signed URL
+            try {
+                JsonNode jsonNode = objectMapper.readTree(response);
+                String signedUrl = jsonNode.path("signedURL").asText();
+
+                if (StringUtils.hasText(signedUrl)) {
+                    // If the signed URL is relative, prepend the base URL
+                    if (signedUrl.startsWith("/")) {
+                        signedUrl = supabaseUrl + signedUrl;
+                    }
+                    log.debug("Generated signed URL for {}/{}: expires in {} seconds", bucketName, fileName, expiresIn);
+                    return signedUrl;
+                } else {
+                    // Fallback: construct URL manually if response format is different
+                    log.warn("Signed URL not found in response, constructing manually");
+                    return String.format("%s/storage/v1/object/sign/%s/%s?expiresIn=%d", supabaseUrl, bucketName, fileName, expiresIn);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse signed URL response, constructing manually: {}", e.getMessage());
+                // Fallback: construct URL manually
+                return String.format("%s/storage/v1/object/sign/%s/%s?expiresIn=%d", supabaseUrl, bucketName, fileName, expiresIn);
+            }
         } catch (Exception e) {
             log.error("Failed to generate signed URL for {}/{}: {}", bucketName, fileName, e.getMessage(), e);
             throw new RuntimeException("Failed to generate signed URL", e);
@@ -261,6 +310,7 @@ public class SupabaseStorageService {
 
     /**
      * Lists files in a Supabase Storage bucket.
+     * Uses Supabase Storage API to retrieve file list.
      *
      * @param bucketName the bucket name
      * @param path the path prefix filter (optional)
@@ -271,10 +321,57 @@ public class SupabaseStorageService {
         validateConfiguration();
 
         try {
-            // Supabase Storage list API implementation
-            // TODO: Implement actual file listing using Supabase Storage API
-            log.warn("File listing not fully implemented. Returning empty array.");
-            return new String[0];
+            // Supabase Storage API: GET /storage/v1/object/list/{bucket}
+            WebClient.RequestHeadersSpec<?> requestSpec = webClient.get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/storage/v1/object/list/{bucket}");
+                        if (StringUtils.hasText(path)) {
+                            uriBuilder.queryParam("prefix", path);
+                        }
+                        if (limit > 0) {
+                            uriBuilder.queryParam("limit", limit);
+                        }
+                        return uriBuilder.build(bucketName);
+                    });
+
+            String response = requestSpec
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            if (response == null || response.isEmpty()) {
+                log.debug("Empty response from Supabase Storage list API for bucket {}", bucketName);
+                return new String[0];
+            }
+
+            // Parse JSON response to extract file names
+            try {
+                JsonNode jsonNode = objectMapper.readTree(response);
+                List<String> fileNames = new ArrayList<>();
+
+                if (jsonNode.isArray()) {
+                    for (JsonNode item : jsonNode) {
+                        String name = item.path("name").asText();
+                        if (StringUtils.hasText(name)) {
+                            fileNames.add(name);
+                        }
+                    }
+                } else if (jsonNode.has("data") && jsonNode.get("data").isArray()) {
+                    // Some Supabase versions return data in a "data" field
+                    for (JsonNode item : jsonNode.get("data")) {
+                        String name = item.path("name").asText();
+                        if (StringUtils.hasText(name)) {
+                            fileNames.add(name);
+                        }
+                    }
+                }
+
+                log.debug("Listed {} files from bucket {} with path {}", fileNames.size(), bucketName, path);
+                return fileNames.toArray(new String[0]);
+            } catch (Exception e) {
+                log.warn("Failed to parse file list response: {}", e.getMessage());
+                return new String[0];
+            }
         } catch (Exception e) {
             log.error("Failed to list files in bucket {}: {}", bucketName, e.getMessage(), e);
             return new String[0];

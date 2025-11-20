@@ -3,8 +3,10 @@ package com.finance_control.auth.service;
 import com.finance_control.auth.exception.AuthenticationException;
 import com.finance_control.shared.monitoring.MetricsService;
 import com.finance_control.shared.monitoring.SentryService;
+import com.finance_control.shared.service.EncryptionService;
 import com.finance_control.shared.service.SupabaseAuthService;
 import com.finance_control.shared.service.UserMappingService;
+import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.dto.AuthResponse;
 import com.finance_control.shared.dto.LoginRequest;
 import com.finance_control.users.model.User;
@@ -25,13 +27,21 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final MetricsService metricsService;
     private final SentryService sentryService;
+    private final EncryptionService encryptionService;
 
-    // Optional Supabase authentication provider
+    // Optional Supabase authentication provider (now primary)
     @Autowired(required = false)
     private SupabaseAuthService supabaseAuthService;
 
     @Autowired(required = false)
     private UserMappingService userMappingService;
+
+    /**
+     * Checks if Supabase authentication is available and enabled.
+     */
+    public boolean hasSupabaseAuth() {
+        return supabaseAuthService != null && supabaseAuthService.isSupabaseAuthEnabled();
+    }
 
     /**
      * Authenticates a user by email and password.
@@ -44,11 +54,18 @@ public class AuthService {
     public Long authenticate(String email, String password) {
         var sample = metricsService.startAuthenticationTimer();
         try {
-            User user = userRepository.findByEmail(email)
+            // Use email hash for efficient lookup
+            String emailHash = encryptionService.hashEmail(email);
+            User user = userRepository.findByEmailHash(emailHash)
                     .orElseThrow(() -> new AuthenticationException("Invalid email or password"));
 
             if (Boolean.FALSE.equals(user.getIsActive())) {
                 throw new AuthenticationException("User account is disabled");
+            }
+
+            // Check if user has a password (Supabase users may not have local passwords)
+            if (user.getPassword() == null) {
+                throw new AuthenticationException("User account uses external authentication. Please use Supabase authentication.");
             }
 
             if (!passwordEncoder.matches(password, user.getPassword())) {
@@ -56,7 +73,6 @@ public class AuthService {
                 throw new AuthenticationException("Invalid email or password");
             }
 
-            metricsService.incrementUserLogin();
             // Avoid logging PII such as email at INFO level
             log.info("User authenticated successfully");
             return user.getId();
@@ -70,15 +86,45 @@ public class AuthService {
      *
      * @param currentPassword the current password for validation
      * @param newPassword the new password to set
-     * @throws AuthenticationException if current password is invalid
+     * @throws AuthenticationException if current password is invalid or user not found
+     * @throws IllegalStateException if user ID is not available in context
+     * @throws UnsupportedOperationException if user is Supabase-only (no local password)
      */
     public void changePassword(String currentPassword, String newPassword) {
-        // TODO: Get current user from security context
-        // For now, this is a placeholder implementation
-        log.info("Password change requested");
+        Long userId = UserContext.getCurrentUserId();
+        if (userId == null) {
+            throw new IllegalStateException("User ID not available in context. User must be authenticated.");
+        }
 
-        // TODO: Implement with proper security context to get current user and validate current password
-        throw new UnsupportedOperationException("Password change not yet implemented - requires security context integration");
+        log.debug("Password change requested for user ID: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AuthenticationException("User not found"));
+
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new AuthenticationException("User account is disabled");
+        }
+
+        // Check if user has a local password (Supabase-only users don't have local passwords)
+        if (user.getPassword() == null) {
+            throw new UnsupportedOperationException(
+                "User account uses external authentication (Supabase). " +
+                "Please change password through Supabase authentication endpoints."
+            );
+        }
+
+        // Validate current password
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            sentryService.addBreadcrumb("Password change failed: invalid current password", "auth", io.sentry.SentryLevel.WARNING);
+            throw new AuthenticationException("Current password is incorrect");
+        }
+
+        // Update password
+        String encodedNewPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encodedNewPassword);
+        userRepository.save(user);
+
+        log.info("Password changed successfully for user ID: {}", userId);
     }
 
     /**
@@ -124,7 +170,6 @@ public class AuthService {
                         // Store the local user ID in a custom claim or metadata
                         // For now, we'll log it - in a real implementation, you might want to add it to the token
 
-                        metricsService.incrementUserLogin();
                         log.info("User authenticated successfully with Supabase, mapped to local user: {}", localUserId);
 
                         return Mono.just(enhancedResponse);

@@ -1,6 +1,7 @@
 package com.finance_control.users.service;
 
 import com.finance_control.shared.service.BaseService;
+import com.finance_control.shared.service.EncryptionService;
 import com.finance_control.shared.util.EntityMapper;
 import com.finance_control.users.validation.UserValidation;
 
@@ -46,16 +47,21 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     /** The password encoder for secure password handling */
     private final PasswordEncoder passwordEncoder;
 
+    /** The encryption service for email hashing */
+    private final EncryptionService encryptionService;
+
     /**
-     * Constructs a new UserService with the specified repository and password encoder.
+     * Constructs a new UserService with the specified repository, password encoder, and encryption service.
      *
      * @param userRepository the repository to use for user data access
      * @param passwordEncoder the password encoder for secure password handling
+     * @param encryptionService the encryption service for email hashing
      */
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EncryptionService encryptionService) {
         super(userRepository);
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.encryptionService = encryptionService;
     }
 
     /**
@@ -71,9 +77,11 @@ public class UserService extends BaseService<User, Long, UserDTO> {
             var predicates = new ArrayList<Predicate>();
 
             if (email != null && !email.trim().isEmpty()) {
+                // Use email hash for searching
+                String emailHash = encryptionService.hashEmail(email);
                 predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get(FIELD_EMAIL)),
-                        "%" + email.toLowerCase() + "%"));
+                        root.get("emailHash"),
+                        "%" + emailHash + "%"));
             }
 
             if (isActive != null) {
@@ -96,7 +104,7 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     }
 
     /**
-     * Finds a user by their email address.
+     * Finds a user by their email address using email hash for efficient lookup.
      *
      * @param email the email address to search for
      * @return an Optional containing the user DTO if found, empty otherwise
@@ -104,16 +112,13 @@ public class UserService extends BaseService<User, Long, UserDTO> {
      */
     public Optional<UserDTO> findByEmail(String email) {
         UserValidation.validateEmail(email);
-        Specification<User> spec = (root, query, criteriaBuilder) -> criteriaBuilder.like(
-                criteriaBuilder.lower(root.get(FIELD_EMAIL)),
-                email.toLowerCase());
-
-        return userRepository.findOne(spec)
+        String emailHash = encryptionService.hashEmail(email);
+        return userRepository.findByEmailHash(emailHash)
                 .map(this::mapToResponseDTO);
     }
 
     /**
-     * Checks if a user exists with the given email address.
+     * Checks if a user exists with the given email address using email hash.
      *
      * @param email the email address to check
      * @return true if a user exists with the email, false otherwise
@@ -121,7 +126,8 @@ public class UserService extends BaseService<User, Long, UserDTO> {
      */
     public boolean existsByEmail(String email) {
         UserValidation.validateEmail(email);
-        return userRepository.existsByEmail(email);
+        String emailHash = encryptionService.hashEmail(email);
+        return userRepository.existsByEmailHash(emailHash);
     }
 
     // BaseService abstract method implementations
@@ -129,8 +135,12 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     protected User mapToEntity(UserDTO createDTO) {
         User user = new User();
         user.setEmail(createDTO.getEmail());
-        // Hash the password before storing
-        user.setPassword(passwordEncoder.encode(createDTO.getPassword()));
+        // Set email hash for efficient lookups
+        user.setEmailHash(encryptionService.hashEmail(createDTO.getEmail()));
+        // Hash the password before storing (nullable for Supabase users)
+        if (createDTO.getPassword() != null) {
+            user.setPassword(passwordEncoder.encode(createDTO.getPassword()));
+        }
         user.setIsActive(createDTO.getIsActive());
         return user;
     }
@@ -139,6 +149,8 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     protected void updateEntityFromDTO(User entity, UserDTO updateDTO) {
         if (updateDTO.getEmail() != null) {
             entity.setEmail(updateDTO.getEmail());
+            // Update email hash when email changes
+            entity.setEmailHash(encryptionService.hashEmail(updateDTO.getEmail()));
         }
         if (updateDTO.getPassword() != null) {
             // Hash the password before storing
@@ -161,8 +173,14 @@ public class UserService extends BaseService<User, Long, UserDTO> {
 
     @Override
     protected void validateCreateDTO(UserDTO createDTO) {
-        UserValidation.validateEmailUnique(createDTO.getEmail(), userRepository::existsByEmail);
-        UserValidation.validatePassword(createDTO.getPassword());
+        // Use email hash for uniqueness check
+        String emailHash = encryptionService.hashEmail(createDTO.getEmail());
+        UserValidation.validateEmailUnique(createDTO.getEmail(),
+            email -> userRepository.existsByEmailHash(emailHash));
+        // Password is optional for Supabase users
+        if (createDTO.getPassword() != null) {
+            UserValidation.validatePassword(createDTO.getPassword());
+        }
     }
 
     @Override
@@ -260,11 +278,13 @@ public class UserService extends BaseService<User, Long, UserDTO> {
     private void addSearchPredicates(List<Predicate> predicates, String search,
             Root<User> root, CriteriaBuilder criteriaBuilder) {
         if (search != null && !search.trim().isEmpty()) {
+            // For email search, try to hash if it looks like an email, otherwise search hash directly
+            String searchLower = search.toLowerCase();
             predicates.add(criteriaBuilder.or(
                     criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_FULL_NAME)),
-                            "%" + search.toLowerCase() + "%"),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_EMAIL)),
-                            "%" + search.toLowerCase() + "%")));
+                            "%" + searchLower + "%"),
+                    criteriaBuilder.like(root.get("emailHash"),
+                            "%" + searchLower + "%")));
         }
     }
 
@@ -284,9 +304,12 @@ public class UserService extends BaseService<User, Long, UserDTO> {
             Object value, Root<User> root,
             CriteriaBuilder criteriaBuilder) {
         switch (key) {
-            case FIELD_EMAIL ->
-                predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_EMAIL)),
-                        "%" + value.toString().toLowerCase() + "%"));
+            case FIELD_EMAIL -> {
+                // Use email hash for filtering
+                String emailHash = encryptionService.hashEmail(value.toString());
+                predicates.add(criteriaBuilder.like(root.get("emailHash"),
+                        "%" + emailHash + "%"));
+            }
             case FIELD_FULL_NAME ->
                 predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_FULL_NAME)),
                         "%" + value.toString().toLowerCase() + "%"));

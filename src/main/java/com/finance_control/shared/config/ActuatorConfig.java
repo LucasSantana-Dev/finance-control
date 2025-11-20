@@ -24,7 +24,7 @@ public class ActuatorConfig {
 
     @Bean
     public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
-        AppProperties.Actuator actuator = appProperties.actuator();
+        com.finance_control.shared.config.properties.ActuatorProperties actuator = appProperties.actuator();
 
         log.info("Configuring actuator security - Endpoints: {}, BasePath: {}, ShowDetails: {}",
                 String.join(",", actuator.endpoints()),

@@ -1,6 +1,8 @@
 package com.finance_control.brazilian_market.repository;
 
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
+import com.finance_control.brazilian_market.model.InvestmentType;
 import com.finance_control.shared.repository.BaseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,15 +44,15 @@ public interface InvestmentRepository extends BaseRepository<Investment, Long> {
     /**
      * Find investments by type for a specific user
      */
-    List<Investment> findByUser_IdAndInvestmentTypeAndIsActiveTrue(Long userId, Investment.InvestmentType investmentType);
+    List<Investment> findByUser_IdAndInvestmentTypeAndIsActiveTrue(Long userId, InvestmentType investmentType);
 
     /**
      * Find investments by type and subtype for a specific user
      */
     List<Investment> findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(
             Long userId,
-            Investment.InvestmentType investmentType,
-            Investment.InvestmentSubtype investmentSubtype
+            InvestmentType investmentType,
+            InvestmentSubtype investmentSubtype
     );
 
     /**
@@ -86,7 +88,7 @@ public interface InvestmentRepository extends BaseRepository<Investment, Long> {
      * Find all unique investment types for a specific user
      */
     @Query("SELECT DISTINCT i.investmentType FROM Investment i WHERE i.user.id = :userId AND i.isActive = true ORDER BY i.investmentType")
-    List<Investment.InvestmentType> findDistinctInvestmentTypesByUserId(@Param("userId") Long userId);
+    List<InvestmentType> findDistinctInvestmentTypesByUserId(@Param("userId") Long userId);
 
     /**
      * Find all unique investment subtypes for a specific user and investment type
@@ -94,9 +96,9 @@ public interface InvestmentRepository extends BaseRepository<Investment, Long> {
     @Query("SELECT DISTINCT i.investmentSubtype FROM Investment i WHERE i.user.id = :userId " +
             "AND i.investmentType = :investmentType AND i.isActive = true AND i.investmentSubtype IS NOT NULL " +
             "ORDER BY i.investmentSubtype")
-    List<Investment.InvestmentSubtype> findDistinctInvestmentSubtypesByUserIdAndType(
+    List<InvestmentSubtype> findDistinctInvestmentSubtypesByUserIdAndType(
             @Param("userId") Long userId,
-            @Param("investmentType") Investment.InvestmentType investmentType
+            @Param("investmentType") InvestmentType investmentType
     );
 
     /**

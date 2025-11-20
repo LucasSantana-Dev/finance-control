@@ -1,6 +1,6 @@
 package com.finance_control.brazilian_market.client;
 
-import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentType;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,11 +29,10 @@ public interface MarketDataProvider {
     /**
      * Check if this provider supports the given investment type
      */
-    boolean supportsInvestmentType(Investment.InvestmentType investmentType);
+    boolean supportsInvestmentType(InvestmentType investmentType);
 
     /**
      * Get the provider name for logging and identification
      */
     String getProviderName();
 }
-

@@ -26,7 +26,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(value = "app.supabase.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(value = "app.supabase.enabled", havingValue = "true", matchIfMissing = true)
 public class SupabaseAuthService {
 
     @Qualifier("supabaseWebClient")

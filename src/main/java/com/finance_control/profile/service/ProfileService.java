@@ -6,6 +6,7 @@ import com.finance_control.profile.model.Profile;
 import com.finance_control.profile.repository.ProfileRepository;
 import com.finance_control.shared.context.UserContext;
 import com.finance_control.shared.service.BaseService;
+import com.finance_control.shared.service.EncryptionService;
 import com.finance_control.shared.service.SupabaseStorageService;
 import com.finance_control.users.model.User;
 import com.finance_control.users.repository.UserRepository;
@@ -21,14 +22,16 @@ public class ProfileService extends BaseService<Profile, Long, ProfileDTO> {
 
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
+    private final EncryptionService encryptionService;
 
     @Autowired(required = false)
     private SupabaseStorageService storageService;
 
-    public ProfileService(ProfileRepository profileRepository, UserRepository userRepository) {
+    public ProfileService(ProfileRepository profileRepository, UserRepository userRepository, EncryptionService encryptionService) {
         super(profileRepository);
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
+        this.encryptionService = encryptionService;
     }
 
     @Override
@@ -114,7 +117,8 @@ public class ProfileService extends BaseService<Profile, Long, ProfileDTO> {
         // Update user email if changed
         if (!user.getEmail().equals(request.getEmail())) {
             // Check if email is already taken by another user
-            userRepository.findByEmail(request.getEmail())
+            String emailHash = encryptionService.hashEmail(request.getEmail());
+            userRepository.findByEmailHash(emailHash)
                     .filter(existingUser -> !existingUser.getId().equals(currentUserId))
                     .ifPresent(existingUser -> {
                         throw new RuntimeException("Email already in use");

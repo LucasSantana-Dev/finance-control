@@ -4,10 +4,8 @@ import com.finance_control.auth.dto.LoginRequest;
 import com.finance_control.auth.dto.LoginResponse;
 import com.finance_control.auth.dto.PasswordChangeRequest;
 import com.finance_control.auth.service.AuthService;
-import com.finance_control.shared.dto.AuthResponse;
-import com.finance_control.shared.dto.PasswordResetRequest;
-import com.finance_control.shared.dto.SignupRequest;
 import com.finance_control.shared.security.JwtUtils;
+import com.finance_control.shared.service.UserMappingService;
 import com.finance_control.users.dto.UserDTO;
 import com.finance_control.users.service.UserService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -33,12 +31,36 @@ public class AuthController {
     private final JwtUtils jwtUtils;
     private final UserService userService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private UserMappingService userMappingService;
+
     @PostMapping("/login")
-    @Operation(summary = "User login", description = "Authenticate user and return JWT token")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
+    @Operation(summary = "User login",
+            description = "Authenticate user and return JWT token. Uses Supabase Auth if enabled, otherwise uses local authentication.")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
+        // Try Supabase Auth first if available
+        if (authService.hasSupabaseAuth()) {
+            try {
+                return authService.authenticateWithSupabase(loginRequest.getEmail(), loginRequest.getPassword())
+                        .map(authResponse -> {
+                            // Return Supabase auth response
+                            LoginResponse response = new LoginResponse(
+                                    authResponse.getAccessToken(),
+                                    authResponse.getUser() != null ?
+                                        userMappingService.findUserIdBySupabaseId(authResponse.getUser().getId()) : null
+                            );
+                            return ResponseEntity.ok(response);
+                        })
+                        .block();
+            } catch (Exception e) {
+                log.debug("Supabase authentication failed, falling back to local auth: {}", e.getMessage());
+                // Fall through to local auth
+            }
+        }
+
+        // Fallback to local authentication
         Long userId = authService.authenticate(loginRequest.getEmail(), loginRequest.getPassword());
         String token = jwtUtils.generateToken(userId);
-
         return ResponseEntity.ok(new LoginResponse(token, userId));
     }
 

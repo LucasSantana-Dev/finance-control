@@ -2,6 +2,8 @@ package com.finance_control.brazilian_market.service;
 
 import com.finance_control.brazilian_market.dto.InvestmentDTO;
 import com.finance_control.brazilian_market.model.Investment;
+import com.finance_control.brazilian_market.model.InvestmentSubtype;
+import com.finance_control.brazilian_market.model.InvestmentType;
 import com.finance_control.brazilian_market.repository.InvestmentRepository;
 import com.finance_control.shared.service.BaseService;
 import com.finance_control.users.model.User;
@@ -171,7 +173,7 @@ public class InvestmentService extends BaseService<Investment, Long, InvestmentD
      * Get investments by type
      */
     @Transactional(readOnly = true)
-    public List<Investment> getInvestmentsByType(User user, Investment.InvestmentType investmentType) {
+    public List<Investment> getInvestmentsByType(User user, InvestmentType investmentType) {
         return investmentRepository.findByUser_IdAndInvestmentTypeAndIsActiveTrue(user.getId(), investmentType);
     }
 
@@ -180,8 +182,8 @@ public class InvestmentService extends BaseService<Investment, Long, InvestmentD
      */
     @Transactional(readOnly = true)
     public List<Investment> getInvestmentsByTypeAndSubtype(User user,
-            Investment.InvestmentType investmentType,
-            Investment.InvestmentSubtype investmentSubtype) {
+            InvestmentType investmentType,
+            InvestmentSubtype investmentSubtype) {
         return investmentRepository.findByUser_IdAndInvestmentTypeAndInvestmentSubtypeAndIsActiveTrue(user.getId(), investmentType, investmentSubtype);
     }
 
@@ -229,7 +231,7 @@ public class InvestmentService extends BaseService<Investment, Long, InvestmentD
      * Get all unique investment types for a user
      */
     @Transactional(readOnly = true)
-    public List<Investment.InvestmentType> getInvestmentTypes(User user) {
+    public List<InvestmentType> getInvestmentTypes(User user) {
         return investmentRepository.findDistinctInvestmentTypesByUserId(user.getId());
     }
 
@@ -237,7 +239,7 @@ public class InvestmentService extends BaseService<Investment, Long, InvestmentD
      * Get all unique investment subtypes for a user and type
      */
     @Transactional(readOnly = true)
-    public List<Investment.InvestmentSubtype> getInvestmentSubtypes(User user, Investment.InvestmentType investmentType) {
+    public List<InvestmentSubtype> getInvestmentSubtypes(User user, InvestmentType investmentType) {
         return investmentRepository.findDistinctInvestmentSubtypesByUserIdAndType(user.getId(), investmentType);
     }
 

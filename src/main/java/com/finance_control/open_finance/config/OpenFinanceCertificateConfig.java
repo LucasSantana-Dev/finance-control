@@ -1,6 +1,7 @@
 package com.finance_control.open_finance.config;
 
 import com.finance_control.shared.config.AppProperties;
+import com.finance_control.shared.config.properties.OpenFinanceProperties;
 import com.finance_control.shared.service.SupabaseStorageService;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -40,7 +41,8 @@ public class OpenFinanceCertificateConfig {
     private SupabaseStorageService supabaseStorageService;
 
     /**
-     * Creates an SSL context configured for mutual TLS (mTLS) with Open Finance APIs.
+     * Creates an SSL context configured for mutual TLS (mTLS) with Open Finance
+     * APIs.
      * Supports loading certificates from files, keystore, or Supabase Storage.
      *
      * @return configured SslContext for mTLS
@@ -48,7 +50,7 @@ public class OpenFinanceCertificateConfig {
     @Bean
     @ConditionalOnProperty(value = "app.open-finance.enabled", havingValue = "true", matchIfMissing = false)
     public SslContext openFinanceSslContext() {
-        AppProperties.Certificates certConfig = appProperties.openFinance().certificates();
+        OpenFinanceProperties.CertificatesProperties certConfig = appProperties.openFinance().certificates();
 
         try {
             SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
@@ -61,7 +63,7 @@ public class OpenFinanceCertificateConfig {
                 log.info("Loading certificates from keystore: {}", certConfig.keystorePath());
                 loadCertificatesFromKeystore(sslContextBuilder, certConfig);
             } else if (StringUtils.hasText(certConfig.clientCertificatePath()) &&
-                       StringUtils.hasText(certConfig.privateKeyPath())) {
+                    StringUtils.hasText(certConfig.privateKeyPath())) {
                 log.info("Loading certificates from files");
                 loadCertificatesFromFiles(sslContextBuilder, certConfig);
             } else {
@@ -84,10 +86,10 @@ public class OpenFinanceCertificateConfig {
         }
     }
 
-
-    private void loadCertificatesFromFiles(SslContextBuilder builder, AppProperties.Certificates certConfig) throws Exception {
+    private void loadCertificatesFromFiles(SslContextBuilder builder,
+            OpenFinanceProperties.CertificatesProperties certConfig) throws Exception {
         try (FileInputStream certStream = new FileInputStream(certConfig.clientCertificatePath());
-             FileInputStream keyStream = new FileInputStream(certConfig.privateKeyPath())) {
+                FileInputStream keyStream = new FileInputStream(certConfig.privateKeyPath())) {
 
             CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
             X509Certificate certificate = (X509Certificate) certFactory.generateCertificate(certStream);
@@ -101,12 +103,14 @@ public class OpenFinanceCertificateConfig {
         }
     }
 
-    private void loadCertificatesFromKeystore(SslContextBuilder builder, AppProperties.Certificates certConfig) throws Exception {
+    private void loadCertificatesFromKeystore(SslContextBuilder builder,
+            OpenFinanceProperties.CertificatesProperties certConfig) throws Exception {
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
         try (FileInputStream keystoreStream = new FileInputStream(certConfig.keystorePath())) {
             keyStore.load(keystoreStream, certConfig.keystorePassword().toCharArray());
 
-            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory
+                    .getInstance(KeyManagerFactory.getDefaultAlgorithm());
             keyManagerFactory.init(keyStore, certConfig.keystorePassword().toCharArray());
 
             builder.keyManager(keyManagerFactory);
@@ -114,7 +118,8 @@ public class OpenFinanceCertificateConfig {
         }
     }
 
-    private void loadCertificatesFromSupabase(SslContextBuilder builder, AppProperties.Certificates certConfig) throws Exception {
+    private void loadCertificatesFromSupabase(SslContextBuilder builder,
+            OpenFinanceProperties.CertificatesProperties certConfig) throws Exception {
         if (supabaseStorageService == null) {
             throw new IllegalStateException("Supabase Storage service is not available");
         }
@@ -126,7 +131,7 @@ public class OpenFinanceCertificateConfig {
                 certConfig.supabaseStorageBucket(), "private-key.pem");
 
         try (InputStream certStream = certResource.getInputStream();
-             InputStream keyStream = keyResource.getInputStream()) {
+                InputStream keyStream = keyResource.getInputStream()) {
 
             CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
             X509Certificate certificate = (X509Certificate) certFactory.generateCertificate(certStream);
@@ -140,7 +145,8 @@ public class OpenFinanceCertificateConfig {
         }
     }
 
-    private void loadCaCertificate(SslContextBuilder builder, AppProperties.Certificates certConfig) throws Exception {
+    private void loadCaCertificate(SslContextBuilder builder,
+            OpenFinanceProperties.CertificatesProperties certConfig) throws Exception {
         InputStream caStream;
         if (certConfig.useSupabaseStorage() && supabaseStorageService != null) {
             var caResource = supabaseStorageService.downloadFile(

@@ -1,37 +1,19 @@
 package com.finance_control.transactions.service;
 
-import com.finance_control.dashboard.service.DashboardService;
-import com.finance_control.shared.exception.EntityNotFoundException;
 import com.finance_control.shared.monitoring.MetricsService;
-import com.finance_control.shared.monitoring.SentryService;
 import com.finance_control.shared.service.BaseService;
-import com.finance_control.shared.service.SupabaseRealtimeService;
-import com.finance_control.shared.util.EntityMapper;
 import com.finance_control.shared.util.ValidationUtils;
-import java.util.Collections;
 import com.finance_control.transactions.dto.TransactionDTO;
 import com.finance_control.transactions.dto.TransactionReconciliationRequest;
 import com.finance_control.transactions.dto.responsibles.TransactionResponsiblesDTO;
 import com.finance_control.transactions.model.Transaction;
-import com.finance_control.transactions.model.category.TransactionCategory;
 import com.finance_control.transactions.model.responsibles.TransactionResponsibles;
 import com.finance_control.transactions.model.responsibles.TransactionResponsibles.TransactionResponsibility;
-import com.finance_control.transactions.model.source.TransactionSourceEntity;
-import com.finance_control.transactions.model.subcategory.TransactionSubcategory;
 import com.finance_control.transactions.repository.TransactionRepository;
-import com.finance_control.transactions.repository.category.TransactionCategoryRepository;
-import com.finance_control.transactions.repository.responsibles.TransactionResponsiblesRepository;
-import com.finance_control.transactions.repository.source.TransactionSourceRepository;
-import com.finance_control.transactions.repository.subcategory.TransactionSubcategoryRepository;
-import com.finance_control.users.model.User;
-import com.finance_control.users.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -56,46 +38,31 @@ public class TransactionService
     private static final String FIELD_DESCRIPTION = "description";
 
     private final TransactionRepository transactionRepository;
-    private final UserRepository userRepository;
-    private final TransactionCategoryRepository categoryRepository;
-    private final TransactionSubcategoryRepository subcategoryRepository;
-    private final TransactionSourceRepository sourceEntityRepository;
-    private final TransactionResponsiblesRepository responsibleRepository;
+    private final TransactionEntityLookupHelper entityLookupHelper;
+    private final TransactionMapper transactionMapper;
+    private final TransactionSpecificationBuilder specificationBuilder;
+    private final TransactionUpdateHelper updateHelper;
+    private final TransactionQueryHelper queryHelper;
     private final MetricsService metricsService;
-    private final SentryService sentryService;
-
-    private SupabaseRealtimeService realtimeService;
-    private DashboardService dashboardService;
-
-    // Setter for optional SupabaseRealtimeService injection
-    @Autowired(required = false)
-    public void setRealtimeService(SupabaseRealtimeService realtimeService) {
-        this.realtimeService = realtimeService;
-    }
-
-    // Setter for optional DashboardService injection
-    @Autowired(required = false)
-    public void setDashboardService(DashboardService dashboardService) {
-        this.dashboardService = dashboardService;
-    }
+    private final TransactionNotificationHelper notificationHelper;
 
     public TransactionService(TransactionRepository transactionRepository,
-            UserRepository userRepository,
-            TransactionCategoryRepository categoryRepository,
-            TransactionSubcategoryRepository subcategoryRepository,
-            TransactionSourceRepository sourceEntityRepository,
-            TransactionResponsiblesRepository responsibleRepository,
+            TransactionEntityLookupHelper entityLookupHelper,
+            TransactionMapper transactionMapper,
+            TransactionSpecificationBuilder specificationBuilder,
+            TransactionUpdateHelper updateHelper,
+            TransactionQueryHelper queryHelper,
             MetricsService metricsService,
-            SentryService sentryService) {
+            TransactionNotificationHelper notificationHelper) {
         super(transactionRepository);
         this.transactionRepository = transactionRepository;
-        this.userRepository = userRepository;
-        this.categoryRepository = categoryRepository;
-        this.subcategoryRepository = subcategoryRepository;
-        this.sourceEntityRepository = sourceEntityRepository;
-        this.responsibleRepository = responsibleRepository;
+        this.entityLookupHelper = entityLookupHelper;
+        this.transactionMapper = transactionMapper;
+        this.specificationBuilder = specificationBuilder;
+        this.updateHelper = updateHelper;
+        this.queryHelper = queryHelper;
         this.metricsService = metricsService;
-        this.sentryService = sentryService;
+        this.notificationHelper = notificationHelper;
     }
 
     /**
@@ -147,23 +114,23 @@ public class TransactionService
         }
 
         // Set required relationships
-        transaction.setUser(getUserById(createDTO.getUserId()));
-        transaction.setCategory(getCategoryById(createDTO.getCategoryId()));
+        transaction.setUser(entityLookupHelper.getUserById(createDTO.getUserId()));
+        transaction.setCategory(entityLookupHelper.getCategoryById(createDTO.getCategoryId()));
 
         // Set optional relationships
         if (createDTO.getSubcategoryId() != null) {
-            transaction.setSubcategory(getSubcategoryById(createDTO.getSubcategoryId()));
+            transaction.setSubcategory(entityLookupHelper.getSubcategoryById(createDTO.getSubcategoryId()));
         }
 
         if (createDTO.getSourceEntityId() != null) {
-            transaction.setSourceEntity(getSourceEntityById(createDTO.getSourceEntityId()));
+            transaction.setSourceEntity(entityLookupHelper.getSourceEntityById(createDTO.getSourceEntityId()));
         }
 
         // Set responsibilities (properly convert DTOs to entities)
         if (createDTO.getResponsibilities() != null) {
             List<TransactionResponsiblesDTO> responsibilities = new ArrayList<>(createDTO.getResponsibilities());
             for (TransactionResponsiblesDTO respDTO : responsibilities) {
-                TransactionResponsibles responsible = getResponsibleById(respDTO.getResponsibleId());
+                TransactionResponsibles responsible = entityLookupHelper.getResponsibleById(respDTO.getResponsibleId());
                 transaction.addResponsible(responsible, respDTO.getPercentage(), respDTO.getNotes());
             }
         }
@@ -173,36 +140,12 @@ public class TransactionService
 
     @Override
     protected void updateEntityFromDTO(Transaction entity, TransactionDTO updateDTO) {
-        updateCommonFields(entity, updateDTO);
-        updateRelationships(entity, updateDTO);
-        updateResponsibilities(entity, updateDTO);
+        updateHelper.updateEntityFromDTO(entity, updateDTO);
     }
 
     @Override
     protected TransactionDTO mapToResponseDTO(Transaction entity) {
-        TransactionDTO dto = new TransactionDTO();
-
-        // Map common fields using reflection
-        EntityMapper.mapCommonFields(entity, dto);
-
-        // Map nested fields separately
-        if (entity.getUser() != null) {
-            dto.setUserId(entity.getUser().getId());
-        }
-        if (entity.getCategory() != null) {
-            dto.setCategoryId(entity.getCategory().getId());
-        }
-        if (entity.getSubcategory() != null) {
-            dto.setSubcategoryId(entity.getSubcategory().getId());
-        }
-        if (entity.getSourceEntity() != null) {
-            dto.setSourceEntityId(entity.getSourceEntity().getId());
-        }
-        dto.setResponsibilities(entity.getResponsibilities().stream()
-                .map(this::mapResponsiblesToDTO)
-                .toList());
-
-        return dto;
+        return transactionMapper.mapToResponseDTO(entity);
     }
 
     @Override
@@ -227,9 +170,7 @@ public class TransactionService
 
     @Override
     protected void setUserId(Transaction entity, Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        entity.setUser(user);
+        entity.setUser(entityLookupHelper.getUserById(userId));
     }
 
     @Override
@@ -243,78 +184,11 @@ public class TransactionService
     }
 
     @Override
-    protected Specification<Transaction> createSpecificationFromFilters(String search, Map<String, Object> filters) {
-        return (root, query, criteriaBuilder) -> {
-            var predicates = new ArrayList<Predicate>();
-
-            addSearchPredicate(predicates, search, root, criteriaBuilder);
-            addFilterPredicates(predicates, filters, root, criteriaBuilder);
-
-            return predicates.isEmpty() ? null : criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-        };
+    protected org.springframework.data.jpa.domain.Specification<Transaction> createSpecificationFromFilters(
+            String search, Map<String, Object> filters) {
+        return specificationBuilder.buildSpecification(search, filters);
     }
 
-    private void addSearchPredicate(ArrayList<Predicate> predicates, String search,
-            jakarta.persistence.criteria.Root<Transaction> root,
-            jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder) {
-        if (search != null && !search.trim().isEmpty()) {
-            predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_DESCRIPTION)),
-                    "%" + search.toLowerCase() + "%"));
-        }
-    }
-
-    private void addFilterPredicates(ArrayList<Predicate> predicates, Map<String, Object> filters,
-            jakarta.persistence.criteria.Root<Transaction> root,
-            jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder) {
-        if (filters == null) {
-            return;
-        }
-
-        filters.forEach((key, value) -> {
-            if (value != null) {
-                addFilterPredicate(predicates, key, value, root, criteriaBuilder);
-            }
-        });
-    }
-
-    private void addFilterPredicate(ArrayList<Predicate> predicates, String key, Object value,
-            jakarta.persistence.criteria.Root<Transaction> root,
-            jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder) {
-        switch (key) {
-            case "userId" -> predicates.add(criteriaBuilder.equal(root.get("user").get("id"), value));
-            case "type" -> predicates.add(criteriaBuilder.equal(root.get("type"), value));
-            case "categoryId" -> predicates.add(criteriaBuilder.equal(root.get("category").get("id"), value));
-            case "subcategoryId" -> predicates.add(criteriaBuilder.equal(root.get("subcategory").get("id"), value));
-            case "sourceEntityId" -> predicates.add(criteriaBuilder.equal(root.get("sourceEntity").get("id"), value));
-            case FIELD_DESCRIPTION ->
-                predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get(FIELD_DESCRIPTION)),
-                        "%" + value.toString().toLowerCase() + "%"));
-            default -> {
-                // Ignore unknown filter keys
-            }
-        }
-    }
-
-    // Helper methods for entity fetching
-    private User getUserById(Long userId) {
-        return findEntityById(userRepository, userId, "User");
-    }
-
-    private TransactionCategory getCategoryById(Long categoryId) {
-        return findEntityById(categoryRepository, categoryId, "TransactionCategory");
-    }
-
-    private TransactionSubcategory getSubcategoryById(Long subcategoryId) {
-        return findEntityById(subcategoryRepository, subcategoryId, "TransactionSubcategory");
-    }
-
-    private TransactionSourceEntity getSourceEntityById(Long sourceEntityId) {
-        return findEntityById(sourceEntityRepository, sourceEntityId, "TransactionSourceEntity");
-    }
-
-    private TransactionResponsibles getResponsibleById(Long responsibleId) {
-        return findEntityById(responsibleRepository, responsibleId, "TransactionResponsible");
-    }
 
     /**
      * Get categories by user ID.
@@ -322,8 +196,8 @@ public class TransactionService
      * @param userId the user ID
      * @return list of categories used by the user
      */
-    public List<TransactionCategory> getCategoriesByUserId(Long userId) {
-        return transactionRepository.findDistinctCategoriesByUserId(userId);
+    public List<com.finance_control.transactions.model.category.TransactionCategory> getCategoriesByUserId(Long userId) {
+        return queryHelper.getCategoriesByUserId(userId);
     }
 
     /**
@@ -332,8 +206,8 @@ public class TransactionService
      * @param categoryId the category ID
      * @return list of subcategories for the category
      */
-    public List<TransactionSubcategory> getSubcategoriesByCategoryId(Long categoryId) {
-        return subcategoryRepository.findByCategoryIdAndIsActiveTrueOrderByNameAsc(categoryId);
+    public List<com.finance_control.transactions.model.subcategory.TransactionSubcategory> getSubcategoriesByCategoryId(Long categoryId) {
+        return queryHelper.getSubcategoriesByCategoryId(categoryId);
     }
 
     /**
@@ -342,7 +216,7 @@ public class TransactionService
      * @return list of distinct transaction types
      */
     public List<String> getTransactionTypes() {
-        return java.util.Collections.unmodifiableList(transactionRepository.findDistinctTypes());
+        return queryHelper.getTransactionTypes();
     }
 
     /**
@@ -350,8 +224,8 @@ public class TransactionService
      *
      * @return list of all source entities
      */
-    public List<TransactionSourceEntity> getSourceEntities() {
-        return Collections.unmodifiableList(sourceEntityRepository.findAll());
+    public List<com.finance_control.transactions.model.source.TransactionSourceEntity> getSourceEntities() {
+        return queryHelper.getSourceEntities();
     }
 
     /**
@@ -361,7 +235,7 @@ public class TransactionService
      * @return total amount for the user
      */
     public BigDecimal getTotalAmountByUserId(Long userId) {
-        return transactionRepository.getTotalAmountByUserId(userId);
+        return queryHelper.getTotalAmountByUserId(userId);
     }
 
     /**
@@ -371,7 +245,7 @@ public class TransactionService
      * @return map of type to total amount
      */
     public Map<String, BigDecimal> getAmountByType(Long userId) {
-        return transactionRepository.getAmountByType(userId);
+        return queryHelper.getAmountByType(userId);
     }
 
     /**
@@ -381,7 +255,7 @@ public class TransactionService
      * @return map of category to total amount
      */
     public Map<String, BigDecimal> getAmountByCategory(Long userId) {
-        return transactionRepository.getAmountByCategory(userId);
+        return queryHelper.getAmountByCategory(userId);
     }
 
     /**
@@ -393,38 +267,9 @@ public class TransactionService
      * @return monthly summary data
      */
     public Map<String, Object> getMonthlySummary(Long userId, LocalDate startDate, LocalDate endDate) {
-        return transactionRepository.getMonthlySummary(userId, startDate, endDate);
+        return queryHelper.getMonthlySummary(userId, startDate, endDate);
     }
 
-    /**
-     * Generic method to find an entity by ID with consistent error handling.
-     *
-     * @param repository the repository to search in
-     * @param id the ID to search for
-     * @param entityName the name of the entity for error messages
-     * @param <T> the entity type
-     * @return the found entity
-     * @throws EntityNotFoundException if the entity is not found
-     */
-    private <T> T findEntityById(org.springframework.data.jpa.repository.JpaRepository<T, Long> repository,
-                                 Long id, String entityName) {
-        return repository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(entityName, "id", id));
-    }
-
-    private TransactionResponsiblesDTO mapResponsiblesToDTO(
-            TransactionResponsibility responsibility) {
-        TransactionResponsiblesDTO dto = new TransactionResponsiblesDTO();
-
-        // Map common fields using reflection
-        EntityMapper.mapCommonFields(responsibility, dto);
-
-        // Map nested fields separately
-        dto.setResponsibleId(responsibility.getResponsible().getId());
-        dto.setResponsibleName(responsibility.getResponsible().getName());
-
-        return dto;
-    }
 
     private void validateTransaction(Transaction transaction) {
         ValidationUtils.validateAmount(transaction.getAmount());
@@ -471,39 +316,8 @@ public class TransactionService
         var sample = metricsService.startTransactionProcessingTimer();
         try {
             TransactionDTO result = super.create(createDTO);
-            metricsService.incrementTransactionCreated();
             metricsService.recordTransactionAmount(createDTO.getAmount().doubleValue(), createDTO.getType().name());
-
-            // Send realtime notification for transaction creation
-            if (realtimeService != null) {
-                try {
-                    realtimeService.notifyTransactionUpdate(result.getUserId(), result);
-                    log.debug("Sent realtime notification for transaction creation: {}", result.getId());
-                } catch (Exception e) {
-                    log.warn("Failed to send realtime notification for transaction creation: {}", e.getMessage());
-                    sentryService.captureException(e, Map.of(
-                        "operation", "realtime_notification",
-                        "transaction_id", result.getId().toString(),
-                        "user_id", result.getUserId().toString()
-                    ));
-                }
-            }
-
-            // Notify dashboard update
-            if (dashboardService != null) {
-                try {
-                    dashboardService.notifyDashboardUpdate(result.getUserId());
-                    log.debug("Sent dashboard update notification for transaction creation: {}", result.getId());
-                } catch (Exception e) {
-                    log.warn("Failed to send dashboard update notification for transaction creation: {}", e.getMessage());
-                    sentryService.captureException(e, Map.of(
-                        "operation", "dashboard_notification",
-                        "transaction_id", result.getId().toString(),
-                        "user_id", result.getUserId().toString()
-                    ));
-                }
-            }
-
+            notificationHelper.notifyTransactionChange(result, "creation");
             return result;
         } finally {
             metricsService.recordTransactionProcessingTime(sample);
@@ -515,38 +329,7 @@ public class TransactionService
         var sample = metricsService.startTransactionProcessingTimer();
         try {
             TransactionDTO result = super.update(id, updateDTO);
-            metricsService.incrementTransactionUpdated();
-
-            // Send realtime notification for transaction update
-            if (realtimeService != null) {
-                try {
-                    realtimeService.notifyTransactionUpdate(result.getUserId(), result);
-                    log.debug("Sent realtime notification for transaction update: {}", result.getId());
-                } catch (Exception e) {
-                    log.warn("Failed to send realtime notification for transaction update: {}", e.getMessage());
-                    sentryService.captureException(e, Map.of(
-                        "operation", "realtime_notification",
-                        "transaction_id", result.getId().toString(),
-                        "user_id", result.getUserId().toString()
-                    ));
-                }
-            }
-
-            // Notify dashboard update
-            if (dashboardService != null) {
-                try {
-                    dashboardService.notifyDashboardUpdate(result.getUserId());
-                    log.debug("Sent dashboard update notification for transaction update: {}", result.getId());
-                } catch (Exception e) {
-                    log.warn("Failed to send dashboard update notification for transaction update: {}", e.getMessage());
-                    sentryService.captureException(e, Map.of(
-                        "operation", "dashboard_notification",
-                        "transaction_id", result.getId().toString(),
-                        "user_id", result.getUserId().toString()
-                    ));
-                }
-            }
-
+            notificationHelper.notifyTransactionChange(result, "update");
             return result;
         } finally {
             metricsService.recordTransactionProcessingTime(sample);
@@ -556,96 +339,59 @@ public class TransactionService
     @Override
     public void delete(Long id) {
         super.delete(id);
-        metricsService.incrementTransactionDeleted();
-    }
-
-    // Helper methods for updateEntityFromDTO
-
-    /**
-     * Updates common fields using EntityMapper.
-     */
-    private void updateCommonFields(Transaction entity, TransactionDTO updateDTO) {
-        // Store responsibilities before mapping to avoid type conflicts
-        List<TransactionResponsiblesDTO> responsibilitiesToUpdate = updateDTO.getResponsibilities();
-
-        // Temporarily clear responsibilities to prevent EntityMapper from copying DTOs
-        updateDTO.setResponsibilities(null);
-
-        // Map common fields using reflection
-        EntityMapper.mapCommonFields(updateDTO, entity);
-
-        // Restore responsibilities to the DTO
-        updateDTO.setResponsibilities(responsibilitiesToUpdate);
     }
 
     /**
-     * Updates entity relationships (category, subcategory, source entity).
+     * Create transaction installments.
+     *
+     * @param request the installment request
+     * @return list of created transaction DTOs
      */
-    private void updateRelationships(Transaction entity, TransactionDTO updateDTO) {
-        updateCategory(entity, updateDTO);
-        updateSubcategory(entity, updateDTO);
-        updateSourceEntity(entity, updateDTO);
-    }
+    public List<TransactionDTO> createInstallments(com.finance_control.transactions.dto.TransactionInstallmentRequest request) {
+        String groupId = java.util.UUID.randomUUID().toString();
+        BigDecimal installmentAmount = request.getTotalAmount().divide(BigDecimal.valueOf(request.getInstallmentCount()), 2, java.math.RoundingMode.HALF_UP);
+        List<TransactionDTO> createdTransactions = new ArrayList<>();
 
-    /**
-     * Updates the category relationship.
-     */
-    private void updateCategory(Transaction entity, TransactionDTO updateDTO) {
-        if (updateDTO.getCategoryId() != null) {
-            entity.setCategory(getCategoryById(updateDTO.getCategoryId()));
+        // Validate user ID if not present in request (should be set by controller)
+        if (request.getUserId() == null) {
+            throw new IllegalArgumentException("User ID is required");
         }
-    }
 
-    /**
-     * Updates the subcategory relationship.
-     */
-    private void updateSubcategory(Transaction entity, TransactionDTO updateDTO) {
-        if (updateDTO.getSubcategoryId() != null) {
-            entity.setSubcategory(getSubcategoryById(updateDTO.getSubcategoryId()));
-        } else {
-            entity.setSubcategory(null);
+        for (int i = 0; i < request.getInstallmentCount(); i++) {
+            TransactionDTO dto = new TransactionDTO();
+            dto.setDescription(request.getDescription() + " (" + (i + 1) + "/" + request.getInstallmentCount() + ")");
+            dto.setAmount(installmentAmount);
+            dto.setType(com.finance_control.shared.enums.TransactionType.valueOf(request.getType()));
+            dto.setSubtype(com.finance_control.shared.enums.TransactionSubtype.valueOf(request.getSubtype()));
+            dto.setSource(com.finance_control.shared.enums.TransactionSource.valueOf(request.getSource()));
+            dto.setCategoryId(request.getCategoryId());
+            dto.setSubcategoryId(request.getSubcategoryId());
+            dto.setUserId(request.getUserId());
+            dto.setDate(request.getFirstInstallmentDate().plusMonths(i).atStartOfDay());
+            dto.setInstallments(request.getInstallmentCount());
+
+            // Map to entity to set relationships
+            Transaction entity = mapToEntity(dto);
+
+            // Set specific installment fields
+            entity.setInstallmentGroupId(groupId);
+            entity.setInstallmentNumber(i + 1);
+            entity.setTotalInstallments(request.getInstallmentCount());
+            entity.setInstallmentAmount(installmentAmount);
+
+            // Save
+            entity = transactionRepository.save(entity);
+
+            // Notify and add to result
+            TransactionDTO resultDTO = mapToResponseDTO(entity);
+            notificationHelper.notifyTransactionChange(resultDTO, "creation");
+            createdTransactions.add(resultDTO);
         }
+
+        // Record metrics for the total amount
+        metricsService.recordTransactionAmount(request.getTotalAmount().doubleValue(), request.getType());
+
+        return createdTransactions;
     }
 
-    /**
-     * Updates the source entity relationship.
-     */
-    private void updateSourceEntity(Transaction entity, TransactionDTO updateDTO) {
-        if (updateDTO.getSourceEntityId() != null) {
-            entity.setSourceEntity(getSourceEntityById(updateDTO.getSourceEntityId()));
-        } else {
-            entity.setSourceEntity(null);
-        }
-    }
-
-    /**
-     * Updates the responsibilities list.
-     */
-    private void updateResponsibilities(Transaction entity, TransactionDTO updateDTO) {
-        clearExistingResponsibilities(entity);
-        addNewResponsibilities(entity, updateDTO);
-    }
-
-    /**
-     * Clears existing responsibilities.
-     */
-    private void clearExistingResponsibilities(Transaction entity) {
-        if (entity.getResponsibilities() == null) {
-            entity.setResponsibilities(new ArrayList<>());
-        } else {
-            entity.getResponsibilities().clear();
-        }
-    }
-
-    /**
-     * Adds new responsibilities from DTO.
-     */
-    private void addNewResponsibilities(Transaction entity, TransactionDTO updateDTO) {
-        if (updateDTO.getResponsibilities() != null) {
-            for (TransactionResponsiblesDTO respDTO : updateDTO.getResponsibilities()) {
-                TransactionResponsibles responsible = getResponsibleById(respDTO.getResponsibleId());
-                entity.addResponsible(responsible, respDTO.getPercentage(), respDTO.getNotes());
-            }
-        }
-    }
 }

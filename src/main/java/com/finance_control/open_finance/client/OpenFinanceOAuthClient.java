@@ -44,7 +44,7 @@ public class OpenFinanceOAuthClient {
      * @return the authorization URL
      */
     public String generateAuthorizationUrl(OpenFinanceInstitution institution, Long userId, String state, java.util.List<String> scopes) {
-        AppProperties.OAuth oauthConfig = appProperties.openFinance().oauth();
+        com.finance_control.shared.config.properties.OpenFinanceProperties.OAuthProperties oauthConfig = appProperties.openFinance().oauth();
         String redirectUri = oauthConfig.redirectUri();
         String clientId = oauthConfig.clientId();
 
@@ -76,7 +76,7 @@ public class OpenFinanceOAuthClient {
      * @return token response containing access token, refresh token, and expiration
      */
     public Mono<TokenResponse> exchangeAuthorizationCode(OpenFinanceInstitution institution, String authorizationCode, String redirectUri) {
-        AppProperties.OAuth oauthConfig = appProperties.openFinance().oauth();
+        com.finance_control.shared.config.properties.OpenFinanceProperties.OAuthProperties oauthConfig = appProperties.openFinance().oauth();
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "authorization_code");
@@ -107,7 +107,7 @@ public class OpenFinanceOAuthClient {
      * @return token response with new access token and refresh token
      */
     public Mono<TokenResponse> refreshToken(OpenFinanceInstitution institution, String refreshToken) {
-        AppProperties.OAuth oauthConfig = appProperties.openFinance().oauth();
+        com.finance_control.shared.config.properties.OpenFinanceProperties.OAuthProperties oauthConfig = appProperties.openFinance().oauth();
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "refresh_token");
@@ -138,7 +138,7 @@ public class OpenFinanceOAuthClient {
      * @return Mono completing when revocation is successful
      */
     public Mono<Void> revokeToken(OpenFinanceInstitution institution, String token, String tokenTypeHint) {
-        AppProperties.OAuth oauthConfig = appProperties.openFinance().oauth();
+        com.finance_control.shared.config.properties.OpenFinanceProperties.OAuthProperties oauthConfig = appProperties.openFinance().oauth();
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("token", token);

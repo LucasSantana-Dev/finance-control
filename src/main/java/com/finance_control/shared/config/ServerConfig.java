@@ -23,7 +23,7 @@ public class ServerConfig {
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
         return factory -> {
-            AppProperties.Server server = appProperties.server();
+            com.finance_control.shared.config.properties.ServerProperties server = appProperties.server();
 
             log.info("Configuring server - Port: {}, Context: {}, MaxHeaderSize: {}KB, MaxPostSize: {}KB",
                     server.port(),

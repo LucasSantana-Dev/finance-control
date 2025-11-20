@@ -98,8 +98,10 @@ dependencies {
 checkstyle {
     toolVersion = '10.16.0'
     configFile = file('checkstyle.xml')
-    ignoreFailures = true
-    maxWarnings = 10
+    // Fail build on complexity violations (errors), but allow warnings
+    // Complexity violations are set to severity="error" in checkstyle.xml
+    ignoreFailures = false
+    maxWarnings = 100  // Increased to allow file/method length warnings
 }
 
 // Configure Checkstyle task with colored output
@@ -138,7 +140,9 @@ tasks.withType(Checkstyle).configureEach {
 pmd {
     toolVersion = '7.0.0'
     ruleSetFiles = files('pmd-ruleset.xml')
-    ignoreFailures = true
+    // Fail build on high-priority complexity violations (priority 1)
+    // Low-priority violations (file/method length) are warnings only
+    ignoreFailures = false
     consoleOutput = true
     maxFailures = 0
 }
@@ -217,7 +221,8 @@ tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
 
 test {
     useJUnitPlatform()
-    finalizedBy jacocoTestReport
+    // Removed finalizedBy jacocoTestReport to prevent build failures in Docker
+    // jacocoTestReport can be run separately when needed (e.g., in CI)
     enabled = true
 
     // Detailed test logging
@@ -231,10 +236,15 @@ test {
         // Log test results to file
         afterSuite { desc, result ->
             if (!desc.parent) {
-                def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successful, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
-                def startItem = '|  ', endItem = '  |'
-                def repeatLength = startItem.length() + output.length() + endItem.length()
-                println('\n' + ('=' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('=' * repeatLength))
+                try {
+                    def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successful, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
+                    def startItem = '|  ', endItem = '  |'
+                    def repeatLength = startItem.length() + output.length() + endItem.length()
+                    println('\n' + ('=' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('=' * repeatLength))
+                } catch (Exception e) {
+                    // Ignore exceptions in afterSuite to prevent test task from failing
+                    println("Warning: Failed to log test results summary: ${e.message}")
+                }
             }
         }
     }
@@ -277,7 +287,7 @@ jacocoTestCoverageVerification {
             limit {
                 counter = 'LINE'
                 value = 'COVEREDRATIO'
-                minimum = 0.75
+                minimum = 0.85
             }
         }
         rule {
@@ -285,7 +295,7 @@ jacocoTestCoverageVerification {
             limit {
                 counter = 'BRANCH'
                 value = 'COVEREDRATIO'
-                minimum = 0.60
+                minimum = 0.85
             }
         }
         rule {
@@ -293,7 +303,7 @@ jacocoTestCoverageVerification {
             limit {
                 counter = 'METHOD'
                 value = 'COVEREDRATIO'
-                minimum = 0.60
+                minimum = 0.85
             }
         }
         rule {
@@ -301,7 +311,7 @@ jacocoTestCoverageVerification {
             limit {
                 counter = 'CLASS'
                 value = 'COVEREDRATIO'
-                minimum = 0.80
+                minimum = 0.85
             }
         }
     }
@@ -329,6 +339,16 @@ sonarqube {
         property "sonar.organization", "lucassantana-dev"
         property "sonar.java.coveragePlugin", "jacoco"
         property "sonar.coverage.jacoco.xmlReportPaths", "${buildDir}/reports/jacoco/test/jacocoTestReport.xml"
+
+        // Cognitive complexity thresholds
+        // Production code: max 15, Test code: max 20
+        property "sonar.complexity.function.threshold", "15"
+        property "sonar.complexity.class.threshold", "20"
+        property "sonar.java.cognitive.complexity.threshold", "15"
+
+        // Size thresholds (warnings only, not blocking)
+        property "sonar.size.limit.function", "150"
+        property "sonar.size.limit.class", "2000"
     }
 }
 
@@ -357,136 +377,6 @@ tasks.withType(Test).configureEach {
     }
 }
 
-// Task to generate quality report without tests
-task generateQualityReportNoTests {
-    description = 'Generates a quality report without test results and coverage'
-    doLast {
-        def reportFile = file("${buildDir}/quality-report-no-tests.txt")
-        reportFile.parentFile.mkdirs()
-        def report = new StringBuilder()
-        report.append("=" * 80).append("\n")
-        report.append("QUALITY REPORT (NO TESTS) - Finance Control Project\n")
-        report.append("Generated: ${new Date()}\n")
-        report.append("=" * 80).append("\n\n")
-        report.append("CHECKSTYLE VIOLATIONS\n")
-        report.append("-" * 40).append("\n")
-        def checkstyleReport = file("${buildDir}/reports/checkstyle/main/checkstyle-report.xml")
-        if (checkstyleReport.exists()) {
-            def violations = parseCheckstyleReport(checkstyleReport)
-            if (violations.isEmpty()) {
-                report.append("✓ No Checkstyle violations found\n")
-            } else {
-                violations.each { violation ->
-                    report.append("✗ ${violation.file}:${violation.line} - ${violation.message}\n")
-                }
-            }
-        } else {
-            report.append("Checkstyle report not found\n")
-        }
-        report.append("\n")
-        report.append("PMD VIOLATIONS\n")
-        report.append("-" * 40).append("\n")
-        def pmdReport = file("${buildDir}/reports/pmd/main.xml")
-        if (pmdReport.exists()) {
-            def violations = parsePmdReport(pmdReport)
-            if (violations.isEmpty()) {
-                report.append("✓ No PMD violations found\n")
-            } else {
-                violations.each { violation ->
-                    report.append("✗ ${violation.file}:${violation.line} - ${violation.rule} - ${violation.message}\n")
-                }
-            }
-        } else {
-            report.append("PMD report not found\n")
-        }
-        report.append("\n")
-        report.append("SPOTBUGS VIOLATIONS\n")
-        report.append("-" * 40).append("\n")
-        def spotbugsReport = file("${buildDir}/reports/spotbugs/main.xml")
-        if (spotbugsReport.exists()) {
-            def violations = parseSpotbugsReport(spotbugsReport)
-            if (violations.isEmpty()) {
-                report.append("✓ No SpotBugs violations found\n")
-            } else {
-                violations.each { violation ->
-                    report.append("✗ ${violation.type} - ${violation.message}\n")
-                }
-            }
-        } else {
-            report.append("SpotBugs report not found\n")
-        }
-        report.append("\n")
-        report.append("TEST RESULTS\n")
-        report.append("-" * 40).append("\n")
-        report.append("SKIPPED - Tests were not executed (--no-test flag used)\n")
-        report.append("\n")
-        report.append("COVERAGE RESULTS\n")
-        report.append("-" * 40).append("\n")
-        report.append("SKIPPED - Coverage analysis was not executed (--no-test flag used)\n")
-        report.append("\n")
-        report.append("\n" + "=" * 80).append("\n")
-        report.append("END OF REPORT\n")
-        reportFile.text = report.toString()
-        println "\n📊 QUALITY REPORT GENERATED (NO TESTS)"
-        println "📄 Report location: ${reportFile.absolutePath}"
-        def totalViolations = 0
-        def checkstyleViolations = 0
-        def pmdViolations = 0
-        def spotbugsViolations = 0
-        try {
-            def checkstyleReportFile = file("${buildDir}/reports/checkstyle/main/checkstyle-report.xml")
-            if (checkstyleReportFile.exists()) {
-                def text = checkstyleReportFile.text
-                checkstyleViolations = text.split('<error').length - 1
-            }
-        } catch (Exception e) {}
-        try {
-            def pmdReportFile = file("${buildDir}/reports/pmd/main.xml")
-            if (pmdReportFile.exists()) {
-                def text = pmdReportFile.text
-                pmdViolations = text.split('<violation').length - 1
-            }
-        } catch (Exception e) {}
-        try {
-            def spotbugsReportFile = file("${buildDir}/reports/spotbugs/main.xml")
-            if (spotbugsReportFile.exists()) {
-                def text = spotbugsReportFile.text
-                spotbugsViolations = text.split('<BugInstance').length - 1
-            }
-        } catch (Exception e) {}
-        totalViolations = checkstyleViolations + pmdViolations + spotbugsViolations
-        println "\n🔍 VIOLATIONS SUMMARY"
-        println "${'='*40}"
-        println "🔍 Checkstyle: ${checkstyleViolations} violations"
-        println "🔍 PMD: ${pmdViolations} violations"
-        println "🔍 SpotBugs: ${spotbugsViolations} violations"
-        println "${'='*40}"
-        println "📊 TOTAL: ${totalViolations} violations"
-        if (totalViolations == 0) {
-            println "🎉 EXCELLENT! No quality violations found!"
-        } else {
-            println "⚠️  Please review and fix the violations above"
-        }
-    }
-}
-
-// Task to run quality checks without tests
-task qualityCheckNoTests {
-    dependsOn checkstyleMain, pmdMain, spotbugsMain, dependencyCheckAnalyze, dependencyUpdates, generateQualityReportNoTests
-    description = 'Runs code quality checks without tests'
-    // Configure colored output
-    logging.captureStandardOutput(org.gradle.api.logging.LogLevel.INFO)
-    doFirst {
-        println "\n${'='*60}"
-        println "🚀 STARTING QUALITY CHECKS (NO TESTS)"
-        println "${'='*60}"
-    }
-    doLast {
-        println "\n${'='*60}"
-        println "✅ QUALITY CHECKS COMPLETED (NO TESTS)"
-        println "${'='*60}"
-    }
-}
 
 // Task to run all quality checks
 task qualityCheck {
@@ -731,34 +621,6 @@ def parseJacocoReport(File reportFile) {
     return coverage
 }
 
-// Custom tasks to run scripts
-task qualityCheckScript(type: Exec) {
-    group = 'scripts'
-    description = 'Runs quality checks using the bash script'
-    workingDir = projectDir
-    commandLine = ['bash', 'scripts/quality/quality-check.sh']
-
-    doFirst {
-        def scriptFile = file('scripts/quality/quality-check.sh')
-        if (!scriptFile.canExecute()) {
-            scriptFile.setExecutable(true)
-        }
-    }
-}
-
-task qualityCheckScriptVerbose(type: Exec) {
-    group = 'scripts'
-    description = 'Runs quality checks with detailed output'
-    workingDir = projectDir
-    commandLine = ['bash', 'scripts/quality/quality-check.sh', '--verbose']
-
-    doFirst {
-        def scriptFile = file('scripts/quality/quality-check.sh')
-        if (!scriptFile.canExecute()) {
-            scriptFile.setExecutable(true)
-        }
-    }
-}
 
 // Docker tasks
 task dockerBuild(type: Exec) {
@@ -819,142 +681,7 @@ task dockerTest(type: Exec) {
 
 // Legacy Maven task removed - project now uses Gradle exclusively
 
-// Task to run build with detailed logging
-task buildWithLogging {
-    description = 'Runs the full build with detailed logging saved to file'
-    dependsOn clean, qualityCheck
 
-    doFirst {
-        def logFile = file("${buildDir}/build.log")
-        logFile.parentFile.mkdirs()
-        println "Build log will be saved to: ${logFile.absolutePath}"
-    }
-
-    doLast {
-        def logFile = file("${buildDir}/build.log")
-        def summaryFile = file("${buildDir}/build-summary.txt")
-
-        // Create build summary
-        summaryFile.text = """
-BUILD SUMMARY - Finance Control Project
-======================================
-Build completed: ${new Date()}
-Build directory: ${buildDir.absolutePath}
-
-Generated Reports:
-- Quality Report: ${buildDir}/quality-report.txt
-- Checkstyle: ${buildDir}/reports/checkstyle/
-- PMD: ${buildDir}/reports/pmd/
-- SpotBugs: ${buildDir}/reports/spotbugs/
-- Tests: ${buildDir}/reports/tests/
-- JaCoCo: ${buildDir}/reports/jacoco/
-
-Log Files:
-- Build Log: ${buildDir}/build.log
-- Test Results: ${buildDir}/test-results/test-results.txt
-- Quality Report: ${buildDir}/quality-report.txt
-
-To view the quality report: cat ${buildDir}/quality-report.txt
-To view test results: cat ${buildDir}/test-results/test-results.txt
-To view build log: cat ${buildDir}/build.log
-        """.trim()
-
-        println "Build summary saved to: ${summaryFile.absolutePath}"
-    }
-}
-
-// Configure all tasks to log to file
-allprojects {
-    tasks.withType(JavaCompile).configureEach {
-        doFirst {
-            def buildDirPath = layout.buildDirectory.get().asFile
-            def logFile = file("${buildDirPath}/logs/compile.log")
-            logFile.parentFile.mkdirs()
-            println "Compilation log will be saved to: ${logFile.absolutePath}"
-        }
-    }
-
-    tasks.withType(Test).configureEach {
-        doFirst {
-            def buildDirPath = layout.buildDirectory.get().asFile
-            def logFile = file("${buildDirPath}/logs/test.log")
-            logFile.parentFile.mkdirs()
-            println "Test log will be saved to: ${logFile.absolutePath}"
-        }
-    }
-
-    tasks.withType(Checkstyle).configureEach {
-        doFirst {
-            def buildDirPath = layout.buildDirectory.get().asFile
-            def logFile = file("${buildDirPath}/logs/checkstyle.log")
-            logFile.parentFile.mkdirs()
-            println "Checkstyle log will be saved to: ${logFile.absolutePath}"
-        }
-    }
-
-    tasks.withType(Pmd).configureEach {
-        doFirst {
-            def buildDirPath = layout.buildDirectory.get().asFile
-            def logFile = file("${buildDirPath}/logs/pmd.log")
-            logFile.parentFile.mkdirs()
-            println "PMD log will be saved to: ${logFile.absolutePath}"
-        }
-    }
-}
-
-// Task to show quality violations summary
-task showViolations {
-    description = 'Shows a summary of all quality violations'
-
-    doLast {
-        def qualityReport = file("${buildDir}/quality-report.txt")
-        if (qualityReport.exists()) {
-            println "\n🔍 QUALITY VIOLATIONS SUMMARY"
-            println "${'='*50}"
-
-            def violationCount = 0
-            qualityReport.eachLine { line ->
-                if (line.startsWith("✗")) {
-                    println "❌ ${line.substring(1)}"
-                    violationCount++
-                }
-            }
-
-            println "${'='*50}"
-            println "📊 Total violations found: ${violationCount}"
-
-            if (violationCount == 0) {
-                println "🎉 No violations found!"
-            } else {
-                println "⚠️  Please fix these violations to improve code quality"
-            }
-        } else {
-            println "❌ Quality report not found. Run 'qualityCheck' task first."
-        }
-    }
-}
-
-// Task to demonstrate colored output
-task demoColors {
-    description = 'Demonstrates colored output capabilities'
-
-    doLast {
-        println "\n🎨 COLORED OUTPUT DEMONSTRATION"
-        println "${'='*50}"
-        println "🔍 Checkstyle: 5 violations found"
-        println "🔍 PMD: 12 violations found"
-        println "🔍 SpotBugs: 3 violations found"
-        println "🧪 Tests: 25 passed, 2 failed, 1 skipped"
-        println "📊 Coverage: 85% line, 78% branch"
-        println "${'='*50}"
-        println "✅ Success indicators"
-        println "❌ Error indicators"
-        println "⚠️  Warning indicators"
-        println "🔍 Analysis indicators"
-        println "📊 Report indicators"
-        println "🎉 Celebration indicators"
-    }
-}
 
 // Configuração do Spring Boot
 springBoot {
@@ -993,8 +720,12 @@ sonarqube {
         property 'sonar.exclusions', '**/target/**,**/generated/**,**/config/**,**/dto/**,**/model/**,**/exception/**,**/enums/**,**/util/**,**/validation/**'
         property 'sonar.test.exclusions', '**/target/**,**/generated/**'
 
-        // Quality thresholds
-        property 'sonar.complexity.function.threshold', '10'
+        // Quality thresholds (cognitive complexity focused)
+        // Production code: max 15, Test code: max 20
+        property 'sonar.complexity.function.threshold', '15'
+        property 'sonar.complexity.class.threshold', '20'
+        property 'sonar.java.cognitive.complexity.threshold', '15'
+        // Size thresholds (warnings only, not blocking)
         property 'sonar.size.limit.function', '150'
         property 'sonar.size.limit.class', '2000'
 

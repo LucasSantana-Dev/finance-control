@@ -415,14 +415,107 @@ export SUPABASE_DATABASE_SSL_MODE=require
    ```
 
 ### Running with Docker Compose
+
+#### Basic Setup (Remote Supabase)
+
+By default, the application connects to a remote Supabase instance. Start the application with:
+
 ```bash
 # Start the application with PostgreSQL and Redis
-docker-compose up -d
+docker compose --env-file docker.env up -d
+
+# Or use the convenience script
+./docker-run.sh start
 
 # The application will be available at:
 # - Application: http://localhost:${APPLICATION_PORT}
 # - Monitoring: Configure SENTRY_DSN environment variable for error tracking
 ```
+
+#### Running with Local Supabase
+
+To run Supabase services locally in Docker, set `SUPABASE_LOCAL_ENABLED=true` in `docker.env`:
+
+```bash
+# Enable local Supabase in docker.env
+echo "SUPABASE_LOCAL_ENABLED=true" >> docker.env
+
+# Start the application with local Supabase services
+docker compose --env-file docker.env --profile supabase up -d
+
+# Or use the convenience script (automatically detects SUPABASE_LOCAL_ENABLED)
+./docker-run.sh start
+```
+
+When `SUPABASE_LOCAL_ENABLED=true`, the following Supabase services will be started:
+
+- **Supabase Database**: PostgreSQL on port `54322`
+- **Supabase API**: Kong API Gateway on port `54321`
+- **Supabase Studio**: Admin UI on port `54323`
+- **Supabase Auth**: GoTrue authentication service
+- **Supabase Storage**: File storage service
+- **Supabase Realtime**: Real-time subscriptions service
+- **Inbucket**: Email testing server on port `54324`
+- **Analytics**: Logflare analytics on port `54327`
+
+**Access Local Supabase Services:**
+- Supabase Studio: http://localhost:54323
+- Supabase API: http://localhost:54321
+- Inbucket (Email Testing): http://localhost:54324
+- Analytics: http://localhost:54327
+
+**Supabase Docker Commands:**
+
+```bash
+# Start only Supabase services
+./docker-run.sh supabase-start
+
+# Stop only Supabase services
+./docker-run.sh supabase-stop
+
+# View Supabase logs
+./docker-run.sh supabase-logs
+
+# Or using docker compose directly
+docker compose --env-file docker.env --profile supabase up -d
+docker compose --env-file docker.env --profile supabase logs -f
+```
+
+**Environment Configuration:**
+
+The `docker.env` file contains all Supabase configuration. Key variables:
+
+- `SUPABASE_LOCAL_ENABLED`: Set to `true` to use local Supabase, `false` for remote (default)
+- `SUPABASE_LOCAL_DB_HOST`: Database host (default: `supabase-db`)
+- `SUPABASE_LOCAL_DB_PORT`: Database port (default: `54322`)
+- `SUPABASE_LOCAL_DB_NAME`: Database name (default: `postgres`)
+- `SUPABASE_LOCAL_DB_USER`: Database user (default: `postgres`)
+- `SUPABASE_LOCAL_DB_PASSWORD`: Database password (default: `postgres`)
+- `SUPABASE_LOCAL_JWT_SECRET`: JWT secret (must be at least 32 characters)
+- `SUPABASE_LOCAL_ANON_KEY`: Anonymous key for local Supabase
+- `SUPABASE_LOCAL_SERVICE_ROLE_KEY`: Service role key for local Supabase
+
+**Switching Between Local and Remote Supabase:**
+
+1. **To use local Supabase:**
+   ```bash
+   # Edit docker.env
+   SUPABASE_LOCAL_ENABLED=true
+
+   # Restart services
+   ./docker-run.sh restart
+   ```
+
+2. **To use remote Supabase:**
+   ```bash
+   # Edit docker.env
+   SUPABASE_LOCAL_ENABLED=false
+
+   # Restart services
+   ./docker-run.sh restart
+   ```
+
+**Note:** When using local Supabase, ensure your Spring Boot application is configured to connect to the local Supabase database. Update your `DB_URL` or configure the application to use `SUPABASE_LOCAL_DB_HOST` and `SUPABASE_LOCAL_DB_PORT` when `SUPABASE_LOCAL_ENABLED=true`.
 
 ### Running Locally
 ```bash
@@ -1031,10 +1124,11 @@ The project includes comprehensive API testing capabilities:
   - ✅ Brazilian market data endpoints (stocks, FIIs, indicators)
   - ✅ Financial goals endpoints (CRUD operations)
   - ✅ Category management endpoints (categories and subcategories)
-  - ✅ **NEW**: Data export endpoints (CSV and JSON formats)
+  - ✅ **NEW**: Reports endpoints (transaction reports, goal reports, summary reports)
+  - ✅ **NEW**: Data export endpoints (CSV and JSON formats with filtering)
   - ✅ **NEW**: Redis caching for performance optimization
   - ✅ **NEW**: Rate limiting for API protection
-  - ✅ **NEW**: Monitoring endpoints (health, metrics, alerts)
+  - ✅ **NEW**: Complete monitoring endpoints (health, alerts, status, frontend-errors)
 
 ### Key Endpoints
 
@@ -1076,20 +1170,25 @@ The project includes comprehensive API testing capabilities:
 - `POST /transaction-subcategories` - Create new subcategory
 - `PUT /transaction-subcategories/{id}` - Update subcategory
 
+#### Reports
+- `GET /api/reports/transactions` - Transaction report with filters (dateFrom, dateTo, type, category)
+- `GET /api/reports/goals` - Goal report with filters (status)
+- `GET /api/reports/summary` - Summary report combining transactions and goals
+
 #### Data Export
-- `GET /api/export/all/csv` - Export all user data as CSV
-- `GET /api/export/all/json` - Export all user data as JSON
-- `GET /api/export/transactions/csv` - Export transactions as CSV
-- `GET /api/export/goals/csv` - Export financial goals as CSV
+- `GET /export/all/csv` - Export all user data as CSV
+- `GET /export/all/json` - Export all user data as JSON
+- `GET /export/transactions/csv` - Export transactions as CSV
+- `GET /export/goals/csv` - Export financial goals as CSV
+- `GET /api/data-export/transactions/csv` - Export filtered transactions as CSV (dateFrom, dateTo, type, category)
+- `GET /api/data-export/goals/csv` - Export filtered financial goals as CSV (status)
 
 #### Monitoring & Observability
-- `GET /api/monitoring/health` - Detailed system health status
-- `GET /api/monitoring/status` - Monitoring system status
-- `GET /api/monitoring/alerts` - Active system alerts
-- `GET /api/monitoring/metrics/summary` - Application metrics summary
-- `POST /api/monitoring/test-alert` - Trigger test alert
-- `DELETE /api/monitoring/alerts/{alertId}` - Clear specific alert
-- `DELETE /api/monitoring/alerts` - Clear all alerts
+- `GET /monitoring/health` - Health check endpoint
+- `GET /monitoring/alerts` - Get active alerts
+- `GET /monitoring/status` - Get monitoring status (database, cache, external services)
+- `GET /monitoring/metrics/summary` - Application metrics summary
+- `POST /monitoring/frontend-errors` - Submit frontend error logs
 - `GET /actuator/health` - Spring Boot Actuator health check
 - `GET /actuator/info` - Application information
 - `DELETE /transaction-subcategories/{id}` - Delete subcategory
@@ -1097,13 +1196,20 @@ The project includes comprehensive API testing capabilities:
 - `GET /transaction-subcategories/category/{categoryId}/usage` - Get subcategories ordered by usage
 - `GET /transaction-subcategories/category/{categoryId}/count` - Get subcategory count by category
 
+#### Investments
+- `GET /investments` - List investments with filtering
+- `GET /investments/{id}` - Get investment by ID
+- `POST /investments` - Create new investment
+- `PUT /investments/{id}` - Update investment
+- `DELETE /investments/{id}` - Delete investment
+- `POST /investments/{id}/update-market-data` - Update market data for investment
+
 #### Brazilian Market Data
-- `GET /api/brazilian-market/selic` - Get SELIC interest rate
-- `GET /api/brazilian-market/cdi` - Get CDI interest rate
-- `GET /api/brazilian-market/ipca` - Get IPCA inflation rate
-- `GET /api/brazilian-market/indicators` - Get all economic indicators
-- `GET /api/brazilian-market/stocks` - Get user's Brazilian stocks
-- `GET /api/brazilian-market/fiis` - Get user's FIIs (Real Estate Investment Funds)
+- `GET /brazilian-market/indicators/selic` - Get SELIC interest rate
+- `GET /brazilian-market/indicators/cdi` - Get CDI interest rate
+- `GET /brazilian-market/indicators/ipca` - Get IPCA inflation rate
+- `GET /brazilian-market/indicators` - Get all economic indicators
+- `GET /brazilian-market/summary` - Get market summary
 - `GET /api/brazilian-market/summary` - Get comprehensive market summary
 
 #### Users & Profile

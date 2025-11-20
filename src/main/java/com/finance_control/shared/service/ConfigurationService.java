@@ -28,7 +28,7 @@ public class ConfigurationService {
      */
     public Map<String, Object> getDatabaseConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Database db = appProperties.database();
+        com.finance_control.shared.config.properties.DatabaseProperties db = appProperties.database();
 
         config.put("url", db.url());
         config.put("port", db.port());
@@ -37,7 +37,7 @@ public class ConfigurationService {
         config.put("driverClassName", db.driverClassName());
 
         // Connection pool configuration
-        AppProperties.Pool pool = db.pool();
+        com.finance_control.shared.config.properties.DatabaseProperties.PoolProperties pool = db.pool();
         Map<String, Object> poolConfig = new HashMap<>();
         poolConfig.put("initialSize", pool.initialSize());
         poolConfig.put("maxSize", pool.maxSize());
@@ -59,10 +59,10 @@ public class ConfigurationService {
      */
     public Map<String, Object> getSecurityConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Security security = appProperties.security();
+        com.finance_control.shared.config.properties.SecurityProperties security = appProperties.security();
 
         // JWT configuration
-        AppProperties.Jwt jwt = security.jwt();
+        com.finance_control.shared.config.properties.SecurityProperties.JwtProperties jwt = security.jwt();
         Map<String, Object> jwtConfig = new HashMap<>();
         jwtConfig.put("secretConfigured", jwt.secret() != null);
         jwtConfig.put("expirationMs", jwt.expirationMs());
@@ -73,7 +73,7 @@ public class ConfigurationService {
         config.put("jwt", jwtConfig);
 
         // CORS configuration
-        AppProperties.Cors cors = security.cors();
+        com.finance_control.shared.config.properties.SecurityProperties.CorsProperties cors = security.cors();
         Map<String, Object> corsConfig = new HashMap<>();
         corsConfig.put("allowedOrigins", cors.allowedOrigins());
         corsConfig.put("allowedMethods", cors.allowedMethods());
@@ -94,7 +94,7 @@ public class ConfigurationService {
      */
     public Map<String, Object> getServerConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Server server = appProperties.server();
+        com.finance_control.shared.config.properties.ServerProperties server = appProperties.server();
 
         config.put("port", server.port());
         config.put("contextPath", server.contextPath());
@@ -115,7 +115,7 @@ public class ConfigurationService {
      */
     public Map<String, Object> getLoggingConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Logging logging = appProperties.logging();
+        com.finance_control.shared.config.properties.LoggingProperties logging = appProperties.logging();
 
         config.put("level", logging.level());
         config.put("pattern", logging.pattern());
@@ -137,7 +137,7 @@ public class ConfigurationService {
      */
     public Map<String, Object> getJpaConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Jpa jpa = appProperties.jpa();
+        com.finance_control.shared.config.properties.JpaProperties jpa = appProperties.jpa();
 
         config.put("hibernateDdlAuto", jpa.hibernateDdlAuto());
         config.put("dialect", jpa.dialect());
@@ -148,7 +148,7 @@ public class ConfigurationService {
         config.put("namingStrategy", jpa.namingStrategy());
 
         // Hibernate properties
-        AppProperties.Properties props = jpa.properties();
+        com.finance_control.shared.config.properties.JpaProperties.HibernateProperties props = jpa.properties();
         Map<String, Object> hibernateProps = new HashMap<>();
         hibernateProps.put("formatSql", props.hibernateFormatSql());
         hibernateProps.put("useSqlComments", props.hibernateUseSqlComments());
@@ -171,7 +171,7 @@ public class ConfigurationService {
      */
     public Map<String, Object> getFlywayConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Flyway flyway = appProperties.flyway();
+        com.finance_control.shared.config.properties.FlywayProperties flyway = appProperties.flyway();
 
         config.put("enabled", flyway.enabled());
         config.put("locations", flyway.locations());
@@ -192,7 +192,7 @@ public class ConfigurationService {
      */
     public Map<String, Object> getActuatorConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Actuator actuator = appProperties.actuator();
+        com.finance_control.shared.config.properties.ActuatorProperties actuator = appProperties.actuator();
 
         config.put("enabled", actuator.enabled());
         config.put("endpoints", actuator.endpoints());
@@ -211,7 +211,7 @@ public class ConfigurationService {
      */
     public Map<String, Object> getOpenApiConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.OpenApi openApi = appProperties.openApi();
+        com.finance_control.shared.config.properties.OpenApiProperties openApi = appProperties.openApi();
 
         config.put("title", openApi.title());
         config.put("description", openApi.description());
@@ -234,7 +234,7 @@ public class ConfigurationService {
      */
     public Map<String, Object> getPaginationConfig() {
         Map<String, Object> config = new HashMap<>();
-        AppProperties.Pagination pagination = appProperties.pagination();
+        com.finance_control.shared.config.properties.PaginationProperties pagination = appProperties.pagination();
 
         config.put("defaultPageSize", pagination.defaultPageSize());
         config.put("maxPageSize", pagination.maxPageSize());

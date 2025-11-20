@@ -96,7 +96,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        AppProperties.Cors cors = appProperties.security().cors();
+        com.finance_control.shared.config.properties.SecurityProperties.CorsProperties cors = appProperties.security().cors();
 
         // Parse allowed origins from comma-separated string
         List<String> allowedOrigins = cors.allowedOrigins();

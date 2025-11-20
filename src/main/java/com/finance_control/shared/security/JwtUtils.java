@@ -156,66 +156,12 @@ public class JwtUtils {
         }
 
         try {
-            String jwtSigner = appProperties.supabase().jwtSigner();
-            if (!StringUtils.hasText(jwtSigner)) {
-                log.warn("Supabase JWT signer not configured");
+            Claims claims = parseSupabaseToken(token);
+            if (claims == null) {
                 return false;
             }
 
-            SecretKey key = Keys.hmacShaKeyFor(jwtSigner.getBytes(StandardCharsets.UTF_8));
-            Claims claims = Jwts.parser()
-                    .verifyWith(key)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-
-            // Validate Supabase-specific claims
-            String issuer = claims.getIssuer();
-            String audience = claims.getAudience() != null && !claims.getAudience().isEmpty()
-                ? claims.getAudience().iterator().next() : null;
-            String role = claims.get("role", String.class);
-            String subject = claims.getSubject();
-
-            // Basic validation - issuer should be Supabase URL or project ref
-            if (!StringUtils.hasText(issuer) || !StringUtils.hasText(audience)) {
-                log.warn("Invalid Supabase JWT claims: missing issuer or audience");
-                return false;
-            }
-
-            // Role should be 'authenticated' for logged-in users
-            if (!StringUtils.hasText(role)) {
-                log.warn("Invalid Supabase JWT: missing role claim");
-                return false;
-            }
-
-            // Validate that role is 'authenticated' for logged-in users
-            if (!"authenticated".equals(role)) {
-                log.warn("Invalid Supabase JWT: role must be 'authenticated', got: {}", role);
-                return false;
-            }
-
-            // Subject should be a valid UUID
-            if (!StringUtils.hasText(subject)) {
-                log.warn("Invalid Supabase JWT: missing subject claim");
-                return false;
-            }
-
-            try {
-                UUID.fromString(subject); // Validate UUID format
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid Supabase JWT: subject is not a valid UUID: {}", subject);
-                return false;
-            }
-
-            // Check expiration
-            Date expiration = claims.getExpiration();
-            if (expiration != null && expiration.before(new Date())) {
-                log.warn("Supabase JWT token is expired");
-                return false;
-            }
-
-            log.debug("Successfully validated Supabase JWT for user: {} with role: {}", subject, role);
-            return true;
+            return validateSupabaseClaims(claims);
 
         } catch (JwtException e) {
             log.warn("Invalid Supabase JWT token: {}", e.getMessage());
@@ -224,6 +170,102 @@ public class JwtUtils {
             log.error("Error validating Supabase JWT token", e);
             return false;
         }
+    }
+
+    private Claims parseSupabaseToken(String token) {
+        String jwtSigner = appProperties.supabase().jwtSigner();
+        if (!StringUtils.hasText(jwtSigner)) {
+            log.warn("Supabase JWT signer not configured");
+            return null;
+        }
+
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(jwtSigner.getBytes(StandardCharsets.UTF_8));
+            return Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (JwtException e) {
+            log.warn("Failed to parse Supabase JWT token: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private boolean validateSupabaseClaims(Claims claims) {
+        String issuer = claims.getIssuer();
+        String audience = extractAudience(claims);
+        String role = claims.get("role", String.class);
+        String subject = claims.getSubject();
+
+        if (!validateBasicClaims(issuer, audience, role, subject)) {
+            return false;
+        }
+
+        if (!validateRole(role)) {
+            return false;
+        }
+
+        if (!validateSubject(subject)) {
+            return false;
+        }
+
+        if (!validateExpiration(claims)) {
+            return false;
+        }
+
+        log.debug("Successfully validated Supabase JWT for user: {} with role: {}", subject, role);
+        return true;
+    }
+
+    private String extractAudience(Claims claims) {
+        if (claims.getAudience() != null && !claims.getAudience().isEmpty()) {
+            return claims.getAudience().iterator().next();
+        }
+        return null;
+    }
+
+    private boolean validateBasicClaims(String issuer, String audience, String role, String subject) {
+        if (!StringUtils.hasText(issuer) || !StringUtils.hasText(audience)) {
+            log.warn("Invalid Supabase JWT claims: missing issuer or audience");
+            return false;
+        }
+        if (!StringUtils.hasText(role)) {
+            log.warn("Invalid Supabase JWT: missing role claim");
+            return false;
+        }
+        if (!StringUtils.hasText(subject)) {
+            log.warn("Invalid Supabase JWT: missing subject claim");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validateRole(String role) {
+        if (!"authenticated".equals(role)) {
+            log.warn("Invalid Supabase JWT: role must be 'authenticated', got: {}", role);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validateSubject(String subject) {
+        try {
+            UUID.fromString(subject);
+            return true;
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid Supabase JWT: subject is not a valid UUID: {}", subject);
+            return false;
+        }
+    }
+
+    private boolean validateExpiration(Claims claims) {
+        Date expiration = claims.getExpiration();
+        if (expiration != null && expiration.before(new Date())) {
+            log.warn("Supabase JWT token is expired");
+            return false;
+        }
+        return true;
     }
 
     /**

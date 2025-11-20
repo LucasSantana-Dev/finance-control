@@ -2,6 +2,7 @@ package com.finance_control.users.model;
 
 import com.finance_control.goals.model.FinancialGoal;
 import com.finance_control.profile.model.Profile;
+import com.finance_control.shared.converter.EncryptedEmailConverter;
 import com.finance_control.shared.model.BaseModel;
 import com.finance_control.transactions.model.Transaction;
 
@@ -25,26 +26,32 @@ import java.util.List;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class User extends BaseModel<Long> {
-    
+
     @NotBlank
     @Email
     @Column(nullable = false, unique = true)
+    @Convert(converter = EncryptedEmailConverter.class)
     private String email;
-    
-    @NotBlank
+
+    @Column(name = "email_hash", length = 64, unique = true)
+    private String emailHash;
+
     @Size(min = 8)
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String password;
-    
+
+    @Column(name = "supabase_user_id", length = 36, unique = true)
+    private String supabaseUserId;
+
     @Column(name = "is_active")
     private Boolean isActive = true;
-    
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Profile profile;
-    
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Transaction> transactions;
-    
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<FinancialGoal> financialGoals;
-} 
+}

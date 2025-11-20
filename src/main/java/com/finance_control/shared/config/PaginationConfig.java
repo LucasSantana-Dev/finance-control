@@ -21,7 +21,7 @@ public class PaginationConfig {
 
     @Bean
     public PageableHandlerMethodArgumentResolverCustomizer paginationCustomizer() {
-        AppProperties.Pagination pagination = appProperties.pagination();
+        com.finance_control.shared.config.properties.PaginationProperties pagination = appProperties.pagination();
 
         log.info("Configuring pagination - DefaultSize: {}, MaxSize: {}, DefaultSort: {}, DefaultDirection: {}",
                 pagination.defaultPageSize(),

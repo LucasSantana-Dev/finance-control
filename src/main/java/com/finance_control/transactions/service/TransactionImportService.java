@@ -10,39 +10,15 @@ import com.finance_control.transactions.dto.importer.TransactionImportResponse;
 import com.finance_control.transactions.importer.DuplicateHandlingStrategy;
 import com.finance_control.transactions.importer.StatementImportFormat;
 import com.finance_control.transactions.importer.TransactionImportIssueType;
+import com.finance_control.transactions.importer.parser.CsvTransactionParser;
+import com.finance_control.transactions.importer.parser.OfxTransactionParser;
 import com.finance_control.transactions.model.Transaction;
 import com.finance_control.transactions.repository.TransactionRepository;
-import com.webcohesion.ofx4j.domain.data.ResponseEnvelope;
-import com.webcohesion.ofx4j.domain.data.ResponseMessageSet;
-import com.webcohesion.ofx4j.domain.data.banking.BankStatementResponse;
-import com.webcohesion.ofx4j.domain.data.banking.BankStatementResponseTransaction;
-import com.webcohesion.ofx4j.domain.data.banking.BankingResponseMessageSet;
-import com.webcohesion.ofx4j.domain.data.common.StatementResponse;
-import com.webcohesion.ofx4j.domain.data.MessageSetType;
-import com.webcohesion.ofx4j.domain.data.common.TransactionList;
-import com.webcohesion.ofx4j.domain.data.creditcard.CreditCardStatementResponse;
-import com.webcohesion.ofx4j.domain.data.creditcard.CreditCardStatementResponseTransaction;
-import com.webcohesion.ofx4j.domain.data.creditcard.CreditCardResponseMessageSet;
-import com.webcohesion.ofx4j.io.AggregateUnmarshaller;
-import com.webcohesion.ofx4j.io.DefaultStringConversion;
-import com.webcohesion.ofx4j.io.OFXParseException;
 import jakarta.validation.Valid;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.temporal.TemporalAccessor;
-import java.time.temporal.TemporalQueries;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -53,16 +29,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Service responsible for orchestrating statement imports (CSV or OFX) and delegating transaction creation.
+ * Service responsible for orchestrating statement imports (CSV or OFX) and
+ * delegating transaction creation.
  */
 @Slf4j
 @Service
@@ -71,6 +45,8 @@ public class TransactionImportService {
 
     private final TransactionService transactionService;
     private final TransactionRepository transactionRepository;
+    private final CsvTransactionParser csvParser;
+    private final OfxTransactionParser ofxParser;
 
     /**
      * Imports a bank statement creating transactions automatically.
@@ -93,18 +69,27 @@ public class TransactionImportService {
                 .map(TransactionImportService::normalizeKey)
                 .collect(Collectors.toSet());
 
-        ParseResult parseResult = switch (resolvedFormat) {
-            case CSV -> parseCsv(file, request);
-            case OFX -> parseOfx(file, request);
+        List<ImportedEntry> entries;
+        List<TransactionImportIssueDTO> issues = new ArrayList<>();
+        switch (resolvedFormat) {
+            case CSV -> {
+                CsvTransactionParser.ParseResult csvResult = csvParser.parseCsv(file, request);
+                entries = convertParseResult(csvResult);
+                issues.addAll(csvResult.issues());
+            }
+            case OFX -> {
+                OfxTransactionParser.ParseResult ofxResult = ofxParser.parseOfx(file, request);
+                entries = convertOfxParseResult(ofxResult);
+                issues.addAll(ofxResult.issues());
+            }
             default -> throw new IllegalArgumentException("Unsupported import format: " + resolvedFormat);
-        };
-        List<ImportedEntry> entries = parseResult.entries();
+        }
 
         TransactionImportResponse.TransactionImportResponseBuilder responseBuilder = TransactionImportResponse.builder()
                 .dryRun(request.isDryRun())
                 .totalEntries(entries.size());
 
-        parseResult.issues().forEach(responseBuilder::issue);
+        issues.forEach(responseBuilder::issue);
 
         int processed = 0;
         int created = 0;
@@ -190,184 +175,58 @@ public class TransactionImportService {
         throw new IllegalArgumentException("Unable to detect file format from filename or content type");
     }
 
-    private ParseResult parseCsv(MultipartFile file, TransactionImportRequest request) {
-        TransactionImportRequest.CsvConfiguration csv = request.getCsv();
-        if (csv == null) {
-            throw new IllegalArgumentException("CSV configuration is required");
-        }
-
-        try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), csv.resolveCharset()))) {
-            CSVFormat format = CSVFormat.DEFAULT.builder()
-                    .setDelimiter(csv.resolveDelimiter())
-                    .setIgnoreEmptyLines(true)
-                    .setTrim(true)
-                    .setIgnoreSurroundingSpaces(true)
-                    .setSkipHeaderRecord(true)
-                    .setHeader()
-                    .build();
-
-            try (CSVParser parser = format.parse(reader)) {
-                Map<String, String> headerLookup = parser.getHeaderMap().keySet().stream()
-                        .collect(Collectors.toMap(TransactionImportService::normalizeKey, Function.identity(), (a, b) -> a));
-
-                String dateColumn = resolveColumn(csv.getDateColumn(), headerLookup, "date column");
-                String descriptionColumn = resolveColumn(csv.getDescriptionColumn(), headerLookup, "description column");
-                String amountColumn = resolveColumn(csv.getAmountColumn(), headerLookup, "amount column");
-                String typeColumn = resolveOptionalColumn(csv.getTypeColumn(), headerLookup);
-                String subtypeColumn = resolveOptionalColumn(csv.getSubtypeColumn(), headerLookup);
-                String sourceColumn = resolveOptionalColumn(csv.getSourceColumn(), headerLookup);
-                String categoryColumn = resolveOptionalColumn(csv.getCategoryColumn(), headerLookup);
-                String subcategoryColumn = resolveOptionalColumn(csv.getSubcategoryColumn(), headerLookup);
-                String sourceEntityColumn = resolveOptionalColumn(csv.getSourceEntityColumn(), headerLookup);
-                String externalIdColumn = resolveOptionalColumn(csv.getExternalIdColumn(), headerLookup);
-
-                List<ImportedEntry> entries = new ArrayList<>();
-                List<TransactionImportIssueDTO> issues = new ArrayList<>();
-                int index = 0;
-                for (CSVRecord record : parser) {
-                    index++;
-                    try {
-                        LocalDateTime date = parseCsvDate(record.get(dateColumn), csv, request.resolveZoneId());
-                        BigDecimal amount = parseCsvAmount(record.get(amountColumn), csv);
-                        String description = sanitize(record.get(descriptionColumn));
-                        if (!StringUtils.hasText(description)) {
-                            throw new IllegalArgumentException("Description cannot be blank");
-                        }
-
-                        TransactionType detectedType = resolveTypeFromColumn(record, typeColumn, TransactionType.class, TransactionImportService::mapTransactionTypeValue);
-                        TransactionSubtype detectedSubtype = resolveTypeFromColumn(record, subtypeColumn, TransactionSubtype.class, TransactionImportService::mapTransactionSubtypeValue);
-                        TransactionSource detectedSource = resolveTypeFromColumn(record, sourceColumn, TransactionSource.class, TransactionImportService::mapTransactionSourceValue);
-
-                        entries.add(new ImportedEntry(index,
-                                extract(record, externalIdColumn),
-                                date,
-                                description,
-                                amount,
-                                detectedType,
-                                detectedSubtype,
-                                detectedSource,
-                                extract(record, categoryColumn),
-                                extract(record, subcategoryColumn),
-                                extract(record, sourceEntityColumn)));
-                    } catch (Exception ex) {
-                        issues.add(TransactionImportIssueDTO.builder()
-                                .lineNumber(index)
-                                .externalReference(extract(record, externalIdColumn))
-                                .message(safeErrorMessage(ex.getMessage()))
-                                .type(TransactionImportIssueType.PARSING_ERROR)
-                                .build());
-                    }
-                }
-
-                return new ParseResult(entries, issues);
-            }
-        } catch (IOException ex) {
-            throw new IllegalArgumentException("Unable to read CSV file", ex);
-        }
+    private List<ImportedEntry> convertParseResult(CsvTransactionParser.ParseResult parseResult) {
+        return parseResult.entries().stream()
+                .map(entry -> new ImportedEntry(
+                        entry.lineNumber(),
+                        entry.externalId(),
+                        entry.date(),
+                        entry.description(),
+                        entry.amount(),
+                        resolveTypeFromString(entry.typeValue(), TransactionType.class,
+                                TransactionImportService::mapTransactionTypeValue),
+                        resolveTypeFromString(entry.subtypeValue(), TransactionSubtype.class,
+                                TransactionImportService::mapTransactionSubtypeValue),
+                        resolveTypeFromString(entry.sourceValue(), TransactionSource.class,
+                                TransactionImportService::mapTransactionSourceValue),
+                        entry.categoryValue(),
+                        entry.subcategoryValue(),
+                        entry.sourceEntityValue()))
+                .toList();
     }
 
-    private ParseResult parseOfx(MultipartFile file, TransactionImportRequest request) {
-        List<ImportedEntry> entries = new ArrayList<>();
-        List<TransactionImportIssueDTO> issues = new ArrayList<>();
-        try (var input = file.getInputStream();
-             var reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
-
-            var stringConversion = new DefaultStringConversion(request.resolveZoneId().getId());
-            AggregateUnmarshaller<ResponseEnvelope> unmarshaller = new AggregateUnmarshaller<>(ResponseEnvelope.class);
-            unmarshaller.setConversion(stringConversion);
-
-            ResponseEnvelope envelope = unmarshaller.unmarshal(reader);
-
-            int index = 0;
-            index = extractBankingTransactions(envelope, request, entries, index);
-            extractCreditCardTransactions(envelope, request, entries, index);
-            return new ParseResult(entries, issues);
-        } catch (IOException | OFXParseException ex) {
-            throw new IllegalArgumentException("Unable to parse OFX file", ex);
+    private <T> T resolveTypeFromString(String value, Class<T> type, Function<String, T> parser) {
+        if (!StringUtils.hasText(value)) {
+            return null;
         }
+        return parser.apply(value);
     }
 
-    private int extractBankingTransactions(ResponseEnvelope envelope, TransactionImportRequest request,
-                                           List<ImportedEntry> entries, int startingIndex) {
-        ResponseMessageSet messageSet = envelope.getMessageSet(MessageSetType.banking);
-        if (!(messageSet instanceof BankingResponseMessageSet bankingResponse)) {
-            return startingIndex;
-        }
-
-        int index = startingIndex;
-        for (BankStatementResponseTransaction transaction : bankingResponse.getStatementResponses()) {
-            BankStatementResponse message = transaction.getMessage();
-            index = extractStatementTransactions(entries, request, index, message, TransactionSource.BANK_TRANSACTION);
-        }
-        return index;
-    }
-
-    private void extractCreditCardTransactions(ResponseEnvelope envelope, TransactionImportRequest request,
-                                               List<ImportedEntry> entries, int startingIndex) {
-        ResponseMessageSet messageSet = envelope.getMessageSet(MessageSetType.creditcard);
-        if (!(messageSet instanceof CreditCardResponseMessageSet creditCardResponse)) {
-            return;
-        }
-
-        int index = startingIndex;
-        for (CreditCardStatementResponseTransaction transaction : creditCardResponse.getStatementResponses()) {
-            CreditCardStatementResponse message = transaction.getMessage();
-            index = extractStatementTransactions(entries, request, index, message, TransactionSource.CREDIT_CARD);
-        }
-    }
-
-    private int extractStatementTransactions(List<ImportedEntry> entries, TransactionImportRequest request,
-                                             int index, StatementResponse response, TransactionSource fallbackSource) {
-        if (response == null) {
-            return index;
-        }
-        TransactionList transactionList = response.getTransactionList();
-        if (transactionList == null) {
-            return index;
-        }
-        List<com.webcohesion.ofx4j.domain.data.common.Transaction> ofxTransactions = transactionList.getTransactions();
-        if (ofxTransactions == null) {
-            return index;
-        }
-        ZoneId zoneId = request.resolveZoneId();
-        for (com.webcohesion.ofx4j.domain.data.common.Transaction ofxTxn : ofxTransactions.stream()
-                .sorted(Comparator.comparing(com.webcohesion.ofx4j.domain.data.common.Transaction::getDatePosted))
-                .toList()) {
-            index++;
-            LocalDateTime date = Optional.ofNullable(ofxTxn.getDatePosted())
-                    .map(datePosted -> LocalDateTime.ofInstant(datePosted.toInstant(), zoneId))
-                    .orElse(null);
-            BigDecimal amount = Optional.ofNullable(ofxTxn.getAmount())
-                    .map(value -> BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP))
-                    .orElse(null);
-            String description = Optional.ofNullable(ofxTxn.getMemo()).filter(StringUtils::hasText)
-                    .orElseGet(() -> sanitize(ofxTxn.getName()));
-
-            TransactionType detectedType = mapOfxTransactionType(ofxTxn.getTransactionType(), amount);
-
-            entries.add(new ImportedEntry(index,
-                    ofxTxn.getId(),
-                    date,
-                    description,
-                    amount,
-                    detectedType,
-                    null,
-                    fallbackSource,
-                    null,
-                    null,
-                    null));
-        }
-        return index;
+    private List<ImportedEntry> convertOfxParseResult(OfxTransactionParser.ParseResult parseResult) {
+        return parseResult.entries().stream()
+                .map(entry -> new ImportedEntry(
+                        entry.lineNumber(),
+                        entry.externalId(),
+                        entry.date(),
+                        entry.description(),
+                        entry.amount(),
+                        entry.type(),
+                        (TransactionSubtype) null,
+                        entry.source(),
+                        entry.categoryValue(),
+                        entry.subcategoryValue(),
+                        entry.sourceEntityValue()))
+                .toList();
     }
 
     private TransactionDTO buildTransactionDto(ImportedEntry entry,
-                                               TransactionImportRequest request,
-                                               Map<String, Long> categoryMappings,
-                                               Map<String, Long> subcategoryMappings,
-                                               Map<String, Long> sourceEntityMappings,
-                                               Map<String, TransactionType> typeMappings,
-                                               Map<String, TransactionSubtype> subtypeMappings,
-                                               Map<String, TransactionSource> sourceMappings) {
+            TransactionImportRequest request,
+            Map<String, Long> categoryMappings,
+            Map<String, Long> subcategoryMappings,
+            Map<String, Long> sourceEntityMappings,
+            Map<String, TransactionType> typeMappings,
+            Map<String, TransactionSubtype> subtypeMappings,
+            Map<String, TransactionSource> sourceMappings) {
         if (entry.date() == null) {
             throw new IllegalArgumentException("Transaction date is required");
         }
@@ -381,8 +240,10 @@ public class TransactionImportService {
         dto.setDate(entry.date());
         dto.setAmount(entry.amount().abs());
         dto.setCategoryId(resolveCategoryId(entry.categoryValue(), request.getDefaultCategoryId(), categoryMappings));
-        dto.setSubcategoryId(resolveMapping(entry.subcategoryValue(), request.getDefaultSubcategoryId(), subcategoryMappings));
-        dto.setSourceEntityId(resolveMapping(entry.sourceEntityValue(), request.getDefaultSourceEntityId(), sourceEntityMappings));
+        dto.setSubcategoryId(
+                resolveMapping(entry.subcategoryValue(), request.getDefaultSubcategoryId(), subcategoryMappings));
+        dto.setSourceEntityId(
+                resolveMapping(entry.sourceEntityValue(), request.getDefaultSourceEntityId(), sourceEntityMappings));
 
         TransactionType type = resolveTransactionType(entry, request, typeMappings);
         dto.setType(type);
@@ -450,110 +311,13 @@ public class TransactionImportService {
         return value.trim().toLowerCase(Locale.ROOT);
     }
 
-    private static String sanitize(String value) {
-        return value != null ? value.trim() : null;
-    }
-
     private static String safeErrorMessage(String message) {
         return StringUtils.hasText(message) ? message : "Failed to process entry";
     }
 
-    private static String resolveColumn(String desired, Map<String, String> headerLookup, String description) {
-        String normalized = normalizeKey(desired);
-        String actual = headerLookup.get(normalized);
-        if (!StringUtils.hasText(actual)) {
-            throw new IllegalArgumentException("Required " + description + " \"" + desired + "\" not found in CSV header");
-        }
-        return actual;
-    }
-
-    private static String resolveOptionalColumn(String desired, Map<String, String> headerLookup) {
-        if (!StringUtils.hasText(desired)) {
-            return null;
-        }
-        return headerLookup.get(normalizeKey(desired));
-    }
-
-    private static String extract(CSVRecord record, String column) {
-        if (!StringUtils.hasText(column)) {
-            return null;
-        }
-        return sanitize(record.get(column));
-    }
-
-    private static LocalDateTime parseCsvDate(String raw, TransactionImportRequest.CsvConfiguration csv, ZoneId zoneId) {
-        if (!StringUtils.hasText(raw)) {
-            throw new IllegalArgumentException("Date value is missing");
-        }
-        final ZoneId effectiveZone = zoneId != null ? zoneId : ZoneId.systemDefault();
-        for (String pattern : csv.safeDatePatterns()) {
-            try {
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern, csv.resolveLocale());
-                TemporalAccessor accessor = formatter.parse(raw);
-                LocalDate date = accessor.query(TemporalQueries.localDate());
-                if (date != null) {
-                    return date.atStartOfDay(effectiveZone).toLocalDateTime();
-                }
-                LocalDateTime dateTime = accessor.query(TemporalQueries.localDate()) != null
-                        && accessor.query(TemporalQueries.localTime()) != null
-                        ? LocalDateTime.from(accessor)
-                        : null;
-                if (dateTime != null) {
-                    return dateTime;
-                }
-            } catch (DateTimeParseException ignored) {
-                // Try next pattern
-            }
-        }
-        throw new IllegalArgumentException("Unable to parse date \"" + raw + "\" using configured patterns");
-    }
-
-    private static BigDecimal parseCsvAmount(String raw, TransactionImportRequest.CsvConfiguration csv) {
-        if (!StringUtils.hasText(raw)) {
-            throw new IllegalArgumentException("Amount value is missing");
-        }
-        String normalized = raw.trim();
-        boolean isNegative = normalized.startsWith("(") && normalized.endsWith(")");
-        if (isNegative) {
-            normalized = normalized.substring(1, normalized.length() - 1);
-        }
-        normalized = normalized.replace(" ", "");
-        char decimalSeparator = csv.resolveDecimalSeparator();
-        char groupingSeparator = csv.resolveGroupingSeparator();
-        normalized = normalized.replace(String.valueOf(groupingSeparator), "");
-        normalized = normalized.replace(String.valueOf(decimalSeparator), ".");
-        normalized = normalized.replace(",", ".");
-        normalized = normalized.replace("+", "");
-        if (normalized.endsWith("-")) {
-            normalized = "-" + normalized.substring(0, normalized.length() - 1);
-        }
-        try {
-            BigDecimal amount = new BigDecimal(normalized);
-            if (isNegative || amount.signum() < 0) {
-                return amount.abs().negate();
-            }
-            return amount;
-        } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Unable to parse amount \"" + raw + "\"");
-        }
-    }
-
-    private static TransactionType mapOfxTransactionType(com.webcohesion.ofx4j.domain.data.common.TransactionType ofxType,
-                                                         BigDecimal amount) {
-        if (ofxType == null) {
-            return amount != null && amount.signum() < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
-        }
-        return switch (ofxType) {
-            case CREDIT, INT, DIV, REPEATPMT, IN, OTHER -> TransactionType.INCOME;
-            case DEBIT, PAYMENT, ATM, POS, DIRECTDEBIT, DIRECTDEP, DEP, CHECK, FEE, SRVCHG, XFER, CASH, OUT ->
-                    TransactionType.EXPENSE;
-            default -> amount != null && amount.signum() < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
-        };
-    }
-
     private static TransactionType resolveTransactionType(ImportedEntry entry,
-                                                          TransactionImportRequest request,
-                                                          Map<String, TransactionType> typeMappings) {
+            TransactionImportRequest request,
+            Map<String, TransactionType> typeMappings) {
         if (entry.detectedType() != null) {
             return entry.detectedType();
         }
@@ -576,8 +340,8 @@ public class TransactionImportService {
     }
 
     private static TransactionSubtype resolveTransactionSubtype(ImportedEntry entry,
-                                                                 TransactionImportRequest request,
-                                                                 Map<String, TransactionSubtype> subtypeMappings) {
+            TransactionImportRequest request,
+            Map<String, TransactionSubtype> subtypeMappings) {
         if (entry.detectedSubtype() != null) {
             return entry.detectedSubtype();
         }
@@ -591,8 +355,8 @@ public class TransactionImportService {
     }
 
     private static TransactionSource resolveTransactionSource(ImportedEntry entry,
-                                                               TransactionImportRequest request,
-                                                               Map<String, TransactionSource> sourceMappings) {
+            TransactionImportRequest request,
+            Map<String, TransactionSource> sourceMappings) {
         if (entry.detectedSource() != null) {
             return entry.detectedSource();
         }
@@ -626,23 +390,6 @@ public class TransactionImportService {
         return defaultValue;
     }
 
-    private static <T> T resolveTypeFromColumn(CSVRecord record, String column,
-                                               Class<T> type,
-                                               Function<String, T> fallbackParser) {
-        if (!StringUtils.hasText(column)) {
-            return null;
-        }
-        String rawValue = sanitize(record.get(column));
-        if (!StringUtils.hasText(rawValue)) {
-            return null;
-        }
-        T parsed = fallbackParser.apply(rawValue);
-        if (parsed != null) {
-            return parsed;
-        }
-        throw new IllegalArgumentException("Unable to map value \"" + rawValue + "\" for column " + column + " to " + type.getSimpleName());
-    }
-
     private static TransactionType mapTransactionTypeValue(String raw) {
         try {
             return TransactionType.valueOf(raw.trim().toUpperCase(Locale.ROOT));
@@ -668,26 +415,19 @@ public class TransactionImportService {
     }
 
     /**
-     * Internal representation of an imported entry before mapping to the domain DTO.
+     * Internal representation of an imported entry before mapping to the domain
+     * DTO.
      */
     private record ImportedEntry(int lineNumber,
-                                 String externalId,
-                                 LocalDateTime date,
-                                 String description,
-                                 BigDecimal amount,
-                                 TransactionType detectedType,
-                                 TransactionSubtype detectedSubtype,
-                                 TransactionSource detectedSource,
-                                 String categoryValue,
-                                 String subcategoryValue,
-                                 String sourceEntityValue) {
-    }
-
-    private record ParseResult(List<ImportedEntry> entries, List<TransactionImportIssueDTO> issues) {
-        private ParseResult {
-            entries = entries != null ? entries : List.of();
-            issues = issues != null ? issues : List.of();
-        }
+            String externalId,
+            LocalDateTime date,
+            String description,
+            BigDecimal amount,
+            TransactionType detectedType,
+            TransactionSubtype detectedSubtype,
+            TransactionSource detectedSource,
+            String categoryValue,
+            String subcategoryValue,
+            String sourceEntityValue) {
     }
 }
-
