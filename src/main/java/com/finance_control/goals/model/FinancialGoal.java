@@ -1,5 +1,7 @@
 package com.finance_control.goals.model;
 
+import com.finance_control.goals.enums.GoalPriority;
+import com.finance_control.goals.enums.GoalStatus;
 import com.finance_control.shared.enums.GoalType;
 import com.finance_control.shared.model.BaseModel;
 import com.finance_control.transactions.model.source.TransactionSourceEntity;
@@ -51,6 +53,14 @@ public class FinancialGoal extends BaseModel<Long> {
 
     @Column(name = "is_active")
     private Boolean isActive = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private GoalPriority priority = GoalPriority.MEDIUM;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private GoalStatus status = GoalStatus.ACTIVE;
 
     @Column(name = "auto_calculate")
     private Boolean autoCalculate = false;

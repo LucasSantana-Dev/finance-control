@@ -73,11 +73,11 @@ public class FinancialGoalController extends BaseController<FinancialGoal, Long,
     private void addStatusFilter(HttpServletRequest request, Map<String, Object> filters) {
         String status = request.getParameter("status");
         if (status != null && !status.trim().isEmpty()) {
-            if ("active".equalsIgnoreCase(status)) {
-                filters.put("isActive", true);
-            } else if ("completed".equalsIgnoreCase(status)) {
-                filters.put("isActive", false);
-            }
+            filters.put("status", status);
+        }
+        String priority = request.getParameter("priority");
+        if (priority != null && !priority.trim().isEmpty()) {
+            filters.put("priority", priority);
         }
     }
 

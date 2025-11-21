@@ -143,6 +143,8 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
         goal.setDeadline(createDTO.getDeadline() != null ? createDTO.getDeadline().toLocalDate() : null);
         goal.setAutoCalculate(Boolean.TRUE.equals(createDTO.getAutoCalculate()));
         goal.setIsActive(true);
+        goal.setPriority(createDTO.getPriority() != null ? createDTO.getPriority() : com.finance_control.goals.enums.GoalPriority.MEDIUM);
+        goal.setStatus(createDTO.getStatus() != null ? createDTO.getStatus() : com.finance_control.goals.enums.GoalStatus.ACTIVE);
 
         // Set account if provided
         if (createDTO.getAccountId() != null) {
@@ -174,6 +176,12 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
         }
         if (updateDTO.getAutoCalculate() != null) {
             entity.setAutoCalculate(updateDTO.getAutoCalculate());
+        }
+        if (updateDTO.getPriority() != null) {
+            entity.setPriority(updateDTO.getPriority());
+        }
+        if (updateDTO.getStatus() != null) {
+            entity.setStatus(updateDTO.getStatus());
         }
     }
 
@@ -213,6 +221,8 @@ public class FinancialGoalService extends BaseService<FinancialGoal, Long, Finan
         dto.setDeadline(entity.getDeadline() != null ? entity.getDeadline().atStartOfDay() : null);
         dto.setAutoCalculate(entity.getAutoCalculate());
         dto.setIsActive(entity.getIsActive());
+        dto.setPriority(entity.getPriority());
+        dto.setStatus(entity.getStatus());
 
         if (entity.getAccount() != null) {
             dto.setAccountId(entity.getAccount().getId());

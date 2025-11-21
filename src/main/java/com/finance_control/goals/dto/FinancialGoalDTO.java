@@ -1,5 +1,7 @@
 package com.finance_control.goals.dto;
 
+import com.finance_control.goals.enums.GoalPriority;
+import com.finance_control.goals.enums.GoalStatus;
 import com.finance_control.goals.validation.FinancialGoalValidation;
 import com.finance_control.shared.dto.BaseDTO;
 import com.finance_control.shared.enums.GoalType;
@@ -16,7 +18,7 @@ import java.time.LocalDateTime;
 /**
  * DTO for creating, updating, and representing financial goals.
  * This class serves all operations, with ID being optional for creation.
- * 
+ *
  * <p>
  * For creation: id should be null
  * For updates: id should be populated with the existing goal ID
@@ -40,6 +42,8 @@ public class FinancialGoalDTO extends BaseDTO<Long> {
 
     private BigDecimal currentAmount;
     private Boolean isActive;
+    private GoalPriority priority;
+    private GoalStatus status;
 
     private LocalDateTime deadline;
     private Boolean autoCalculate;
@@ -49,7 +53,7 @@ public class FinancialGoalDTO extends BaseDTO<Long> {
     /**
      * Validates the DTO for create operations.
      * Ensures all required fields are present and valid.
-     * 
+     *
      * @throws IllegalArgumentException if validation fails
      */
     @Override
@@ -66,7 +70,7 @@ public class FinancialGoalDTO extends BaseDTO<Long> {
     /**
      * Validates the DTO for update operations.
      * Validates only the fields that are present (not null).
-     * 
+     *
      * @throws IllegalArgumentException if validation fails
      */
     @Override
@@ -83,7 +87,7 @@ public class FinancialGoalDTO extends BaseDTO<Long> {
     /**
      * Validates the DTO for response operations.
      * Ensures the DTO is properly populated for API responses.
-     * 
+     *
      * @throws IllegalArgumentException if validation fails
      */
     @Override
