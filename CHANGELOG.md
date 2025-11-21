@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Notifications Module**: Complete notification system for user alerts
+  - `Notification` entity with types: INSTALLMENT_DUE, GOAL_PROGRESS, GOAL_ACHIEVED, BUDGET_ALERT
+  - `NotificationController` with CRUD operations and filtering endpoints
+  - `NotificationService` with mark as read/unread functionality
+  - Support for metadata (JSON) and read status tracking
+  - Endpoints: `/notifications`, `/notifications/unread`, `/notifications/read`, `/notifications/type/{type}`, `/notifications/count/unread`
+- **UserSettings Module**: User preferences and application settings
+  - `UserSettings` entity with currency format, date format, notification preferences, theme, and language
+  - `UserSettingsController` with GET and PUT endpoints
+  - Auto-creation of default settings on first access
+  - Support for BRL/USD/EUR currency formats, multiple date formats, and light/dark/system themes
+  - Endpoints: `/user-settings` (GET, PUT)
+- **UserCategory Module**: User-specific transaction categories
+  - `UserCategory` entity with color and icon support
+  - `UserCategoryController` with CRUD operations
+  - Separate from global `TransactionCategory` to maintain backward compatibility
+  - Support for income/expense types with unique constraint on (user_id, name, type)
+  - Endpoints: `/user-categories`, `/user-categories/type/{type}`, `/user-categories/defaults`
+- **FinancialGoal Enhancements**: Added priority and status fields
+  - `GoalPriority` enum: LOW, MEDIUM, HIGH (default: MEDIUM)
+  - `GoalStatus` enum: ACTIVE, COMPLETED, PAUSED, CANCELLED (default: ACTIVE)
+  - Updated `FinancialGoal` entity, DTO, service, and controller
+  - Filtering support by priority and status in `FinancialGoalController`
+  - Migration V17 adds priority and status columns with defaults
 - **Feature Flag System**: Centralized feature flag system for controlling feature availability
   - `Feature` enum with all available features (FINANCIAL_PREDICTIONS, BRAZILIAN_MARKET, OPEN_FINANCE, REPORTS, DATA_EXPORT, REALTIME_NOTIFICATIONS, MONITORING, SUPABASE_AUTH, SUPABASE_STORAGE, SUPABASE_REALTIME)
   - `FeatureFlagService` for type-safe feature flag checking

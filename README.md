@@ -81,11 +81,16 @@ curl -X POST "https://api.yourdomain.com/transactions/import" \
 - **Progress visualization**: Real-time progress percentage calculation
 - **Deadline management**: Track goal completion deadlines
 - **Auto-calculation**: Automatic goal progress updates from transactions
+- ✅ **NEW**: Priority levels (low, medium, high) for goal organization
+- ✅ **NEW**: Status tracking (active, completed, paused, cancelled) for goal lifecycle management
 
 ### 👥 User Management
 - **Secure authentication**: JWT-based authentication system
 - **User isolation**: Multi-tenant architecture with data isolation
 - **Profile management**: User profile and preferences
+- ✅ **NEW**: User settings management with currency format, date format, notification preferences, theme, and language
+- ✅ **NEW**: User-specific categories with color and icon support
+- ✅ **NEW**: Notification system for installment due, goal progress, goal achieved, and budget alerts
 
 ### 🔧 Technical Features
 - **RESTful API**: Comprehensive REST endpoints with OpenAPI documentation
@@ -166,6 +171,7 @@ src/main/java/com/finance_control/
 ├── brazilian_market/    # Brazilian market data integration
 ├── dashboard/           # Financial dashboard and analytics
 ├── goals/               # Financial goals management
+├── notifications/       # User notifications management
 ├── profile/             # User profile management
 ├── shared/              # Common utilities and base classes
 │   ├── config/          # Configuration classes
@@ -178,7 +184,9 @@ src/main/java/com/finance_control/
 │   ├── responsibles/    # Transaction responsibility sharing
 │   ├── source/          # Transaction sources (accounts, cards)
 │   └── subcategory/     # Transaction subcategories
-└── users/               # User management
+├── usercategories/      # User-specific transaction categories
+├── users/               # User management
+└── usersettings/        # User preferences and settings
 ```
 
 ### Design Patterns
@@ -1129,6 +1137,9 @@ The project includes comprehensive API testing capabilities:
   - ✅ **NEW**: Redis caching for performance optimization
   - ✅ **NEW**: Rate limiting for API protection
   - ✅ **NEW**: Complete monitoring endpoints (health, alerts, status, frontend-errors)
+  - ✅ **NEW**: Notifications endpoints (CRUD, filtering by type and read status)
+  - ✅ **NEW**: User settings endpoints (preferences and application settings)
+  - ✅ **NEW**: User categories endpoints (user-specific categories with color/icon support)
 
 ### Key Endpoints
 
@@ -1152,12 +1163,13 @@ The project includes comprehensive API testing capabilities:
 - `DELETE /transactions/{id}` - Delete transaction
 
 #### Financial Goals
-- `GET /financial-goals` - List financial goals
+- `GET /financial-goals` - List financial goals (supports priority and status filters)
 - `POST /financial-goals` - Create new goal
 - `GET /financial-goals/active` - Get active goals
 - `GET /financial-goals/completed` - Get completed goals
 - `POST /financial-goals/{id}/progress` - Update goal progress
 - `POST /financial-goals/{id}/complete` - Complete goal
+- ✅ **NEW**: Priority levels (low, medium, high) and status (active, completed, paused, cancelled) support
 
 #### Transaction Categories
 - `GET /transaction-categories` - List transaction categories
@@ -1183,6 +1195,32 @@ The project includes comprehensive API testing capabilities:
 - `GET /api/data-export/transactions/csv` - Export filtered transactions as CSV (dateFrom, dateTo, type, category)
 - `GET /api/data-export/goals/csv` - Export filtered financial goals as CSV (status)
 
+#### Notifications
+- `GET /notifications` - List notifications with filtering
+- `POST /notifications` - Create new notification
+- `GET /notifications/unread` - Get unread notifications
+- `GET /notifications/read` - Get read notifications
+- `GET /notifications/type/{type}` - Get notifications by type (INSTALLMENT_DUE, GOAL_PROGRESS, GOAL_ACHIEVED, BUDGET_ALERT)
+- `GET /notifications/count/unread` - Count unread notifications
+- `PUT /notifications/{id}/read` - Mark notification as read
+- `PUT /notifications/{id}/unread` - Mark notification as unread
+- `PUT /notifications/read-all` - Mark all notifications as read
+- `DELETE /notifications/read` - Delete all read notifications
+
+#### User Settings
+- `GET /user-settings` - Get current user settings
+- `PUT /user-settings` - Update current user settings
+- Supports currency format (BRL, USD, EUR), date format, notification preferences, theme (light, dark, system), and language
+
+#### User Categories
+- `GET /user-categories` - List user-specific categories
+- `POST /user-categories` - Create new user category
+- `PUT /user-categories/{id}` - Update user category
+- `DELETE /user-categories/{id}` - Delete user category
+- `GET /user-categories/type/{type}` - Get categories by type (income, expense)
+- `GET /user-categories/defaults` - Get default categories for user
+- Supports color and icon customization
+
 #### Monitoring & Observability
 - `GET /monitoring/health` - Health check endpoint
 - `GET /monitoring/alerts` - Get active alerts
@@ -1191,7 +1229,6 @@ The project includes comprehensive API testing capabilities:
 - `POST /monitoring/frontend-errors` - Submit frontend error logs
 - `GET /actuator/health` - Spring Boot Actuator health check
 - `GET /actuator/info` - Application information
-- `DELETE /transaction-subcategories/{id}` - Delete subcategory
 - `GET /transaction-subcategories/category/{categoryId}` - Get subcategories by category
 - `GET /transaction-subcategories/category/{categoryId}/usage` - Get subcategories ordered by usage
 - `GET /transaction-subcategories/category/{categoryId}/count` - Get subcategory count by category
