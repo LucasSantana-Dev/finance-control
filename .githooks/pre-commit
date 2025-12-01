@@ -1,0 +1,39 @@
+#!/bin/bash
+# Pre-commit hook to prevent committing sensitive files and secrets
+
+echo "🔒 Running security checks..."
+
+# Prevent committing .env files (except .env.example)
+if git diff --cached --name-only | grep -E '\.env$|\.env\.(production|development|test|local)$'; then
+  echo "❌ ERROR: Attempting to commit .env file!"
+  echo "   .env files should never be committed to the repository."
+  echo "   Use .env.example as a template instead."
+  exit 1
+fi
+
+# Check for common secret patterns in staged files
+if git diff --cached | grep -iE '(password|secret|api[_-]?key|token|jwt[_-]?secret|encryption[_-]?key)\s*[:=]\s*["\']?[^"\']{8,}'; then
+  echo "⚠️  WARNING: Potential secret detected in staged files!"
+  echo "   Please review your changes to ensure no secrets are committed."
+  echo "   Common patterns: passwords, API keys, tokens, secrets"
+  read -p "Continue anyway? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+fi
+
+# Check for hardcoded credentials in Java files
+if git diff --cached --name-only | grep '\.java$'; then
+  if git diff --cached | grep -iE '(password\s*=\s*["\'][^"\']+|secret\s*=\s*["\'][^"\']+|api[_-]?key\s*=\s*["\'][^"\']+)'; then
+    echo "⚠️  WARNING: Potential hardcoded credential in Java file!"
+    echo "   Use environment variables or configuration properties instead."
+    read -p "Continue anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      exit 1
+    fi
+  fi
+fi
+
+echo "✅ Pre-commit security checks passed"
