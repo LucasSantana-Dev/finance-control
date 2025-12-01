@@ -1,39 +1,282 @@
 #!/bin/bash
-# Pre-commit hook to prevent committing sensitive files and secrets
+# Pre-commit hook to ensure code quality, no errors, and pattern compliance
 
+set -e
+
+echo "🔍 Running pre-commit quality checks..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$STAGED_FILES" ]; then
+  echo "✅ No staged files to check"
+  exit 0
+fi
+
+# Filter staged files to Java/Properties/YAML/XML files
+JAVA_FILES=$(echo "$STAGED_FILES" | grep -E '\.(java)$' || true)
+ALL_CODE_FILES=$(echo "$STAGED_FILES" | grep -E '\.(java|properties|yml|yaml|xml|gradle|groovy)$' || true)
+
+STAGED_COUNT=$(echo "$STAGED_FILES" | wc -l | tr -d ' ')
+echo ""
+echo "📝 Checking $STAGED_COUNT staged file(s)..."
+
+# Check if we're in the project root
+if [ ! -f "build.gradle" ]; then
+  echo -e "${YELLOW}⚠️  WARNING: build.gradle not found. Skipping Gradle checks.${NC}"
+  SKIP_GRADLE=true
+else
+  SKIP_GRADLE=false
+  # Check if Gradle wrapper exists and is executable
+  if [ ! -f "./gradlew" ] || [ ! -x "./gradlew" ]; then
+    echo -e "${YELLOW}⚠️  WARNING: Gradle wrapper not found or not executable. Skipping Gradle checks.${NC}"
+    SKIP_GRADLE=true
+  fi
+fi
+
+# Helper function to check if a Gradle task exists
+check_gradle_task() {
+  local task_name="$1"
+  if [ "$SKIP_GRADLE" = true ]; then
+    return 1
+  fi
+  # Try to get task info - if task doesn't exist, this will fail
+  ./gradlew tasks --all 2>/dev/null | grep -qE "(^|\s)$task_name(\s|$)" || return 1
+}
+
+# ============================================================================
+# 1. Security Checks
+# ============================================================================
+echo ""
 echo "🔒 Running security checks..."
 
 # Prevent committing .env files (except .env.example)
-if git diff --cached --name-only | grep -E '\.env$|\.env\.(production|development|test|local)$'; then
-  echo "❌ ERROR: Attempting to commit .env file!"
+if echo "$STAGED_FILES" | grep -E '\.env$|\.env\.(production|development|test|local)$' | grep -v '\.env\.example$'; then
+  echo -e "${RED}❌ ERROR: Attempting to commit .env file!${NC}"
   echo "   .env files should never be committed to the repository."
   echo "   Use .env.example as a template instead."
   exit 1
 fi
 
 # Check for common secret patterns in staged files
-if git diff --cached | grep -iE '(password|secret|api[_-]?key|token|jwt[_-]?secret|encryption[_-]?key)\s*[:=]\s*["\']?[^"\']{8,}'; then
-  echo "⚠️  WARNING: Potential secret detected in staged files!"
+SECRET_PATTERN='(password|secret|api[_-]?key|token|jwt[_-]?secret|encryption[_-]?key|supabase[_-]?key|database[_-]?password|db[_-]?password)\s*[:=]\s*[^[:space:]]{8,}'
+SECRET_CHECK=$(git diff --cached | grep -iE "$SECRET_PATTERN" | grep -v '\.example' | grep -v '\.test' | grep -v '\.spec' | grep -v 'docker\.env' || true)
+if [ -n "$SECRET_CHECK" ]; then
+  echo -e "${YELLOW}⚠️  WARNING: Potential secret detected in staged files!${NC}"
   echo "   Please review your changes to ensure no secrets are committed."
   echo "   Common patterns: passwords, API keys, tokens, secrets"
-  read -p "Continue anyway? (y/N) " -n 1 -r
+  printf "%s" "Continue anyway? (y/N) "
+  read -n 1 -r REPLY || REPLY=""
   echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+  if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
     exit 1
   fi
 fi
 
 # Check for hardcoded credentials in Java files
-if git diff --cached --name-only | grep '\.java$'; then
-  if git diff --cached | grep -iE '(password\s*=\s*["\'][^"\']+|secret\s*=\s*["\'][^"\']+|api[_-]?key\s*=\s*["\'][^"\']+)'; then
-    echo "⚠️  WARNING: Potential hardcoded credential in Java file!"
-    echo "   Use environment variables or configuration properties instead."
-    read -p "Continue anyway? (y/N) " -n 1 -r
+if [ -n "$JAVA_FILES" ]; then
+  CRED_PATTERN='(password|secret|api[_-]?key|supabase[_-]?(url|key)|database[_-]?password|db[_-]?password)\s*=\s*["'"'"'][^"'"'"']+'
+  CREDENTIAL_CHECK=$(git diff --cached | grep -iE "$CRED_PATTERN" | grep -v '\.example' | grep -v '\.test' | grep -v '\.spec' | grep -v 'System\.getenv' | grep -v 'System\.getProperty' || true)
+  if [ -n "$CREDENTIAL_CHECK" ]; then
+    echo -e "${YELLOW}⚠️  WARNING: Potential hardcoded credential in Java file!${NC}"
+    echo "   Use environment variables (System.getenv) or configuration properties instead."
+    printf "%s" "Continue anyway? (y/N) "
+    read -n 1 -r REPLY || REPLY=""
     echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
       exit 1
     fi
   fi
 fi
 
-echo "✅ Pre-commit security checks passed"
+# Check for hardcoded database credentials in properties files
+PROPERTIES_FILES=$(echo "$STAGED_FILES" | grep -E '\.(properties|yml|yaml)$' || true)
+if [ -n "$PROPERTIES_FILES" ]; then
+  DB_CRED_CHECK=$(git diff --cached | grep -iE '(spring\.datasource\.(password|username)|db\.(password|username))\s*[:=]\s*[^[:space:]]{4,}' | grep -v '\.example' | grep -v 'docker\.env' || true)
+  if [ -n "$DB_CRED_CHECK" ]; then
+    echo -e "${YELLOW}⚠️  WARNING: Potential hardcoded database credential in properties file!${NC}"
+    echo "   Use environment variables or externalized configuration instead."
+    printf "%s" "Continue anyway? (y/N) "
+    read -n 1 -r REPLY || REPLY=""
+    echo
+    if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+      exit 1
+    fi
+  fi
+fi
+
+echo -e "${GREEN}✅ Security checks passed${NC}"
+
+# ============================================================================
+# 2. Compilation Check
+# ============================================================================
+if [ "$SKIP_GRADLE" = false ] && [ -n "$JAVA_FILES" ]; then
+  echo ""
+  echo "🔨 Running compilation check..."
+
+  if ./gradlew compileJava --no-daemon >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ Compilation check passed${NC}"
+  else
+    echo -e "${RED}❌ Compilation check failed!${NC}"
+    echo "   Please fix compilation errors before committing."
+    echo "   Run './gradlew compileJava' to see detailed errors."
+    exit 1
+  fi
+fi
+
+# ============================================================================
+# 3. Code Quality Checks (Checkstyle, PMD, SpotBugs)
+# ============================================================================
+if [ "$SKIP_GRADLE" = false ] && [ -n "$JAVA_FILES" ]; then
+  echo ""
+  echo "🔍 Running code quality checks..."
+
+  QUALITY_ERRORS=0
+
+  # Checkstyle
+  if check_gradle_task "checkstyleMain"; then
+    echo "   Running Checkstyle..."
+    if ./gradlew checkstyleMain --no-daemon >/dev/null 2>&1; then
+      echo -e "   ${GREEN}✅ Checkstyle passed${NC}"
+    else
+      echo -e "   ${RED}❌ Checkstyle found violations!${NC}"
+      echo "      Check report: build/reports/checkstyle/main/checkstyle-report.html"
+      QUALITY_ERRORS=$((QUALITY_ERRORS + 1))
+    fi
+  fi
+
+  # PMD
+  if check_gradle_task "pmdMain"; then
+    echo "   Running PMD..."
+    if ./gradlew pmdMain --no-daemon >/dev/null 2>&1; then
+      echo -e "   ${GREEN}✅ PMD passed${NC}"
+    else
+      echo -e "   ${RED}❌ PMD found violations!${NC}"
+      echo "      Check report: build/reports/pmd/main.html"
+      QUALITY_ERRORS=$((QUALITY_ERRORS + 1))
+    fi
+  fi
+
+  # SpotBugs (may not fail build, but check anyway)
+  if check_gradle_task "spotbugsMain"; then
+    echo "   Running SpotBugs..."
+    if ./gradlew spotbugsMain --no-daemon >/dev/null 2>&1; then
+      echo -e "   ${GREEN}✅ SpotBugs passed${NC}"
+    else
+      echo -e "   ${YELLOW}⚠️  SpotBugs found issues${NC}"
+      echo "      Check report: build/reports/spotbugs/main.html"
+      # SpotBugs is configured with ignoreFailures=true, so don't fail commit
+    fi
+  fi
+
+  if [ $QUALITY_ERRORS -gt 0 ]; then
+    echo ""
+    echo -e "${RED}❌ Code quality checks failed!${NC}"
+    echo "   Please fix the violations before committing."
+    echo "   You can run './gradlew checkstyleMain pmdMain' to see detailed reports."
+    exit 1
+  else
+    echo -e "${GREEN}✅ Code quality checks passed${NC}"
+  fi
+fi
+
+# ============================================================================
+# 4. Pattern Checks for Java Code
+# ============================================================================
+if [ -n "$JAVA_FILES" ]; then
+  echo ""
+  echo "🔎 Checking code patterns..."
+
+  PATTERN_ERRORS=0
+
+  # Filter out test files from Java files list
+  NON_TEST_JAVA_FILES=$(echo "$JAVA_FILES" | grep -v '\.test\.' | grep -v '\.spec\.' | grep -v '__tests__' | grep -v '/test/' || true)
+
+  # Only check patterns in non-test files
+  if [ -n "$NON_TEST_JAVA_FILES" ]; then
+    # Use xargs to safely handle filenames with spaces or special characters
+    # xargs properly quotes arguments to handle spaces in filenames
+    # -r flag prevents execution when input is empty (avoids false positives)
+    # Check for System.out.println / System.err.println (should use logger)
+    if echo "$NON_TEST_JAVA_FILES" | xargs -r git diff --cached -- | grep -E '^\+\s*.*System\.(out|err)\.print'; then
+      echo -e "${YELLOW}⚠️  WARNING: System.out.println/System.err.println detected!${NC}"
+      echo "   Use a logger (SLF4J/Logback) instead of System.out/err."
+      echo "   Example: logger.info(\"message\") or logger.error(\"message\")"
+      PATTERN_ERRORS=$((PATTERN_ERRORS + 1))
+    fi
+
+    # Check for printStackTrace() (should use logger)
+    if echo "$NON_TEST_JAVA_FILES" | xargs -r git diff --cached -- | grep -E '^\+\s*.*\.printStackTrace\('; then
+      echo -e "${YELLOW}⚠️  WARNING: printStackTrace() detected!${NC}"
+      echo "   Use logger.error(\"message\", exception) instead of printStackTrace()."
+      PATTERN_ERRORS=$((PATTERN_ERRORS + 1))
+    fi
+
+    # Check for @SuppressWarnings (warn about usage)
+    if echo "$NON_TEST_JAVA_FILES" | xargs -r git diff --cached -- | grep -E '^\+\s*.*@SuppressWarnings'; then
+      echo -e "${YELLOW}⚠️  WARNING: @SuppressWarnings detected!${NC}"
+      echo "   Consider if the warning suppression is necessary. It may indicate a code smell."
+      # Don't fail, just warn
+    fi
+
+    # Check for empty catch blocks (should at least log)
+    # Look for catch blocks with only whitespace/braces in the diff
+    # Match: catch(...) { } or catch(...) { } on same line, but exclude if there's content after the opening brace
+    if echo "$NON_TEST_JAVA_FILES" | xargs -r git diff --cached -- | grep -E '^\+\s*catch\s*\([^)]+\)\s*\{\s*\}' | grep -vE '^\+\s*catch\s*\([^)]+\)\s*\{\s*[^}\s]'; then
+      echo -e "${YELLOW}⚠️  WARNING: Empty catch block detected!${NC}"
+      echo "   At minimum, log the exception: catch (Exception e) { logger.warn(\"Error\", e); }"
+      PATTERN_ERRORS=$((PATTERN_ERRORS + 1))
+    fi
+
+    # Check for TODO/FIXME without issue reference (optional, just warn)
+    if echo "$NON_TEST_JAVA_FILES" | xargs -r git diff --cached -- | grep -iE '^\+\s*.*(todo|fixme):' | grep -vE '(todo|fixme):\s*#[0-9]+'; then
+      echo -e "${YELLOW}💡 INFO: TODO/FIXME comments found. Consider linking to an issue (e.g., TODO: #123).${NC}"
+    fi
+
+    # Check for hardcoded strings that should be constants (basic check)
+    if echo "$NON_TEST_JAVA_FILES" | xargs -r git diff --cached -- | grep -E '^\+\s*.*"[A-Z_]{10,}"' | grep -v 'logger\.'; then
+      echo -e "${YELLOW}💡 INFO: Potential hardcoded constant string detected. Consider extracting to a constant.${NC}"
+    fi
+  fi
+
+  if [ $PATTERN_ERRORS -ge 2 ]; then
+    echo -e "${RED}❌ Multiple pattern violations detected!${NC}"
+    exit 1
+  elif [ $PATTERN_ERRORS -eq 1 ]; then
+    printf "%s" "Continue with warnings? (y/N) "
+    read -n 1 -r REPLY || REPLY=""
+    echo
+    if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+      exit 1
+    fi
+  else
+    echo -e "${GREEN}✅ Pattern checks passed${NC}"
+  fi
+fi
+
+# ============================================================================
+# Summary
+# ============================================================================
+echo ""
+echo -e "${GREEN}✅ All pre-commit checks passed!${NC}"
+echo ""
+echo "💡 Tips:"
+if [ "$SKIP_GRADLE" = false ]; then
+  echo "   - Run './gradlew checkstyleMain' to check code style"
+  echo "   - Run './gradlew pmdMain' to check code quality"
+  echo "   - Run './gradlew spotbugsMain' to check for bugs"
+  echo "   - Run './gradlew compileJava' to check compilation"
+  echo "   - Run './gradlew qualityCheck' to run all quality checks"
+else
+  echo "   - Install Java 21 and Gradle to enable quality checks"
+  echo "   - Or use Docker: ./scripts/dev.sh quality-local"
+fi
+echo ""
+
+exit 0
