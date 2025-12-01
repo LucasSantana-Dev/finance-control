@@ -6,14 +6,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -29,12 +29,14 @@ import java.util.List;
 @ConditionalOnProperty(value = "app.open-finance.enabled", havingValue = "true", matchIfMissing = false)
 public class AccountInformationClient {
 
-    @Qualifier("openFinanceWebClient")
-    private final WebClient webClient;
+    @Qualifier("openFinanceRestClient")
+    private final RestClient restClient;
 
     private static final String ACCOUNTS_ENDPOINT = "/open-banking/accounts/v1/accounts";
     private static final String BALANCES_ENDPOINT = "/open-banking/accounts/v1/balances";
     private static final String TRANSACTIONS_ENDPOINT = "/open-banking/accounts/v1/transactions";
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 2000;
 
     /**
      * Retrieves all accounts for a user from an institution.
@@ -42,20 +44,20 @@ public class AccountInformationClient {
      * @param accessToken the OAuth access token
      * @return list of accounts
      */
-    public Mono<List<Account>> getAccounts(String accessToken) {
+    public List<Account> getAccounts(String accessToken) {
         log.debug("Fetching accounts from Open Finance API");
 
-        return webClient.get()
-                .uri(ACCOUNTS_ENDPOINT)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(this::parseAccountsResponse)
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
-                        .filter(throwable -> throwable instanceof WebClientResponseException &&
-                                ((WebClientResponseException) throwable).getStatusCode().is5xxServerError()))
-                .doOnSuccess(accounts -> log.info("Successfully fetched {} accounts", accounts.size()))
-                .doOnError(error -> log.error("Failed to fetch accounts: {}", error.getMessage()));
+        return executeWithRetry(() -> {
+            JsonNode response = restClient.get()
+                    .uri(ACCOUNTS_ENDPOINT)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            List<Account> accounts = parseAccountsResponse(response);
+            log.info("Successfully fetched {} accounts", accounts.size());
+            return accounts;
+        }, "Failed to fetch accounts");
     }
 
     /**
@@ -65,20 +67,20 @@ public class AccountInformationClient {
      * @param accountId the account ID
      * @return account balance
      */
-    public Mono<AccountBalance> getAccountBalance(String accessToken, String accountId) {
+    public AccountBalance getAccountBalance(String accessToken, String accountId) {
         log.debug("Fetching account balance for account: {}", accountId);
 
-        return webClient.get()
-                .uri(BALANCES_ENDPOINT + "/{accountId}", accountId)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(jsonNode -> parseBalanceResponse(jsonNode, accountId))
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
-                        .filter(throwable -> throwable instanceof WebClientResponseException &&
-                                ((WebClientResponseException) throwable).getStatusCode().is5xxServerError()))
-                .doOnSuccess(balance -> log.info("Successfully fetched balance for account: {}", accountId))
-                .doOnError(error -> log.error("Failed to fetch balance for account {}: {}", accountId, error.getMessage()));
+        return executeWithRetry(() -> {
+            JsonNode response = restClient.get()
+                    .uri(BALANCES_ENDPOINT + "/{accountId}", accountId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            AccountBalance balance = parseBalanceResponse(response, accountId);
+            log.info("Successfully fetched balance for account: {}", accountId);
+            return balance;
+        }, "Failed to fetch balance for account " + accountId);
     }
 
     /**
@@ -92,36 +94,33 @@ public class AccountInformationClient {
      * @param pageSize page size for pagination
      * @return paginated transactions
      */
-    public Mono<TransactionListResponse> getAccountTransactions(String accessToken, String accountId,
+    public TransactionListResponse getAccountTransactions(String accessToken, String accountId,
                                                                 LocalDateTime fromDate, LocalDateTime toDate,
                                                                 Integer page, Integer pageSize) {
         log.debug("Fetching transactions for account: {}", accountId);
 
-        var uriBuilder = webClient.get()
-                .uri(uriBuilder1 -> {
-                    var builder = uriBuilder1.path(TRANSACTIONS_ENDPOINT + "/{accountId}")
-                            .queryParam("page", page != null ? page : 1)
-                            .queryParam("page-size", pageSize != null ? pageSize : 100);
-                    if (fromDate != null) {
-                        builder.queryParam("fromBookingDateTime", fromDate.format(DateTimeFormatter.ISO_DATE_TIME));
-                    }
-                    if (toDate != null) {
-                        builder.queryParam("toBookingDateTime", toDate.format(DateTimeFormatter.ISO_DATE_TIME));
-                    }
-                    return builder.build(accountId);
-                })
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
+        return executeWithRetry(() -> {
+            JsonNode response = restClient.get()
+                    .uri(uriBuilder -> {
+                        var builder = uriBuilder.path(TRANSACTIONS_ENDPOINT + "/{accountId}")
+                                .queryParam("page", page != null ? page : 1)
+                                .queryParam("page-size", pageSize != null ? pageSize : 100);
+                        if (fromDate != null) {
+                            builder.queryParam("fromBookingDateTime", fromDate.format(DateTimeFormatter.ISO_DATE_TIME));
+                        }
+                        if (toDate != null) {
+                            builder.queryParam("toBookingDateTime", toDate.format(DateTimeFormatter.ISO_DATE_TIME));
+                        }
+                        return builder.build(accountId);
+                    })
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(JsonNode.class);
 
-        return uriBuilder
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(jsonNode -> parseTransactionsResponse(jsonNode, accountId))
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
-                        .filter(throwable -> throwable instanceof WebClientResponseException &&
-                                ((WebClientResponseException) throwable).getStatusCode().is5xxServerError()))
-                .doOnSuccess(response -> log.info("Successfully fetched {} transactions for account: {}",
-                                                  response.getTransactions().size(), accountId))
-                .doOnError(error -> log.error("Failed to fetch transactions for account {}: {}", accountId, error.getMessage()));
+            TransactionListResponse result = parseTransactionsResponse(response, accountId);
+            log.info("Successfully fetched {} transactions for account: {}", result.getTransactions().size(), accountId);
+            return result;
+        }, "Failed to fetch transactions for account " + accountId);
     }
 
     /**
@@ -131,20 +130,61 @@ public class AccountInformationClient {
      * @param accountId the account ID
      * @return account details
      */
-    public Mono<Account> getAccountDetails(String accessToken, String accountId) {
+    public Account getAccountDetails(String accessToken, String accountId) {
         log.debug("Fetching account details for account: {}", accountId);
 
-        return webClient.get()
-                .uri(ACCOUNTS_ENDPOINT + "/{accountId}", accountId)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(jsonNode -> parseAccountResponse(jsonNode))
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
-                        .filter(throwable -> throwable instanceof WebClientResponseException &&
-                                ((WebClientResponseException) throwable).getStatusCode().is5xxServerError()))
-                .doOnSuccess(account -> log.info("Successfully fetched account details: {}", accountId))
-                .doOnError(error -> log.error("Failed to fetch account details for {}: {}", accountId, error.getMessage()));
+        return executeWithRetry(() -> {
+            JsonNode response = restClient.get()
+                    .uri(ACCOUNTS_ENDPOINT + "/{accountId}", accountId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            Account account = parseAccountResponse(response);
+            log.info("Successfully fetched account details: {}", accountId);
+            return account;
+        }, "Failed to fetch account details for " + accountId);
+    }
+
+    /**
+     * Executes a request with retry logic for 5xx server errors.
+     */
+    private <T> T executeWithRetry(java.util.function.Supplier<T> operation, String errorMessage) {
+        int attempts = 0;
+        Exception lastException = null;
+
+        while (attempts < MAX_RETRIES) {
+            try {
+                return operation.get();
+            } catch (RestClientException e) {
+                lastException = e;
+                HttpStatusCode statusCode = null;
+
+                if (e instanceof HttpServerErrorException serverEx) {
+                    statusCode = serverEx.getStatusCode();
+                } else if (e instanceof HttpClientErrorException clientEx) {
+                    statusCode = clientEx.getStatusCode();
+                }
+
+                if (statusCode != null && statusCode.is5xxServerError() && attempts < MAX_RETRIES - 1) {
+                    attempts++;
+                    long delay = RETRY_DELAY_MS * attempts;
+                    log.warn("Server error ({}), retrying in {}ms (attempt {}/{})", statusCode, delay, attempts, MAX_RETRIES);
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Retry interrupted", ie);
+                    }
+                } else {
+                    log.error("{}: {}", errorMessage, e.getMessage());
+                    throw new RuntimeException(errorMessage, e);
+                }
+            }
+        }
+
+        log.error("{} after {} attempts", errorMessage, MAX_RETRIES);
+        throw new RuntimeException(errorMessage, lastException);
     }
 
     private List<Account> parseAccountsResponse(JsonNode jsonNode) {

@@ -20,7 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
         "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration," +
         "org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration," +
         "org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration," +
-        "org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration"
+        "org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration," +
+        "org.springframework.boot.autoconfigure.http.client.HttpClientAutoConfiguration," +
+        "org.springframework.boot.autoconfigure.web.client.RestClientAutoConfiguration"
 })
 class SimpleIntegrationTest {
 
@@ -28,14 +30,15 @@ class SimpleIntegrationTest {
     private Environment environment;
 
     @Test
-    void contextLoads() {
-        // Se este teste passar, sabemos que o contexto carrega corretamente
-        assertThat(true).isTrue();
+    void shouldLoadApplicationContextSuccessfully() {
+        // If this test runs, the context loaded successfully
+        // No assertion needed - test failure would indicate context loading issues
+        assertThat(environment).isNotNull();
     }
 
     @Test
-    void testBasicConfiguration() {
-        // Basic test to verify if configurations are loading
+    void shouldHaveTestProfileActive() {
+        // Verify test profile is active
         assertThat(environment.getActiveProfiles()).contains("test");
     }
 }

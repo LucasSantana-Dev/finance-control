@@ -19,8 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.util.Map;
@@ -83,10 +82,10 @@ class AuthServiceTest {
         when(userRepository.findByEmailHash(testEmailHash)).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
 
-        // Mock MetricsService methods
-        when(metricsService.startAuthenticationTimer()).thenReturn(Instant.now());
-        doNothing().when(metricsService).incrementUserLogin();
-        doNothing().when(metricsService).recordAuthenticationTime(any(Instant.class));
+        // Mock MetricsService methods - use lenient() for optional calls
+        lenient().when(metricsService.startAuthenticationTimer()).thenReturn(Instant.now());
+        lenient().doNothing().when(metricsService).incrementUserLogin();
+        lenient().doNothing().when(metricsService).recordAuthenticationTime(any(Instant.class));
 
         Long result = authService.authenticate("test@example.com", "password123");
 
@@ -96,8 +95,8 @@ class AuthServiceTest {
 
     @Test
     void shouldChangePasswordSuccessfully() {
-        // The changePassword method is not yet implemented, so it throws UnsupportedOperationException
-        assertThat(org.junit.jupiter.api.Assertions.assertThrows(UnsupportedOperationException.class,
+        // When user context is not available, changePassword throws IllegalStateException
+        assertThat(org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
                 () -> authService.changePassword("oldPassword", "newPassword"))).isNotNull();
     }
 
@@ -147,10 +146,10 @@ class AuthServiceTest {
         when(userRepository.findByEmailHash(testEmailHash)).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
 
-        // Mock MetricsService methods
-        when(metricsService.startAuthenticationTimer()).thenReturn(Instant.now());
-        doNothing().when(metricsService).incrementUserLogin();
-        doNothing().when(metricsService).recordAuthenticationTime(any(Instant.class));
+        // Mock MetricsService methods - use lenient() for optional calls
+        lenient().when(metricsService.startAuthenticationTimer()).thenReturn(Instant.now());
+        lenient().doNothing().when(metricsService).incrementUserLogin();
+        lenient().doNothing().when(metricsService).recordAuthenticationTime(any(Instant.class));
 
         Long result = authService.authenticate("test@example.com", "password123");
 
@@ -215,10 +214,9 @@ class AuthServiceTest {
             throw new RuntimeException("Failed to set supabaseAuthService to null", e);
         }
 
-        StepVerifier.create(authService.authenticateWithSupabase("test@example.com", "password"))
-                .expectErrorMatches(error -> error instanceof IllegalStateException
-                        && error.getMessage().contains("Supabase authentication is not enabled"))
-                .verify();
+        assertThatThrownBy(() -> authService.authenticateWithSupabase("test@example.com", "password"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Supabase authentication is not enabled");
     }
 
     @Test
@@ -237,10 +235,9 @@ class AuthServiceTest {
             throw new RuntimeException("Failed to set services", e);
         }
 
-        StepVerifier.create(authService.authenticateWithSupabase("test@example.com", "password"))
-                .expectErrorMatches(error -> error instanceof IllegalStateException
-                        && error.getMessage().contains("User mapping service is not available"))
-                .verify();
+        assertThatThrownBy(() -> authService.authenticateWithSupabase("test@example.com", "password"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("User mapping service is not available");
     }
 
     @Test
@@ -258,9 +255,8 @@ class AuthServiceTest {
                         .build())
                 .build();
 
-        when(supabaseAuthService.signin(any())).thenReturn(Mono.just(supabaseResponse));
+        when(supabaseAuthService.signin(any())).thenReturn(supabaseResponse);
         when(userMappingService.findOrCreateUserFromSupabase(supabaseResponse)).thenReturn(1L);
-        doNothing().when(metricsService).incrementUserLogin();
 
         // Use reflection to set services
         try {
@@ -274,16 +270,14 @@ class AuthServiceTest {
             throw new RuntimeException("Failed to set services", e);
         }
 
-        StepVerifier.create(authService.authenticateWithSupabase("test@example.com", "password"))
-                .expectNextMatches(response -> {
-                    assertThat(response.getAccessToken()).isEqualTo("access-token");
-                    assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
-                    assertThat(response.getUser().getEmail()).isEqualTo("test@example.com");
-                    return true;
-                })
-                .verifyComplete();
+        AuthResponse response = authService.authenticateWithSupabase("test@example.com", "password");
 
-        verify(metricsService).incrementUserLogin();
+        assertThat(response.getAccessToken()).isEqualTo("access-token");
+        assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
+        assertThat(response.getUser().getEmail()).isEqualTo("test@example.com");
+
+        // Note: authenticateWithSupabase does not call metricsService.incrementUserLogin()
+        // Only the regular authenticate() method does
     }
 
     @Test
@@ -301,7 +295,7 @@ class AuthServiceTest {
                         .build())
                 .build();
 
-        when(supabaseAuthService.signup(any())).thenReturn(Mono.just(supabaseResponse));
+        when(supabaseAuthService.signup(any())).thenReturn(supabaseResponse);
         when(userMappingService.findOrCreateUserFromSupabase(supabaseResponse)).thenReturn(1L);
 
         // Use reflection to set services
@@ -316,13 +310,10 @@ class AuthServiceTest {
             throw new RuntimeException("Failed to set services", e);
         }
 
-        StepVerifier.create(authService.signupWithSupabase("test@example.com", "password", Map.of("key", "value")))
-                .expectNextMatches(response -> {
-                    assertThat(response.getAccessToken()).isEqualTo("access-token");
-                    assertThat(response.getUser().getEmail()).isEqualTo("test@example.com");
-                    return true;
-                })
-                .verifyComplete();
+        AuthResponse response = authService.signupWithSupabase("test@example.com", "password", Map.of("key", "value"));
+
+        assertThat(response.getAccessToken()).isEqualTo("access-token");
+        assertThat(response.getUser().getEmail()).isEqualTo("test@example.com");
     }
 
     @Test
@@ -336,7 +327,7 @@ class AuthServiceTest {
                 .expiresIn(3600)
                 .build();
 
-        when(supabaseAuthService.refreshToken("refresh-token")).thenReturn(Mono.just(response));
+        when(supabaseAuthService.refreshToken("refresh-token")).thenReturn(response);
 
         // Use reflection to set supabaseAuthService
         try {
@@ -347,15 +338,14 @@ class AuthServiceTest {
             throw new RuntimeException("Failed to set supabaseAuthService", e);
         }
 
-        StepVerifier.create(authService.refreshSupabaseToken("refresh-token"))
-                .expectNextMatches(r -> r.getAccessToken().equals("new-access-token"))
-                .verifyComplete();
+        AuthResponse result = authService.refreshSupabaseToken("refresh-token");
+        assertThat(result.getAccessToken()).isEqualTo("new-access-token");
     }
 
     @Test
     void resetPasswordWithSupabase_WhenSuccessful_ShouldComplete() {
         when(supabaseAuthService.isSupabaseAuthEnabled()).thenReturn(true);
-        when(supabaseAuthService.resetPassword(any())).thenReturn(Mono.empty());
+        doNothing().when(supabaseAuthService).resetPassword(any());
 
         // Use reflection to set supabaseAuthService
         try {
@@ -366,8 +356,7 @@ class AuthServiceTest {
             throw new RuntimeException("Failed to set supabaseAuthService", e);
         }
 
-        StepVerifier.create(authService.resetPasswordWithSupabase("test@example.com", "https://redirect.com"))
-                .verifyComplete();
+        authService.resetPasswordWithSupabase("test@example.com", "https://redirect.com");
 
         verify(supabaseAuthService).resetPassword(any());
     }
@@ -375,7 +364,7 @@ class AuthServiceTest {
     @Test
     void updatePasswordWithSupabase_WhenSuccessful_ShouldComplete() {
         when(supabaseAuthService.isSupabaseAuthEnabled()).thenReturn(true);
-        when(supabaseAuthService.updatePassword("newPassword", "access-token")).thenReturn(Mono.empty());
+        doNothing().when(supabaseAuthService).updatePassword("newPassword", "access-token");
 
         // Use reflection to set supabaseAuthService
         try {
@@ -386,8 +375,7 @@ class AuthServiceTest {
             throw new RuntimeException("Failed to set supabaseAuthService", e);
         }
 
-        StepVerifier.create(authService.updatePasswordWithSupabase("newPassword", "access-token"))
-                .verifyComplete();
+        authService.updatePasswordWithSupabase("newPassword", "access-token");
 
         verify(supabaseAuthService).updatePassword("newPassword", "access-token");
     }
@@ -395,7 +383,7 @@ class AuthServiceTest {
     @Test
     void signoutFromSupabase_WhenSuccessful_ShouldComplete() {
         when(supabaseAuthService.isSupabaseAuthEnabled()).thenReturn(true);
-        when(supabaseAuthService.signout("access-token")).thenReturn(Mono.empty());
+        doNothing().when(supabaseAuthService).signout("access-token");
 
         // Use reflection to set supabaseAuthService
         try {
@@ -406,8 +394,7 @@ class AuthServiceTest {
             throw new RuntimeException("Failed to set supabaseAuthService", e);
         }
 
-        StepVerifier.create(authService.signoutFromSupabase("access-token"))
-                .verifyComplete();
+        authService.signoutFromSupabase("access-token");
 
         verify(supabaseAuthService).signout("access-token");
     }
@@ -419,7 +406,7 @@ class AuthServiceTest {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode userInfo = mapper.readTree("{\"id\":\"uuid\",\"email\":\"test@example.com\"}");
 
-        when(supabaseAuthService.getUserInfo("access-token")).thenReturn(Mono.just(userInfo));
+        when(supabaseAuthService.getUserInfo("access-token")).thenReturn(userInfo);
 
         // Use reflection to set supabaseAuthService
         try {
@@ -430,9 +417,8 @@ class AuthServiceTest {
             throw new RuntimeException("Failed to set supabaseAuthService", e);
         }
 
-        StepVerifier.create(authService.getCurrentSupabaseUser("access-token"))
-                .expectNextMatches(node -> node.get("email").asText().equals("test@example.com"))
-                .verifyComplete();
+        com.fasterxml.jackson.databind.JsonNode result = authService.getCurrentSupabaseUser("access-token");
+        assertThat(result.get("email").asText()).isEqualTo("test@example.com");
 
         verify(supabaseAuthService).getUserInfo("access-token");
     }

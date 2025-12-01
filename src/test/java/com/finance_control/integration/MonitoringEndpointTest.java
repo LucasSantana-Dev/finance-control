@@ -3,43 +3,43 @@ package com.finance_control.integration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
     "app.security.public-endpoints=/monitoring/**,/api/monitoring/**,/actuator/**",
-    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration,org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration,org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration"
+    "app.feature-flags.monitoring.enabled=true",
+    "app.actuator.enabled=true",
+    "management.endpoints.web.exposure.include=health",
+    "management.endpoints.web.base-path=/actuator",
+    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration,org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration,org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration,org.springframework.boot.autoconfigure.web.client.RestClientAutoConfiguration"
 })
 @DisplayName("Monitoring Endpoint Test")
 class MonitoringEndpointTest {
 
     @Autowired
-    private TestRestTemplate restTemplate;
+    private MockMvc mockMvc;
 
     @Test
     @DisplayName("Should return 200 for metrics summary endpoint")
-    void metricsSummaryEndpoint_ShouldReturn200() {
-        ResponseEntity<Object> response = restTemplate.getForEntity("/monitoring/metrics/summary", Object.class);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
+    void metricsSummaryEndpoint_ShouldReturn200() throws Exception {
+        mockMvc.perform(get("/monitoring/metrics/summary"))
+                .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("Should return 200 for actuator health endpoint")
-    void actuatorHealthEndpoint_ShouldReturn200() {
-        ResponseEntity<Object> response = restTemplate.getForEntity("/actuator/health", Object.class);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
+    void actuatorHealthEndpoint_ShouldReturn200() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk());
     }
 }

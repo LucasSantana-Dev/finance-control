@@ -50,8 +50,7 @@ public class OpenFinancePaymentController {
                 .paymentType(request.getPaymentType())
                 .build();
 
-        PaymentInitiationClient.PaymentResponse response = paymentClient.initiatePayment(accessToken, paymentRequest)
-                .block();
+        PaymentInitiationClient.PaymentResponse response = paymentClient.initiatePayment(accessToken, paymentRequest);
 
         return ResponseEntity.ok(PaymentResponse.builder()
                 .paymentId(response.getPaymentId())
@@ -70,8 +69,7 @@ public class OpenFinancePaymentController {
         featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
 
         String accessToken = consentService.getAccessToken(consentId);
-        PaymentInitiationClient.PaymentStatus status = paymentClient.getPaymentStatus(accessToken, paymentId)
-                .block();
+        PaymentInitiationClient.PaymentStatus status = paymentClient.getPaymentStatus(accessToken, paymentId);
 
         return ResponseEntity.ok(PaymentStatus.builder()
                 .paymentId(status.getPaymentId())
@@ -90,7 +88,7 @@ public class OpenFinancePaymentController {
         featureFlagService.requireEnabled(Feature.OPEN_FINANCE);
 
         String accessToken = consentService.getAccessToken(consentId);
-        paymentClient.cancelPayment(accessToken, paymentId).block();
+        paymentClient.cancelPayment(accessToken, paymentId);
 
         return ResponseEntity.noContent().build();
     }

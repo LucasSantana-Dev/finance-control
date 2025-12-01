@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 /**
  * REST controller for Supabase Authentication operations.
@@ -49,13 +48,17 @@ public class SupabaseAuthController {
         @ApiResponse(responseCode = "409", description = "User already exists"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public Mono<ResponseEntity<AuthResponse>> signup(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<AuthResponse> signup(@Valid @RequestBody SignupRequest request) {
         log.debug("POST /auth/supabase/signup for email: {}", request.getEmail());
 
-        return authService.signup(request)
-                .map(authResponse -> ResponseEntity.ok(authResponse))
-                .doOnSuccess(response -> log.info("Supabase signup successful for email: {}", request.getEmail()))
-                .doOnError(error -> log.error("Supabase signup failed for email: {} - {}", request.getEmail(), error.getMessage()));
+        try {
+            AuthResponse authResponse = authService.signup(request);
+            log.info("Supabase signup successful for email: {}", request.getEmail());
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception e) {
+            log.error("Supabase signup failed for email: {} - {}", request.getEmail(), e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -73,13 +76,17 @@ public class SupabaseAuthController {
         @ApiResponse(responseCode = "401", description = "Authentication failed"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public Mono<ResponseEntity<AuthResponse>> signin(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> signin(@Valid @RequestBody LoginRequest request) {
         log.debug("POST /auth/supabase/signin for email: {}", request.getEmail());
 
-        return authService.signin(request)
-                .map(authResponse -> ResponseEntity.ok(authResponse))
-                .doOnSuccess(response -> log.info("Supabase signin successful for email: {}", request.getEmail()))
-                .doOnError(error -> log.error("Supabase signin failed for email: {} - {}", request.getEmail(), error.getMessage()));
+        try {
+            AuthResponse authResponse = authService.signin(request);
+            log.info("Supabase signin successful for email: {}", request.getEmail());
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception e) {
+            log.error("Supabase signin failed for email: {} - {}", request.getEmail(), e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -97,13 +104,17 @@ public class SupabaseAuthController {
         @ApiResponse(responseCode = "401", description = "Refresh token expired or invalid"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public Mono<ResponseEntity<AuthResponse>> refreshToken(@RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
         log.debug("POST /auth/supabase/refresh");
 
-        return authService.refreshToken(request.getRefreshToken())
-                .map(authResponse -> ResponseEntity.ok(authResponse))
-                .doOnSuccess(response -> log.info("Token refresh successful"))
-                .doOnError(error -> log.error("Token refresh failed: {}", error.getMessage()));
+        try {
+            AuthResponse authResponse = authService.refreshToken(request.getRefreshToken());
+            log.info("Token refresh successful");
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception e) {
+            log.error("Token refresh failed: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -119,13 +130,17 @@ public class SupabaseAuthController {
         @ApiResponse(responseCode = "400", description = "Invalid email"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public Mono<ResponseEntity<String>> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
         log.debug("POST /auth/supabase/reset-password for email: {}", request.getEmail());
 
-        return authService.resetPassword(request)
-                .then(Mono.just(ResponseEntity.ok("Password reset email sent successfully")))
-                .doOnSuccess(response -> log.info("Password reset email sent to: {}", request.getEmail()))
-                .doOnError(error -> log.error("Password reset failed for email: {} - {}", request.getEmail(), error.getMessage()));
+        try {
+            authService.resetPassword(request);
+            log.info("Password reset email sent to: {}", request.getEmail());
+            return ResponseEntity.ok("Password reset email sent successfully");
+        } catch (Exception e) {
+            log.error("Password reset failed for email: {} - {}", request.getEmail(), e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -143,7 +158,7 @@ public class SupabaseAuthController {
         @ApiResponse(responseCode = "401", description = "Unauthorized"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public Mono<ResponseEntity<String>> updatePassword(
+    public ResponseEntity<String> updatePassword(
             @Valid @RequestBody UpdatePasswordRequest request,
             @RequestHeader("Authorization") String authorizationHeader) {
 
@@ -151,10 +166,14 @@ public class SupabaseAuthController {
 
         String accessToken = extractTokenFromHeader(authorizationHeader);
 
-        return authService.updatePassword(request.getNewPassword(), accessToken)
-                .then(Mono.just(ResponseEntity.ok("Password updated successfully")))
-                .doOnSuccess(response -> log.info("Password update successful"))
-                .doOnError(error -> log.error("Password update failed: {}", error.getMessage()));
+        try {
+            authService.updatePassword(request.getNewPassword(), accessToken);
+            log.info("Password update successful");
+            return ResponseEntity.ok("Password updated successfully");
+        } catch (Exception e) {
+            log.error("Password update failed: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -173,7 +192,7 @@ public class SupabaseAuthController {
         @ApiResponse(responseCode = "409", description = "Email already in use"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public Mono<ResponseEntity<String>> updateEmail(
+    public ResponseEntity<String> updateEmail(
             @Valid @RequestBody UpdateEmailRequest request,
             @RequestHeader("Authorization") String authorizationHeader) {
 
@@ -181,10 +200,14 @@ public class SupabaseAuthController {
 
         String accessToken = extractTokenFromHeader(authorizationHeader);
 
-        return authService.updateEmail(request.getNewEmail(), accessToken)
-                .then(Mono.just(ResponseEntity.ok("Email update initiated successfully. Please check your email for confirmation.")))
-                .doOnSuccess(response -> log.info("Email update initiated for: {}", request.getNewEmail()))
-                .doOnError(error -> log.error("Email update failed for: {} - {}", request.getNewEmail(), error.getMessage()));
+        try {
+            authService.updateEmail(request.getNewEmail(), accessToken);
+            log.info("Email update initiated for: {}", request.getNewEmail());
+            return ResponseEntity.ok("Email update initiated successfully. Please check your email for confirmation.");
+        } catch (Exception e) {
+            log.error("Email update failed for: {} - {}", request.getNewEmail(), e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -200,15 +223,19 @@ public class SupabaseAuthController {
         @ApiResponse(responseCode = "401", description = "Unauthorized"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public Mono<ResponseEntity<String>> signout(@RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<String> signout(@RequestHeader("Authorization") String authorizationHeader) {
         log.debug("POST /auth/supabase/signout");
 
         String accessToken = extractTokenFromHeader(authorizationHeader);
 
-        return authService.signout(accessToken)
-                .then(Mono.just(ResponseEntity.ok("Sign out successful")))
-                .doOnSuccess(response -> log.info("User sign out successful"))
-                .doOnError(error -> log.error("User sign out failed: {}", error.getMessage()));
+        try {
+            authService.signout(accessToken);
+            log.info("User sign out successful");
+            return ResponseEntity.ok("Sign out successful");
+        } catch (Exception e) {
+            log.error("User sign out failed: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -227,17 +254,21 @@ public class SupabaseAuthController {
         @ApiResponse(responseCode = "400", description = "Invalid verification token"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public Mono<ResponseEntity<AuthResponse>> verifyEmail(
+    public ResponseEntity<AuthResponse> verifyEmail(
             @RequestParam String token,
             @RequestParam String type,
             @RequestParam String email) {
 
         log.debug("POST /auth/supabase/verify for email: {}", email);
 
-        return authService.verifyEmail(token, type, email)
-                .map(authResponse -> ResponseEntity.ok(authResponse))
-                .doOnSuccess(response -> log.info("Email verification successful for: {}", email))
-                .doOnError(error -> log.error("Email verification failed for: {} - {}", email, error.getMessage()));
+        try {
+            AuthResponse authResponse = authService.verifyEmail(token, type, email);
+            log.info("Email verification successful for: {}", email);
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception e) {
+            log.error("Email verification failed for: {} - {}", email, e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -253,15 +284,19 @@ public class SupabaseAuthController {
         @ApiResponse(responseCode = "401", description = "Unauthorized"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public Mono<ResponseEntity<Object>> getCurrentUser(@RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<Object> getCurrentUser(@RequestHeader("Authorization") String authorizationHeader) {
         log.debug("GET /auth/supabase/me");
 
         String accessToken = extractTokenFromHeader(authorizationHeader);
 
-        return authService.getUserInfo(accessToken)
-                .map(userInfo -> ResponseEntity.ok((Object) userInfo))
-                .doOnSuccess(response -> log.debug("User info retrieved successfully"))
-                .doOnError(error -> log.error("Failed to get user info: {}", error.getMessage()));
+        try {
+            Object userInfo = authService.getUserInfo(accessToken);
+            log.debug("User info retrieved successfully");
+            return ResponseEntity.ok(userInfo);
+        } catch (Exception e) {
+            log.error("Failed to get user info: {}", e.getMessage());
+            throw e;
+        }
     }
 
     /**

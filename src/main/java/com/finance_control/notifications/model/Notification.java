@@ -46,7 +46,7 @@ public class Notification extends BaseModel<Long> {
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 
-    @Column(columnDefinition = "JSONB")
+    @Column(columnDefinition = "TEXT")
     private String metadata;
 
     @Column(name = "read_at")

@@ -8,6 +8,8 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -26,8 +28,11 @@ import java.util.Map;
 /**
  * Redis configuration for caching and rate limiting.
  * Provides Redis connection, cache manager, and Redis template configuration.
+ * This configuration is only active in production profile when Redis host is configured.
+ * For development/single-user deployments, CaffeineConfig is used instead.
  */
 @Slf4j
+@Profile("prod")
 @ConditionalOnExpression("!'${app.redis.host:}'.isEmpty()")
 @Configuration
 @EnableCaching
@@ -85,8 +90,10 @@ public class RedisConfig {
 
     /**
      * Configures cache manager with different TTL for different cache names.
+     * This overrides CaffeineConfig when Redis is available in production.
      */
     @Bean
+    @Primary
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         com.finance_control.shared.config.properties.CacheProperties cache = appProperties.cache();
 

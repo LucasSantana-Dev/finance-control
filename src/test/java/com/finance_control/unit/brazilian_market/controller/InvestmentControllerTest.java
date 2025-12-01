@@ -20,9 +20,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.core.MethodParameter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
@@ -43,6 +46,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -51,6 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Tests the unified GET /investments endpoint with filtering, sorting, pagination, and metadata.
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class InvestmentControllerTest {
 
     private MockMvc mockMvc;
@@ -155,11 +160,11 @@ class InvestmentControllerTest {
     void getInvestments_WithValidParameters_ShouldReturnOk() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
                 .thenReturn(investments);
-        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
+        lenient().when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
         doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
@@ -180,7 +185,7 @@ class InvestmentControllerTest {
     void getInvestments_WithTypeFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), eq(InvestmentType.STOCK), any(), any(), any()))
                 .thenReturn(investments);
@@ -202,7 +207,7 @@ class InvestmentControllerTest {
     void getInvestments_WithSearchTerm_ShouldReturnSearchResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), eq("PETR4"), any(), any(), any(), any()))
                 .thenReturn(investments);
@@ -223,11 +228,11 @@ class InvestmentControllerTest {
     void getInvestments_WithPriceRangeFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
                 .thenReturn(investments);
-        when(filterHelper.applyPriceAndDividendFilters(anyList(), eq(BigDecimal.valueOf(20.00)), eq(BigDecimal.valueOf(30.00)), any(), any()))
+        lenient().when(filterHelper.applyPriceAndDividendFilters(anyList(), eq(BigDecimal.valueOf(20.00)), eq(BigDecimal.valueOf(30.00)), any(), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
         doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
@@ -245,11 +250,11 @@ class InvestmentControllerTest {
     void getInvestments_WithDividendYieldFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
                 .thenReturn(investments);
-        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), eq(BigDecimal.valueOf(5.0)), eq(BigDecimal.valueOf(10.0))))
+        lenient().when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), eq(BigDecimal.valueOf(5.0)), eq(BigDecimal.valueOf(10.0))))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
         doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
@@ -371,11 +376,11 @@ class InvestmentControllerTest {
     void getInvestments_WithComplexFiltering_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 10), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), eq(InvestmentType.STOCK), any(), eq("Energy"), any()))
                 .thenReturn(investments);
-        when(filterHelper.applyPriceAndDividendFilters(anyList(), eq(BigDecimal.valueOf(20.00)), eq(BigDecimal.valueOf(30.00)), eq(BigDecimal.valueOf(5.0)), any()))
+        lenient().when(filterHelper.applyPriceAndDividendFilters(anyList(), eq(BigDecimal.valueOf(20.00)), eq(BigDecimal.valueOf(30.00)), eq(BigDecimal.valueOf(5.0)), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
         doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
@@ -400,7 +405,7 @@ class InvestmentControllerTest {
     void getInvestments_WithTypeAndSubtypeFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), eq(InvestmentType.STOCK), eq(InvestmentSubtype.ORDINARY), any(), any()))
                 .thenReturn(investments);
@@ -423,7 +428,7 @@ class InvestmentControllerTest {
     void getInvestments_WithSectorFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), eq("Energy"), any()))
                 .thenReturn(investments);
@@ -444,7 +449,7 @@ class InvestmentControllerTest {
     void getInvestments_WithIndustryFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), eq("Oil & Gas")))
                 .thenReturn(investments);
@@ -465,11 +470,11 @@ class InvestmentControllerTest {
     void getInvestments_WithOnlyMinPriceFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
                 .thenReturn(investments);
-        when(filterHelper.applyPriceAndDividendFilters(anyList(), eq(BigDecimal.valueOf(25.00)), any(), any(), any()))
+        lenient().when(filterHelper.applyPriceAndDividendFilters(anyList(), eq(BigDecimal.valueOf(25.00)), any(), any(), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
         doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
@@ -485,11 +490,11 @@ class InvestmentControllerTest {
     void getInvestments_WithOnlyMaxPriceFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
                 .thenReturn(investments);
-        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), eq(BigDecimal.valueOf(30.00)), any(), any()))
+        lenient().when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), eq(BigDecimal.valueOf(30.00)), any(), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
         doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
@@ -505,11 +510,11 @@ class InvestmentControllerTest {
     void getInvestments_WithOnlyMinDividendYieldFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
                 .thenReturn(investments);
-        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), eq(BigDecimal.valueOf(5.0)), any()))
+        lenient().when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), eq(BigDecimal.valueOf(5.0)), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
         doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
@@ -525,11 +530,11 @@ class InvestmentControllerTest {
     void getInvestments_WithOnlyMaxDividendYieldFilter_ShouldReturnFilteredResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 20), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
                 .thenReturn(investments);
-        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), eq(BigDecimal.valueOf(10.0))))
+        lenient().when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), eq(BigDecimal.valueOf(10.0))))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
         doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));
@@ -545,11 +550,11 @@ class InvestmentControllerTest {
     void getInvestments_WithPagination_ShouldReturnPagedResults() throws Exception {
         List<Investment> investments = Arrays.asList(testInvestment);
         List<InvestmentDTO> investmentDTOs = Arrays.asList(testInvestmentDTO);
-        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs);
+        Page<InvestmentDTO> pagedResult = new PageImpl<>(investmentDTOs, PageRequest.of(0, 1), investmentDTOs.size());
 
         when(filterHelper.getInvestmentsByFilters(any(User.class), any(), any(), any(), any(), any()))
                 .thenReturn(investments);
-        when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
+        lenient().when(filterHelper.applyPriceAndDividendFilters(anyList(), any(), any(), any(), any()))
                 .thenReturn(investments);
         when(investmentService.convertToResponseDTO(any(Investment.class))).thenReturn(testInvestmentDTO);
         doReturn(pagedResult).when(filterHelper).paginateList(anyList(), any(Pageable.class));

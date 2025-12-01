@@ -46,16 +46,9 @@ public class UserSynchronizationService {
 
         try {
             // Get user info from Supabase
-            Optional<JsonNode> supabaseUserInfo = supabaseAuthService.getUserInfo(accessToken).blockOptional();
-
-            if (supabaseUserInfo.isPresent()) {
-                JsonNode userData = supabaseUserInfo.get();
-                updateLocalUserFromSupabase(localUserId, userData);
-                log.info("Successfully synced user data from Supabase for user: {}", localUserId);
-            } else {
-                log.warn("Could not retrieve user info from Supabase for user: {}", localUserId);
-            }
-
+            JsonNode userData = supabaseAuthService.getUserInfo(accessToken);
+            updateLocalUserFromSupabase(localUserId, userData);
+            log.info("Successfully synced user data from Supabase for user: {}", localUserId);
         } catch (Exception e) {
             log.error("Error syncing user data from Supabase for user {}: {}", localUserId, e.getMessage(), e);
         }
@@ -166,12 +159,10 @@ public class UserSynchronizationService {
             // Update Supabase user metadata using SupabaseProfileService
             if (supabaseProfileService != null) {
                 try {
-                    supabaseProfileService.updateUserMetadata(accessToken, metadata)
-                            .doOnSuccess(v -> log.info("Successfully synced user metadata to Supabase for user: {} (email: {})", localUserId, user.getEmail()))
-                            .doOnError(error -> log.error("Failed to sync user metadata to Supabase for user {}: {}", localUserId, error.getMessage()))
-                            .block();
+                    supabaseProfileService.updateUserMetadata(accessToken, metadata);
+                    log.info("Successfully synced user metadata to Supabase for user: {} (email: {})", localUserId, user.getEmail());
                 } catch (Exception e) {
-                    log.error("Error updating Supabase metadata for user {}: {}", localUserId, e.getMessage(), e);
+                    log.error("Failed to sync user metadata to Supabase for user {}: {}", localUserId, e.getMessage(), e);
                 }
             } else {
                 log.warn("SupabaseProfileService not available. Cannot sync user metadata to Supabase for user: {}", localUserId);

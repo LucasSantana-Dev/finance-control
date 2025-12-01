@@ -9,7 +9,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.http.client.HttpClientAutoConfiguration,org.springframework.boot.autoconfigure.web.client.RestClientAutoConfiguration"
+})
 @ActiveProfiles("test")
 class FinanceControlApplicationTests {
 
@@ -52,9 +54,13 @@ class FinanceControlApplicationTests {
 				new CacheProperties(true, 3600L, 1800L, 900L),
 				new RateLimitProperties(true, 100, 200, 60),
 				new AiProperties(),
-				new SupabaseProperties(false, "", "", "", "", new SupabaseProperties.SupabaseDatabaseProperties(), new SupabaseProperties.StorageProperties(), new SupabaseProperties.RealtimeProperties(false, java.util.List.of("transactions", "dashboard", "goals"))),
+				new SupabaseProperties(false, "", "", "", "",
+					new SupabaseProperties.SupabaseDatabaseProperties(false, "", 5432, "", "", "", false, "require"),
+					new SupabaseProperties.StorageProperties(false, "avatars", "documents", "transactions", new SupabaseProperties.CompressionProperties(true, 6, 0.1, 1024, java.util.List.of())),
+					new SupabaseProperties.RealtimeProperties(false, java.util.List.of("transactions", "dashboard", "goals"))),
 				new MonitoringProperties(true, new MonitoringProperties.SentryProperties(false, "test-dsn", "ERROR", "1.0.0", 0.1, 0.1, false, true, true)),
-				new OpenFinanceProperties()
+				new OpenFinanceProperties(),
+				new FeatureFlagsProperties()
 			);
 		}
 	}

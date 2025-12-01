@@ -134,9 +134,13 @@ class ConfigurationServiceTest {
             new CacheProperties(true, 900000, 300000, 1800000),
             new RateLimitProperties(true, 100, 200, 60),
             new AiProperties(),
-            new SupabaseProperties(false, "", "", "", "", new SupabaseProperties.SupabaseDatabaseProperties(), new SupabaseProperties.StorageProperties(), new SupabaseProperties.RealtimeProperties(false, List.of("transactions", "dashboard", "goals"))),
+            new SupabaseProperties(false, "", "", "", "",
+                new SupabaseProperties.SupabaseDatabaseProperties(false, "", 5432, "", "", "", false, "require"),
+                new SupabaseProperties.StorageProperties(false, "avatars", "documents", "transactions", new SupabaseProperties.CompressionProperties(true, 6, 0.1, 1024, List.of())),
+                new SupabaseProperties.RealtimeProperties(false, List.of("transactions", "dashboard", "goals"))),
             new MonitoringProperties(true, new MonitoringProperties.SentryProperties(true, "", "dev", "1.0.0", 0.1, 0.1, false, true, true)),
-            new OpenFinanceProperties()
+            new OpenFinanceProperties(),
+            new FeatureFlagsProperties()
         );
 
         // Mock AppProperties using record accessors
@@ -438,7 +442,8 @@ class ConfigurationServiceTest {
             appPropertiesInstance.ai(),
             appPropertiesInstance.supabase(),
             appPropertiesInstance.monitoring(),
-            appPropertiesInstance.openFinance()
+            appPropertiesInstance.openFinance(),
+            new FeatureFlagsProperties()
         );
 
         configurationService = new ConfigurationService(nullSecretAppProperties, environmentInfo);

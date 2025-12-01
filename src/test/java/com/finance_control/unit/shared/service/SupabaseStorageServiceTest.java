@@ -48,7 +48,7 @@ class SupabaseStorageServiceTest {
         );
         SupabaseProperties supabaseRecord = new SupabaseProperties(
             true, "https://test.supabase.co", "test-anon-key", "test-jwt-signer", "test-service-role",
-            new SupabaseProperties.SupabaseDatabaseProperties(),
+            new SupabaseProperties.SupabaseDatabaseProperties(false, "", 5432, "", "", "", false, "require"),
             storage,
             new SupabaseProperties.RealtimeProperties(true, new java.util.ArrayList<>())
         );

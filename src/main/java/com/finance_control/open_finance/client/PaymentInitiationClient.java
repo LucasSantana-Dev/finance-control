@@ -6,15 +6,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,10 +28,12 @@ import java.util.Map;
 @ConditionalOnProperty(value = "app.open-finance.enabled", havingValue = "true", matchIfMissing = false)
 public class PaymentInitiationClient {
 
-    @Qualifier("openFinanceWebClient")
-    private final WebClient webClient;
+    @Qualifier("openFinanceRestClient")
+    private final RestClient restClient;
 
     private static final String PAYMENTS_ENDPOINT = "/open-banking/payments/v1/pix/payments";
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 2000;
 
     /**
      * Initiates a payment.
@@ -40,7 +42,7 @@ public class PaymentInitiationClient {
      * @param paymentRequest payment request details
      * @return payment response with payment ID and status
      */
-    public Mono<PaymentResponse> initiatePayment(String accessToken, PaymentRequest paymentRequest) {
+    public PaymentResponse initiatePayment(String accessToken, PaymentRequest paymentRequest) {
         log.debug("Initiating payment: {}", paymentRequest.getEndToEndId());
 
         Map<String, Object> requestBody = new HashMap<>();
@@ -66,19 +68,19 @@ public class PaymentInitiationClient {
         data.put("payment", payment);
         requestBody.put("data", data);
 
-        return webClient.post()
-                .uri(PAYMENTS_ENDPOINT)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(this::parsePaymentResponse)
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
-                        .filter(throwable -> throwable instanceof WebClientResponseException &&
-                                ((WebClientResponseException) throwable).getStatusCode().is5xxServerError()))
-                .doOnSuccess(response -> log.info("Successfully initiated payment: {}", response.getPaymentId()))
-                .doOnError(error -> log.error("Failed to initiate payment: {}", error.getMessage()));
+        return executeWithRetry(() -> {
+            JsonNode response = restClient.post()
+                    .uri(PAYMENTS_ENDPOINT)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            PaymentResponse result = parsePaymentResponse(response);
+            log.info("Successfully initiated payment: {}", result.getPaymentId());
+            return result;
+        }, "Failed to initiate payment");
     }
 
     /**
@@ -88,20 +90,20 @@ public class PaymentInitiationClient {
      * @param paymentId the payment ID
      * @return payment status
      */
-    public Mono<PaymentStatus> getPaymentStatus(String accessToken, String paymentId) {
+    public PaymentStatus getPaymentStatus(String accessToken, String paymentId) {
         log.debug("Checking payment status: {}", paymentId);
 
-        return webClient.get()
-                .uri(PAYMENTS_ENDPOINT + "/{paymentId}", paymentId)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(this::parsePaymentStatusResponse)
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
-                        .filter(throwable -> throwable instanceof WebClientResponseException &&
-                                ((WebClientResponseException) throwable).getStatusCode().is5xxServerError()))
-                .doOnSuccess(status -> log.info("Payment status for {}: {}", paymentId, status.getStatus()))
-                .doOnError(error -> log.error("Failed to get payment status for {}: {}", paymentId, error.getMessage()));
+        return executeWithRetry(() -> {
+            JsonNode response = restClient.get()
+                    .uri(PAYMENTS_ENDPOINT + "/{paymentId}", paymentId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            PaymentStatus status = parsePaymentStatusResponse(response);
+            log.info("Payment status for {}: {}", paymentId, status.getStatus());
+            return status;
+        }, "Failed to get payment status for " + paymentId);
     }
 
     /**
@@ -109,21 +111,61 @@ public class PaymentInitiationClient {
      *
      * @param accessToken the OAuth access token
      * @param paymentId the payment ID
-     * @return Mono completing when cancellation is successful
      */
-    public Mono<Void> cancelPayment(String accessToken, String paymentId) {
+    public void cancelPayment(String accessToken, String paymentId) {
         log.debug("Cancelling payment: {}", paymentId);
 
-        return webClient.delete()
-                .uri(PAYMENTS_ENDPOINT + "/{paymentId}", paymentId)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
-                        .filter(throwable -> throwable instanceof WebClientResponseException &&
-                                ((WebClientResponseException) throwable).getStatusCode().is5xxServerError()))
-                .doOnSuccess(response -> log.info("Successfully cancelled payment: {}", paymentId))
-                .doOnError(error -> log.error("Failed to cancel payment {}: {}", paymentId, error.getMessage()));
+        executeWithRetry(() -> {
+            restClient.delete()
+                    .uri(PAYMENTS_ENDPOINT + "/{paymentId}", paymentId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Successfully cancelled payment: {}", paymentId);
+            return null;
+        }, "Failed to cancel payment " + paymentId);
+    }
+
+    /**
+     * Executes a request with retry logic for 5xx server errors.
+     */
+    private <T> T executeWithRetry(java.util.function.Supplier<T> operation, String errorMessage) {
+        int attempts = 0;
+        Exception lastException = null;
+
+        while (attempts < MAX_RETRIES) {
+            try {
+                return operation.get();
+            } catch (RestClientException e) {
+                lastException = e;
+                HttpStatusCode statusCode = null;
+
+                if (e instanceof HttpServerErrorException serverEx) {
+                    statusCode = serverEx.getStatusCode();
+                } else if (e instanceof HttpClientErrorException clientEx) {
+                    statusCode = clientEx.getStatusCode();
+                }
+
+                if (statusCode != null && statusCode.is5xxServerError() && attempts < MAX_RETRIES - 1) {
+                    attempts++;
+                    long delay = RETRY_DELAY_MS * attempts;
+                    log.warn("Server error ({}), retrying in {}ms (attempt {}/{})", statusCode, delay, attempts, MAX_RETRIES);
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Retry interrupted", ie);
+                    }
+                } else {
+                    log.error("{}: {}", errorMessage, e.getMessage());
+                    throw new RuntimeException(errorMessage, e);
+                }
+            }
+        }
+
+        log.error("{} after {} attempts", errorMessage, MAX_RETRIES);
+        throw new RuntimeException(errorMessage, lastException);
     }
 
     private PaymentResponse parsePaymentResponse(JsonNode jsonNode) {

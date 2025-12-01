@@ -91,26 +91,31 @@ services:
       - docker.env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       JAVA_OPTS: "${JAVA_OPTS:-}"
       # Conditional Supabase connection based on SUPABASE_LOCAL_ENABLED
       SUPABASE_LOCAL_ENABLED: ${SUPABASE_LOCAL_ENABLED:-false}
       # Supabase database connection - overridden by docker-run.sh when SUPABASE_LOCAL_ENABLED=true
       # These will override env_file values when set as environment variables
-      SUPABASE_DATABASE_HOST: ${SUPABASE_DATABASE_HOST}
-      SUPABASE_DATABASE_PORT: ${SUPABASE_DATABASE_PORT}
-      SUPABASE_DATABASE_NAME: ${SUPABASE_DATABASE_NAME}
-      SUPABASE_DATABASE_USERNAME: ${SUPABASE_DATABASE_USERNAME}
-      SUPABASE_DATABASE_PASSWORD: ${SUPABASE_DATABASE_PASSWORD}
-      SUPABASE_DATABASE_SSL_ENABLED: ${SUPABASE_DATABASE_SSL_ENABLED}
-      SUPABASE_DATABASE_SSL_MODE: ${SUPABASE_DATABASE_SSL_MODE}
+      # SUPABASE_DATABASE_HOST: ${SUPABASE_DATABASE_HOST}
+      # SUPABASE_DATABASE_PORT: ${SUPABASE_DATABASE_PORT}
+      # SUPABASE_DATABASE_NAME: ${SUPABASE_DATABASE_NAME}
+      # SUPABASE_DATABASE_USERNAME: ${SUPABASE_DATABASE_USERNAME}
+      # SUPABASE_DATABASE_PASSWORD: ${SUPABASE_DATABASE_PASSWORD}
+      # SUPABASE_DATABASE_SSL_ENABLED: ${SUPABASE_DATABASE_SSL_ENABLED}
+      # SUPABASE_DATABASE_SSL_MODE: ${SUPABASE_DATABASE_SSL_MODE}
+
     ports:
       - "${APPLICATION_PORT}:8080"
       - "5005:5005"
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      # Local db dependency - only needed when SUPABASE_DATABASE_ENABLED=false
+      # When using remote Supabase, this dependency is not required
+      db:
+        condition: service_healthy
+        required: false
       supabase-db:
         condition: service_healthy
         required: false
@@ -400,6 +405,7 @@ services:
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${SUPABASE_LOCAL_PUBLIC_URL:-http://127.0.0.1:54321}
       GOTRUE_DB_DRIVER: postgres
       GOTRUE_DB_DATABASE_URL: postgres://${SUPABASE_LOCAL_DB_USER:-postgres}:${SUPABASE_LOCAL_DB_PASSWORD:-postgres}@supabase-db:5432/${SUPABASE_LOCAL_DB_NAME:-postgres}?search_path=auth
       GOTRUE_SITE_URL: ${SUPABASE_LOCAL_SITE_URL:-http://127.0.0.1:3000}

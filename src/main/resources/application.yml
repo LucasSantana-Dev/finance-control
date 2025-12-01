@@ -23,27 +23,25 @@ spring:
         format_sql: false
         physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
 
-      # Database Configuration - Using local PostgreSQL for testing
-      datasource:
-        url: ${DB_URL:jdbc:h2:mem:testdb}
-        username: ${DB_USERNAME:sa}
-        password: ${DB_PASSWORD:}
-        driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:${app.database.driver-class-name:org.h2.Driver}}
-        hikari:
-          maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
-          minimum-idle: ${DB_POOL_MIN_IDLE:5}
-          connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:20000}
-          idle-timeout: ${DB_POOL_IDLE_TIMEOUT:300000}
-          max-lifetime: ${DB_POOL_MAX_LIFETIME:300000}
-          leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_THRESHOLD:60000}
+  # Database Configuration
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:testdb}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:${app.database.driver-class-name:org.h2.Driver}}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:20000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:300000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:300000}
+      leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_THRESHOLD:60000}
 
   # Cache Configuration
   cache:
-    type: redis
-    redis:
-      time-to-live: ${app.cache.ttl.dashboard}
-      cache-null-values: false
-      enable-statistics: true
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=15m
 
   flyway:
     enabled: ${app.flyway.enabled}
@@ -185,7 +183,7 @@ app:
   monitoring:
     enabled: ${MONITORING_ENABLED:true}
     sentry:
-      enabled: ${SENTRY_ENABLED:true}
+      enabled: ${SENTRY_ENABLED:false}
     health-check:
       interval: ${HEALTH_CHECK_INTERVAL:30}
     frontend-errors:
@@ -263,6 +261,24 @@ app:
       endpoint: ${OPEN_FINANCE_INSTITUTION_REGISTRY_ENDPOINT:https://api.openfinancebrasil.org.br/institutions}
       refresh-interval-hours: ${OPEN_FINANCE_INSTITUTION_REFRESH_INTERVAL:24}
       auto-refresh: ${OPEN_FINANCE_INSTITUTION_AUTO_REFRESH:true}
+
+  ai:
+    enabled: ${AI_ENABLED:true}
+    provider: ${AI_PROVIDER:openai}
+    openai:
+      enabled: ${OPENAI_ENABLED:true}
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_MODEL:gpt-4o-mini}
+      max-tokens: ${OPENAI_MAX_TOKENS:800}
+      temperature: ${OPENAI_TEMPERATURE:0.2}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    cometapi:
+      enabled: ${COMETAPI_ENABLED:false}
+      api-key: ${COMETAPI_API_KEY:}
+      model: ${COMETAPI_MODEL:gpt-4o-mini}
+      max-tokens: ${COMETAPI_MAX_TOKENS:800}
+      temperature: ${COMETAPI_TEMPERATURE:0.7}
+      base-url: ${COMETAPI_BASE_URL:https://api.cometapi.com/v1}
 
   feature-flags:
     financial-predictions:

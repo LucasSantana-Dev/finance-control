@@ -78,12 +78,15 @@ class BaseServiceTest {
 
     @Test
     void findAll_WithNullSort_ShouldDefaultAsc() {
+        // Given
         Pageable input = PageRequest.of(0, 10);
         Page<DummyEntity> page = new PageImpl<>(List.of(), input, 0);
         doReturn(page).when(repository).findAll(any(Specification.class), any(Pageable.class));
 
-        service.findAll(null, Map.of("k", "v"), null, null, input);
-        // No direct way to assert pageable sort here without captor; coverage comes from branch execution
-        assertThat(true).isTrue();
+        // When
+        Page<DummyDTO> result = service.findAll(null, Map.of("k", "v"), null, null, input);
+
+        // Then - verify method executes without exception and returns result
+        assertThat(result).isNotNull();
     }
 }

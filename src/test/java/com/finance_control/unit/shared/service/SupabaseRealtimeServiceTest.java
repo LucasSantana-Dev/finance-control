@@ -3,6 +3,9 @@ package com.finance_control.unit.shared.service;
 import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.config.properties.SupabaseProperties;
 import com.finance_control.shared.service.SupabaseRealtimeService;
+import com.finance_control.shared.service.realtime.RealtimeMessageHandler;
+import com.finance_control.shared.service.realtime.RealtimeSubscriptionManager;
+import com.finance_control.shared.service.realtime.RealtimeWebSocketManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -29,6 +32,15 @@ class SupabaseRealtimeServiceTest {
 
     @Mock
     private SimpMessagingTemplate messagingTemplate;
+
+    @Mock
+    private RealtimeWebSocketManager webSocketManager;
+
+    @Mock
+    private RealtimeSubscriptionManager subscriptionManager;
+
+    @Mock
+    private RealtimeMessageHandler messageHandler;
 
     @InjectMocks
     private SupabaseRealtimeService realtimeService;
@@ -44,11 +56,37 @@ class SupabaseRealtimeServiceTest {
         );
         SupabaseProperties supabaseRecord = new SupabaseProperties(
             true, "https://test.supabase.co", "test-anon-key", "test-jwt-signer", "test-service-role",
-            new SupabaseProperties.SupabaseDatabaseProperties(),
-            new SupabaseProperties.StorageProperties(true, "avatars", "documents", "transactions", new SupabaseProperties.CompressionProperties()),
+            new SupabaseProperties.SupabaseDatabaseProperties(false, "", 5432, "", "", "", false, "require"),
+            new SupabaseProperties.StorageProperties(true, "avatars", "documents", "transactions", new SupabaseProperties.CompressionProperties(true, 6, 0.1, 1024, java.util.List.of())),
             realtime
         );
         when(appProperties.supabase()).thenReturn(supabaseRecord);
+
+        // Setup mocks for dependencies
+        lenient().doNothing().when(webSocketManager).initialize();
+        lenient().when(webSocketManager.connect(any())).thenReturn(true);
+        lenient().doNothing().when(webSocketManager).disconnect();
+        lenient().when(webSocketManager.isConnected()).thenReturn(false);
+        lenient().when(webSocketManager.getSession()).thenReturn(null);
+        lenient().when(webSocketManager.getNextMessageId()).thenReturn(1L);
+        lenient().doNothing().when(subscriptionManager).setupDefaultChannels();
+        lenient().doNothing().when(subscriptionManager).clearAll();
+        lenient().doNothing().when(subscriptionManager).subscribeToChannel(anyString(), anyLong());
+        lenient().doNothing().when(subscriptionManager).unsubscribeFromChannel(anyString(), anyLong());
+        lenient().doNothing().when(subscriptionManager).subscribeToDatabaseChanges(anyString(), anyLong());
+        lenient().doNothing().when(subscriptionManager).unsubscribeFromDatabaseChanges(anyString(), anyLong());
+        lenient().when(subscriptionManager.isValidChannel(anyString())).thenReturn(true);
+        lenient().when(subscriptionManager.getSubscriptionCounts()).thenReturn(new HashMap<>());
+        lenient().when(subscriptionManager.getDatabaseSubscribers(anyString())).thenReturn(new java.util.HashSet<>());
+        lenient().doNothing().when(messageHandler).broadcastToChannel(anyString(), any());
+        lenient().doNothing().when(messageHandler).broadcastToUser(anyString(), anyLong(), any());
+        lenient().doNothing().when(messageHandler).notifyTransactionUpdate(anyLong(), any());
+        lenient().doNothing().when(messageHandler).notifyDashboardUpdate(anyLong(), any());
+        lenient().doNothing().when(messageHandler).notifyGoalUpdate(anyLong(), any());
+        lenient().doNothing().when(messageHandler).handleRealtimeMessage(anyString(), any());
+        lenient().doNothing().when(messageHandler).sendDatabaseSubscriptionMessage(any(), anyString(), anyLong());
+        lenient().doNothing().when(messageHandler).sendDatabaseUnsubscriptionMessage(any(), anyString(), anyLong());
+        lenient().when(messageHandler.getObjectMapper()).thenReturn(new com.fasterxml.jackson.databind.ObjectMapper());
 
         // Setup test data
         testData = new HashMap<>();
@@ -66,11 +104,16 @@ class SupabaseRealtimeServiceTest {
         // Given
         String channelName = "transactions";
         Long userId = 1L;
+        Map<String, Integer> counts = new HashMap<>();
+        counts.put(channelName, 1);
+        when(subscriptionManager.getSubscriptionCounts()).thenReturn(counts);
 
         // When
         realtimeService.subscribeToChannel(channelName, userId);
 
         // Then
+        verify(subscriptionManager).subscribeToChannel(channelName, userId);
+        verify(messageHandler).broadcastToUser(eq(channelName), eq(userId), any());
         Map<String, Integer> subscriptionCounts = realtimeService.getSubscriptionCounts();
         assertThat(subscriptionCounts.get(channelName)).isEqualTo(1);
     }
@@ -80,6 +123,8 @@ class SupabaseRealtimeServiceTest {
         // Given
         String invalidChannel = "invalid_channel";
         Long userId = 1L;
+        when(subscriptionManager.isValidChannel(invalidChannel)).thenReturn(false);
+        doThrow(new IllegalArgumentException("Invalid channel")).when(subscriptionManager).subscribeToChannel(invalidChannel, userId);
 
         // When & Then
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
@@ -92,27 +137,18 @@ class SupabaseRealtimeServiceTest {
         // Given
         String channelName = "transactions";
         Long userId = 1L;
+        Map<String, Integer> countsBefore = new HashMap<>();
+        countsBefore.put(channelName, 1);
+        when(subscriptionManager.getSubscriptionCounts()).thenReturn(countsBefore);
         realtimeService.subscribeToChannel(channelName, userId);
 
-        // Verify subscription exists
-        Map<String, Integer> countsBefore = realtimeService.getSubscriptionCounts();
-        assertThat(countsBefore.get(channelName)).isEqualTo(1);
-
         // When
+        Map<String, Integer> countsAfter = new HashMap<>();
+        when(subscriptionManager.getSubscriptionCounts()).thenReturn(countsAfter);
         realtimeService.unsubscribeFromChannel(channelName, userId);
 
-        // Then - Channel is removed from activeSubscriptions when empty, so it may not be in counts
-        // Or if setupDefaultChannels re-adds it, the count should be 0
-        Map<String, Integer> subscriptionCounts = realtimeService.getSubscriptionCounts();
-        Integer count = subscriptionCounts.get(channelName);
-        // Channel is removed when empty, so it might not be in the map
-        // If it exists (due to setupDefaultChannels), it should be 0
-        if (count != null) {
-            assertThat(count).isZero();
-        } else {
-            // Channel was removed, which is also valid
-            assertThat(subscriptionCounts).doesNotContainKey(channelName);
-        }
+        // Then
+        verify(subscriptionManager).unsubscribeFromChannel(channelName, userId);
     }
 
     @Test
@@ -195,8 +231,7 @@ class SupabaseRealtimeServiceTest {
         realtimeService.subscribeToDatabaseChanges(tableName, userId);
 
         // Then
-        // Verify that database subscription was added
-        // Note: This is internal state, so we can't easily test it without exposing getters
+        verify(subscriptionManager).subscribeToDatabaseChanges(tableName, userId);
     }
 
     @Test
@@ -210,7 +245,7 @@ class SupabaseRealtimeServiceTest {
         realtimeService.unsubscribeFromDatabaseChanges(tableName, userId);
 
         // Then
-        // Verify that database subscription was removed
+        verify(subscriptionManager).unsubscribeFromDatabaseChanges(tableName, userId);
     }
 
     @Test
@@ -266,16 +301,18 @@ class SupabaseRealtimeServiceTest {
     @Test
     void getSubscriptionCounts_WithSubscriptions_ShouldReturnCorrectCounts() {
         // Given
-        realtimeService.subscribeToChannel("transactions", 1L);
-        realtimeService.subscribeToChannel("transactions", 2L);
-        realtimeService.subscribeToChannel("dashboard", 1L);
+        Map<String, Integer> counts = new HashMap<>();
+        counts.put("transactions", 2);
+        counts.put("dashboard", 1);
+        counts.put("goals", 0);
+        when(subscriptionManager.getSubscriptionCounts()).thenReturn(counts);
 
         // When
-        Map<String, Integer> counts = realtimeService.getSubscriptionCounts();
+        Map<String, Integer> result = realtimeService.getSubscriptionCounts();
 
         // Then
-        assertThat(counts.get("transactions")).isEqualTo(2);
-        assertThat(counts.get("dashboard")).isEqualTo(1);
-        assertThat(counts.get("goals")).isZero(); // Not subscribed
+        assertThat(result.get("transactions")).isEqualTo(2);
+        assertThat(result.get("dashboard")).isEqualTo(1);
+        assertThat(result.get("goals")).isZero(); // Not subscribed
     }
 }

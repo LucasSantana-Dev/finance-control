@@ -64,41 +64,41 @@ public class OpenFinanceAccountService {
 
         String accessToken = consentService.getAccessToken(consentId);
 
-        return accountClient.getAccounts(accessToken)
-                .map(accounts -> accounts.stream()
-                        .map(accountInfo -> {
-                            // Check if account already exists
-                            var existingAccount = accountRepository.findByInstitutionIdAndExternalAccountId(
-                                    consent.getInstitution().getId(), accountInfo.getAccountId());
+        List<AccountInformationClient.Account> accounts = accountClient.getAccounts(accessToken);
 
-                            ConnectedAccount account;
-                            if (existingAccount.isPresent()) {
-                                account = existingAccount.get();
-                                // Update account information
-                                account.setAccountType(accountInfo.getAccountType());
-                                account.setAccountNumber(accountInfo.getAccountNumber());
-                                account.setBranch(accountInfo.getBranch());
-                                account.setAccountHolderName(accountInfo.getAccountHolderName());
-                                account.setCurrency(accountInfo.getCurrency());
-                            } else {
-                                account = new ConnectedAccount();
-                                account.setUser(consent.getUser());
-                                account.setConsent(consent);
-                                account.setInstitution(consent.getInstitution());
-                                account.setExternalAccountId(accountInfo.getAccountId());
-                                account.setAccountType(accountInfo.getAccountType());
-                                account.setAccountNumber(accountInfo.getAccountNumber());
-                                account.setBranch(accountInfo.getBranch());
-                                account.setAccountHolderName(accountInfo.getAccountHolderName());
-                                account.setCurrency(accountInfo.getCurrency());
-                                account.setSyncStatus("PENDING");
-                            }
+        return accounts.stream()
+                .map(accountInfo -> {
+                    // Check if account already exists
+                    var existingAccount = accountRepository.findByInstitutionIdAndExternalAccountId(
+                            consent.getInstitution().getId(), accountInfo.getAccountId());
 
-                            account = accountRepository.save(account);
-                            return mapper.toDTO(account);
-                        })
-                        .collect(Collectors.toList()))
-                .block();
+                    ConnectedAccount account;
+                    if (existingAccount.isPresent()) {
+                        account = existingAccount.get();
+                        // Update account information
+                        account.setAccountType(accountInfo.getAccountType());
+                        account.setAccountNumber(accountInfo.getAccountNumber());
+                        account.setBranch(accountInfo.getBranch());
+                        account.setAccountHolderName(accountInfo.getAccountHolderName());
+                        account.setCurrency(accountInfo.getCurrency());
+                    } else {
+                        account = new ConnectedAccount();
+                        account.setUser(consent.getUser());
+                        account.setConsent(consent);
+                        account.setInstitution(consent.getInstitution());
+                        account.setExternalAccountId(accountInfo.getAccountId());
+                        account.setAccountType(accountInfo.getAccountType());
+                        account.setAccountNumber(accountInfo.getAccountNumber());
+                        account.setBranch(accountInfo.getBranch());
+                        account.setAccountHolderName(accountInfo.getAccountHolderName());
+                        account.setCurrency(accountInfo.getCurrency());
+                        account.setSyncStatus("PENDING");
+                    }
+
+                    account = accountRepository.save(account);
+                    return mapper.toDTO(account);
+                })
+                .collect(Collectors.toList());
     }
 
     /**
@@ -127,27 +127,25 @@ public class OpenFinanceAccountService {
         final ConnectedAccount finalAccount = account;
 
         try {
-            return accountClient.getAccountBalance(accessToken, finalAccount.getExternalAccountId())
-                    .map(balance -> {
-                        finalAccount.setBalance(balance.getBalance());
-                        finalAccount.setLastSyncedAt(LocalDateTime.now());
-                        finalAccount.setSyncStatus("SUCCESS");
-                        ConnectedAccount savedAccount = accountRepository.save(finalAccount);
+            AccountInformationClient.AccountBalance balance = accountClient.getAccountBalance(accessToken, finalAccount.getExternalAccountId());
 
-                        // Broadcast realtime update
-                        broadcastAccountUpdate(savedAccount);
+            finalAccount.setBalance(balance.getBalance());
+            finalAccount.setLastSyncedAt(LocalDateTime.now());
+            finalAccount.setSyncStatus("SUCCESS");
+            ConnectedAccount savedAccount = accountRepository.save(finalAccount);
 
-                        metricsService.incrementOpenFinanceAccountSyncSuccess();
-                        log.info("Successfully synced balance for account {}", accountId);
-                        AccountBalanceDTO dto = new AccountBalanceDTO();
-                        dto.setAccountId(accountId);
-                        dto.setExternalAccountId(savedAccount.getExternalAccountId());
-                        dto.setBalance(balance.getBalance());
-                        dto.setCurrency(balance.getCurrency());
-                        dto.setLastUpdated(LocalDateTime.now());
-                        return dto;
-                    })
-                    .block();
+            // Broadcast realtime update
+            broadcastAccountUpdate(savedAccount);
+
+            metricsService.incrementOpenFinanceAccountSyncSuccess();
+            log.info("Successfully synced balance for account {}", accountId);
+            AccountBalanceDTO dto = new AccountBalanceDTO();
+            dto.setAccountId(accountId);
+            dto.setExternalAccountId(savedAccount.getExternalAccountId());
+            dto.setBalance(balance.getBalance());
+            dto.setCurrency(balance.getCurrency());
+            dto.setLastUpdated(LocalDateTime.now());
+            return dto;
         } catch (Exception e) {
             account.setSyncStatus("FAILED");
             accountRepository.save(account);

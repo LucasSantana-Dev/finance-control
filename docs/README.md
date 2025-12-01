@@ -1,82 +1,132 @@
 # Finance Control - Documentation
 
-This folder contains comprehensive documentation for the Finance Control application, covering architecture patterns, coding standards, and implementation guidelines.
+Welcome to the Finance Control documentation. This comprehensive guide covers all aspects of the application, from getting started to advanced development topics.
 
-## 📚 Documentation Overview
+## Documentation Structure
 
-### 🏗️ Architecture & Patterns
+### Getting Started
 
-- **[API_PATTERNS.md](API_PATTERNS.md)** - REST API patterns, conventions, and best practices
-- **[API_RESPONSE_IMPLEMENTATION.md](API_RESPONSE_IMPLEMENTATION.md)** - Standardized API response implementation guide
-- **[BASE_CLASSES_GUIDE.md](BASE_CLASSES_GUIDE.md)** - Base classes architecture and usage patterns
-- **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)** - System architecture diagrams and documentation
-- **[UNIFIED_ENDPOINTS_GUIDE.md](UNIFIED_ENDPOINTS_GUIDE.md)** - Unified API endpoints documentation
+Essential documentation for setting up and understanding the project:
 
-### 🛠️ Development Guidelines
-
-- **[DEPENDENCIES_GUIDE.md](DEPENDENCIES_GUIDE.md)** - Key dependencies and their purposes
-- **[NAMING_EXAMPLES.md](NAMING_EXAMPLES.md)** - Naming convention examples and patterns
-- **[MAPSTRUCT_INTEGRATION.md](MAPSTRUCT_INTEGRATION.md)** - MapStruct integration guide
-- **[CRUD_API_DOCUMENTATION.md](CRUD_API_DOCUMENTATION.md)** - CRUD API documentation
-
-### 🧪 Testing
-
-- **[TESTING_STRATEGY.md](TESTING_STRATEGY.md)** - Comprehensive testing strategy and best practices
-
-### 🔧 Configuration & Environment
-
+- **[README.md](../README.md)** - Project overview, quick start guide, and installation instructions
+- **[SETUP.md](SETUP.md)** - Detailed setup instructions for local development environment
 - **[ENVIRONMENT.md](ENVIRONMENT.md)** - Environment configuration and variables
+
+### Development
+
+Core development guides and patterns:
+
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Comprehensive development guide covering:
+  - Code quality standards and tools
+  - Dependency management
+  - Base classes architecture
+  - MapStruct integration
+  - Naming conventions
+  - Logging configuration
+  - Development workflow
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture diagrams and design patterns
+- **[TESTING.md](TESTING.md)** - Testing strategy, best practices, and API testing guide
+
+### API Reference
+
+Documentation for API development and usage:
+
+- **[API.md](API.md)** - REST API patterns, conventions, and best practices
+- **[FEATURES.md](FEATURES.md)** - Comprehensive overview of all application features:
+  - Transaction Management
+  - Category Management
+  - Financial Goals
+  - Dashboard and Analytics
+  - Feature Flags
+
+### Operations
+
+Deployment, CI/CD, and security documentation:
+
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - CI/CD setup, quality gates, and deployment guide
+- **[SECURITY.md](SECURITY.md)** - Security best practices and guidelines
 - **[DOCKER.md](DOCKER.md)** - Docker setup, integration, and desktop usage
-- **[LOGGING.md](LOGGING.md)** - Logging configuration, implementation, and organization
-- **[CODE_QUALITY.md](CODE_QUALITY.md)** - Code quality tools configuration and synchronization
 
-### 📋 Business Logic
-
-- **[TRANSACTION_CATEGORIES_MANAGEMENT.md](TRANSACTION_CATEGORIES_MANAGEMENT.md)** - Transaction categories management
-
-## 🎯 Quick Start
+## Quick Navigation
 
 ### For New Developers
-1. Start with **[BASE_CLASSES_GUIDE.md](BASE_CLASSES_GUIDE.md)** to understand the architecture
-2. Review **[API_PATTERNS.md](API_PATTERNS.md)** for REST conventions
-3. Check **[NAMING_EXAMPLES.md](NAMING_EXAMPLES.md)** for naming standards
-4. Read **[TESTING_STRATEGY.md](TESTING_STRATEGY.md)** for testing guidelines
+
+1. Start with the main **[README.md](../README.md)** for project overview
+2. Follow **[SETUP.md](SETUP.md)** to set up your development environment
+3. Review **[DEVELOPMENT.md](DEVELOPMENT.md)** for coding standards and patterns
+4. Read **[ARCHITECTURE.md](ARCHITECTURE.md)** to understand the system design
+5. Check **[TESTING.md](TESTING.md)** for testing guidelines
 
 ### For API Development
-1. **[API_PATTERNS.md](API_PATTERNS.md)** - REST endpoint patterns and conventions
-2. **[API_RESPONSE_IMPLEMENTATION.md](API_RESPONSE_IMPLEMENTATION.md)** - Response wrapping and error handling
-3. **[BASE_CLASSES_GUIDE.md](BASE_CLASSES_GUIDE.md)** - Controller and service base classes
 
-### For Service Development
-1. **[BASE_CLASSES_GUIDE.md](BASE_CLASSES_GUIDE.md)** - Base service implementation
-2. **[MAPSTRUCT_INTEGRATION.md](MAPSTRUCT_INTEGRATION.md)** - DTO mapping with MapStruct
-3. **[CRUD_API_DOCUMENTATION.md](CRUD_API_DOCUMENTATION.md)** - CRUD operations documentation
+1. **[API.md](API.md)** - REST endpoint patterns and conventions
+2. **[FEATURES.md](FEATURES.md)** - Complete feature documentation
+3. **[DEVELOPMENT.md](DEVELOPMENT.md)** - Base classes and MapStruct integration
+4. **[TESTING.md](TESTING.md)** - API testing with Postman
 
-## 📋 Documentation Standards
+### For DevOps
+
+1. **[DEPLOYMENT.md](DEPLOYMENT.md)** - CI/CD pipeline and quality gates
+2. **[DOCKER.md](DOCKER.md)** - Container configuration and deployment
+3. **[SECURITY.md](SECURITY.md)** - Security best practices
+4. **[ENVIRONMENT.md](ENVIRONMENT.md)** - Environment configuration
+
+## Documentation Standards
 
 All documentation follows these standards:
+
 - **Markdown format** for easy reading and version control
 - **Clear structure** with headers and sections
 - **Code examples** for practical implementation
 - **Cross-references** between related documents
 - **Regular updates** to reflect current codebase
 
-## 🔄 Recent Updates
+## Key Features Documented
 
-- **Documentation Cleanup** - Removed outdated progress files and irrelevant UI/UX documentation
-- **Testing Documentation Update** - Updated testing strategy with current coverage metrics (71% instructions)
-- **Removed Outdated Files** - Cleaned up files related to completed fixes and disabled features
-- **Consolidated Documentation** - Merged related files for better organization
-- **BASE_CLASSES_GUIDE.md** - Updated with latest base class implementations
-- **API_PATTERNS.md** - Added new response patterns and error handling
-- **ENVIRONMENT.md** - Consolidated environment configuration documentation
-- **DOCKER.md** - Consolidated Docker setup and integration documentation
-- **LOGGING.md** - Consolidated logging configuration and implementation
-- **CODE_QUALITY.md** - Consolidated code quality tools documentation
+### Transaction Management
+- CRUD operations for income and expenses
+- Category and subcategory organization
+- Shared responsibilities and splitting
+- Advanced filtering and search
 
-## 📞 Contributing
+### Financial Goals
+- Goal setting and tracking
+- Progress monitoring
+- Priority management
+- Deadline tracking
+
+### Dashboard and Analytics
+- Financial summaries and metrics
+- Spending analysis by category
+- Income vs expenses tracking
+- Trend analysis and reporting
+
+### Feature Flags
+- Flexible feature toggling
+- Environment-based configuration
+- Centralized feature management
+
+## Recent Updates
+
+- **Documentation Consolidation** - Merged related files for better organization:
+  - Logging documentation merged into DEVELOPMENT.md
+  - Postman testing guide merged into TESTING.md
+  - Created comprehensive FEATURES.md
+- **File Renaming** - Improved naming clarity:
+  - ARCHITECTURE_DIAGRAM.md → ARCHITECTURE.md
+  - CI_CD_SETUP.md → DEPLOYMENT.md
+- **Cleanup** - Removed obsolete files:
+  - API_RESPONSE_IMPLEMENTATION.md (covered in API.md)
+  - POSTGRESQL_INTEGRATION_STATUS.md (outdated status doc)
+  - POSTMAN_COLLECTION_SUMMARY.md (artifact)
+  - UI_UX_LOVABLE_PROMPT.md (frontend-specific)
+  - TRANSACTION_CATEGORIES_MANAGEMENT.md (merged into FEATURES.md)
+  - FEATURE_FLAGS.md (merged into FEATURES.md)
+
+## Contributing to Documentation
 
 When adding new documentation:
+
 1. Follow the existing structure and format
 2. Include practical examples
 3. Cross-reference related documents
@@ -84,7 +134,7 @@ When adding new documentation:
 5. Ensure accuracy with current codebase
 6. Consider consolidating related information to reduce redundancy
 
-## 🎯 Documentation Goals
+## Documentation Goals
 
 - **Comprehensive coverage** of all major components
 - **Clear examples** for common use cases
@@ -92,6 +142,15 @@ When adding new documentation:
 - **Easy navigation** with clear organization
 - **Regular maintenance** to keep information current
 - **Consolidated information** to reduce redundancy
+
+## Support
+
+For questions or issues:
+
+1. Check the relevant documentation section
+2. Review code examples and patterns
+3. Consult API documentation at `http://localhost:8080/swagger-ui.html`
+4. Check GitHub issues and discussions
 
 ---
 

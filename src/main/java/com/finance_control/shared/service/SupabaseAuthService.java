@@ -11,11 +11,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.util.Map;
 
@@ -29,8 +31,8 @@ import java.util.Map;
 @ConditionalOnProperty(value = "app.supabase.enabled", havingValue = "true", matchIfMissing = true)
 public class SupabaseAuthService {
 
-    @Qualifier("supabaseWebClient")
-    private final WebClient webClient;
+    @Qualifier("supabaseRestClient")
+    private final RestClient restClient;
     private final AppProperties appProperties;
     private final ObjectMapper objectMapper;
 
@@ -42,10 +44,10 @@ public class SupabaseAuthService {
     private static final String AUTH_LOGOUT = "/auth/v1/logout";
     private static final String AUTH_VERIFY = "/auth/v1/verify";
 
-    public SupabaseAuthService(@Qualifier("supabaseWebClient") WebClient webClient,
+    public SupabaseAuthService(@Qualifier("supabaseRestClient") RestClient restClient,
                                AppProperties appProperties,
                                ObjectMapper objectMapper) {
-        this.webClient = webClient;
+        this.restClient = restClient;
         this.appProperties = appProperties;
         ObjectMapper configuredMapper = objectMapper.copy();
         configuredMapper.findAndRegisterModules();
@@ -58,7 +60,7 @@ public class SupabaseAuthService {
      * @param request Signup request containing email, password, and optional metadata
      * @return AuthResponse containing access token, refresh token, and user info
      */
-    public Mono<AuthResponse> signup(SignupRequest request) {
+    public AuthResponse signup(SignupRequest request) {
         log.debug("Attempting Supabase signup for email: {}", request.getEmail());
 
         Map<String, Object> signupData = Map.of(
@@ -67,16 +69,21 @@ public class SupabaseAuthService {
             "data", request.getMetadata() != null ? request.getMetadata() : Map.of()
         );
 
-        return webClient.post()
-                .uri(AUTH_SIGNUP)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(signupData)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(this::mapToAuthResponse)
-                .doOnSuccess(response -> log.info("Supabase signup successful for email: {}", request.getEmail()))
-                .doOnError(error -> log.error("Supabase signup failed for email: {} - {}", request.getEmail(), error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleAuthError);
+        try {
+            JsonNode response = restClient.post()
+                    .uri(AUTH_SIGNUP)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(signupData)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            AuthResponse authResponse = mapToAuthResponse(response);
+            log.info("Supabase signup successful for email: {}", request.getEmail());
+            return authResponse;
+        } catch (RestClientException e) {
+            log.error("Supabase signup failed for email: {} - {}", request.getEmail(), e.getMessage());
+            throw handleAuthError(e);
+        }
     }
 
     /**
@@ -85,7 +92,7 @@ public class SupabaseAuthService {
      * @param request Login request containing email and password
      * @return AuthResponse containing access token, refresh token, and user info
      */
-    public Mono<AuthResponse> signin(LoginRequest request) {
+    public AuthResponse signin(LoginRequest request) {
         log.debug("Attempting Supabase signin for email: {}", request.getEmail());
 
         Map<String, Object> signinData = Map.of(
@@ -93,16 +100,21 @@ public class SupabaseAuthService {
             "password", request.getPassword()
         );
 
-        return webClient.post()
-                .uri(AUTH_SIGNIN)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(signinData)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(this::mapToAuthResponse)
-                .doOnSuccess(response -> log.info("Supabase signin successful for email: {}", request.getEmail()))
-                .doOnError(error -> log.error("Supabase signin failed for email: {} - {}", request.getEmail(), error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleAuthError);
+        try {
+            JsonNode response = restClient.post()
+                    .uri(AUTH_SIGNIN)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(signinData)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            AuthResponse authResponse = mapToAuthResponse(response);
+            log.info("Supabase signin successful for email: {}", request.getEmail());
+            return authResponse;
+        } catch (RestClientException e) {
+            log.error("Supabase signin failed for email: {} - {}", request.getEmail(), e.getMessage());
+            throw handleAuthError(e);
+        }
     }
 
     /**
@@ -111,32 +123,36 @@ public class SupabaseAuthService {
      * @param refreshToken The refresh token
      * @return AuthResponse containing new access token and refresh token
      */
-    public Mono<AuthResponse> refreshToken(String refreshToken) {
+    public AuthResponse refreshToken(String refreshToken) {
         log.debug("Attempting token refresh");
 
         Map<String, Object> refreshData = Map.of(
             "refresh_token", refreshToken
         );
 
-        return webClient.post()
-                .uri(AUTH_REFRESH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(refreshData)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(this::mapToAuthResponse)
-                .doOnSuccess(response -> log.info("Token refresh successful"))
-                .doOnError(error -> log.error("Token refresh failed: {}", error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleAuthError);
+        try {
+            JsonNode response = restClient.post()
+                    .uri(AUTH_REFRESH)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(refreshData)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            AuthResponse authResponse = mapToAuthResponse(response);
+            log.info("Token refresh successful");
+            return authResponse;
+        } catch (RestClientException e) {
+            log.error("Token refresh failed: {}", e.getMessage());
+            throw handleAuthError(e);
+        }
     }
 
     /**
      * Initiates password recovery for a user.
      *
      * @param request Password reset request containing email
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> resetPassword(PasswordResetRequest request) {
+    public void resetPassword(PasswordResetRequest request) {
         log.debug("Initiating password reset for email: {}", request.getEmail());
 
         Map<String, Object> resetData = Map.of(
@@ -144,15 +160,19 @@ public class SupabaseAuthService {
             "redirect_to", request.getRedirectTo() != null ? request.getRedirectTo() : getDefaultRedirectUrl()
         );
 
-        return webClient.post()
-                .uri(AUTH_RECOVER)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(resetData)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.info("Password reset email sent to: {}", request.getEmail()))
-                .doOnError(error -> log.error("Password reset failed for email: {} - {}", request.getEmail(), error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleAuthError);
+        try {
+            restClient.post()
+                    .uri(AUTH_RECOVER)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(resetData)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Password reset email sent to: {}", request.getEmail());
+        } catch (RestClientException e) {
+            log.error("Password reset failed for email: {} - {}", request.getEmail(), e.getMessage());
+            throw handleAuthError(e);
+        }
     }
 
     /**
@@ -160,25 +180,28 @@ public class SupabaseAuthService {
      *
      * @param newPassword The new password
      * @param accessToken The access token for authentication
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> updatePassword(String newPassword, String accessToken) {
+    public void updatePassword(String newPassword, String accessToken) {
         log.debug("Attempting password update");
 
         Map<String, Object> updateData = Map.of(
             "password", newPassword
         );
 
-        return webClient.put()
-                .uri(AUTH_UPDATE)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(updateData)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.info("Password update successful"))
-                .doOnError(error -> log.error("Password update failed: {}", error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleAuthError);
+        try {
+            restClient.put()
+                    .uri(AUTH_UPDATE)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(updateData)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Password update successful");
+        } catch (RestClientException e) {
+            log.error("Password update failed: {}", e.getMessage());
+            throw handleAuthError(e);
+        }
     }
 
     /**
@@ -186,44 +209,50 @@ public class SupabaseAuthService {
      *
      * @param newEmail The new email address
      * @param accessToken The access token for authentication
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> updateEmail(String newEmail, String accessToken) {
+    public void updateEmail(String newEmail, String accessToken) {
         log.debug("Attempting email update to: {}", newEmail);
 
         Map<String, Object> updateData = Map.of(
             "email", newEmail
         );
 
-        return webClient.put()
-                .uri(AUTH_UPDATE)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(updateData)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.info("Email update successful"))
-                .doOnError(error -> log.error("Email update failed: {}", error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleAuthError);
+        try {
+            restClient.put()
+                    .uri(AUTH_UPDATE)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(updateData)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Email update successful");
+        } catch (RestClientException e) {
+            log.error("Email update failed: {}", e.getMessage());
+            throw handleAuthError(e);
+        }
     }
 
     /**
      * Signs out the current user by invalidating their session.
      *
      * @param accessToken The access token for authentication
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> signout(String accessToken) {
+    public void signout(String accessToken) {
         log.debug("Attempting user signout");
 
-        return webClient.post()
-                .uri(AUTH_LOGOUT)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.info("User signout successful"))
-                .doOnError(error -> log.error("User signout failed: {}", error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleAuthError);
+        try {
+            restClient.post()
+                    .uri(AUTH_LOGOUT)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("User signout successful");
+        } catch (RestClientException e) {
+            log.error("User signout failed: {}", e.getMessage());
+            throw handleAuthError(e);
+        }
     }
 
     /**
@@ -234,7 +263,7 @@ public class SupabaseAuthService {
      * @param email The email address being verified
      * @return AuthResponse containing tokens if verification successful
      */
-    public Mono<AuthResponse> verifyEmail(String token, String type, String email) {
+    public AuthResponse verifyEmail(String token, String type, String email) {
         log.debug("Attempting email verification for: {}", email);
 
         Map<String, Object> verifyData = Map.of(
@@ -243,16 +272,21 @@ public class SupabaseAuthService {
             "email", email
         );
 
-        return webClient.post()
-                .uri(AUTH_VERIFY)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(verifyData)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(this::mapToAuthResponse)
-                .doOnSuccess(response -> log.info("Email verification successful for: {}", email))
-                .doOnError(error -> log.error("Email verification failed for: {} - {}", email, error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleAuthError);
+        try {
+            JsonNode response = restClient.post()
+                    .uri(AUTH_VERIFY)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(verifyData)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            AuthResponse authResponse = mapToAuthResponse(response);
+            log.info("Email verification successful for: {}", email);
+            return authResponse;
+        } catch (RestClientException e) {
+            log.error("Email verification failed for: {} - {}", email, e.getMessage());
+            throw handleAuthError(e);
+        }
     }
 
     /**
@@ -261,17 +295,22 @@ public class SupabaseAuthService {
      * @param accessToken The access token
      * @return JsonNode containing user information
      */
-    public Mono<JsonNode> getUserInfo(String accessToken) {
+    public JsonNode getUserInfo(String accessToken) {
         log.debug("Fetching user info from Supabase");
 
-        return webClient.get()
-                .uri(AUTH_UPDATE)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .doOnSuccess(user -> log.debug("User info retrieved successfully"))
-                .doOnError(error -> log.error("Failed to get user info: {}", error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleAuthError);
+        try {
+            JsonNode user = restClient.get()
+                    .uri(AUTH_UPDATE)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            log.debug("User info retrieved successfully");
+            return user;
+        } catch (RestClientException e) {
+            log.error("Failed to get user info: {}", e.getMessage());
+            throw handleAuthError(e);
+        }
     }
 
     /**
@@ -289,19 +328,29 @@ public class SupabaseAuthService {
     /**
      * Handles authentication errors from Supabase API.
      */
-    private <T> Mono<T> handleAuthError(WebClientResponseException ex) {
-        log.warn("Supabase auth error - Status: {}, Body: {}", ex.getStatusCode(), ex.getResponseBodyAsString());
+    private RuntimeException handleAuthError(RestClientException ex) {
+        String errorMessage = ex.getMessage();
+        HttpStatusCode statusCode = null;
 
-        // You can create custom exceptions based on the error response
-        // For now, we'll just propagate the error
-        return Mono.error(ex);
+        if (ex instanceof HttpClientErrorException httpEx) {
+            statusCode = httpEx.getStatusCode();
+            errorMessage = httpEx.getResponseBodyAsString();
+            log.warn("Supabase auth error - Status: {}, Body: {}", statusCode, errorMessage);
+        } else if (ex instanceof HttpServerErrorException serverEx) {
+            statusCode = serverEx.getStatusCode();
+            errorMessage = serverEx.getResponseBodyAsString();
+            log.warn("Supabase auth server error - Status: {}, Body: {}", statusCode, errorMessage);
+        } else {
+            log.warn("Supabase auth error: {}", errorMessage);
+        }
+
+        return new RuntimeException("Supabase authentication error: " + errorMessage, ex);
     }
 
     /**
      * Gets the default redirect URL for password reset emails.
      */
     private String getDefaultRedirectUrl() {
-        // This could be configured in application properties
         return appProperties.supabase().url() + "/reset-password";
     }
 

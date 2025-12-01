@@ -120,23 +120,21 @@ public class OpenFinanceConsentService {
         String redirectUri = appProperties.openFinance().oauth().redirectUri();
         final OpenFinanceConsent finalConsent = consent;
 
-        return oauthClient.exchangeAuthorizationCode(finalConsent.getInstitution(), authorizationCode, redirectUri)
-                .map(tokenResponse -> {
-                    // Encrypt and store tokens
-                    finalConsent.setAccessToken(encryptToken(tokenResponse.getAccessToken()));
-                    finalConsent.setRefreshToken(encryptToken(tokenResponse.getRefreshToken()));
-                    finalConsent.setExpiresAt(tokenResponse.getExpiresAt());
-                    finalConsent.setStatus("AUTHORIZED");
+        var tokenResponse = oauthClient.exchangeAuthorizationCode(finalConsent.getInstitution(), authorizationCode, redirectUri);
 
-                    OpenFinanceConsent savedConsent = consentRepository.save(finalConsent);
+        // Encrypt and store tokens
+        finalConsent.setAccessToken(encryptToken(tokenResponse.getAccessToken()));
+        finalConsent.setRefreshToken(encryptToken(tokenResponse.getRefreshToken()));
+        finalConsent.setExpiresAt(tokenResponse.getExpiresAt());
+        finalConsent.setStatus("AUTHORIZED");
 
-                    // Broadcast realtime update
-                    broadcastConsentUpdate(savedConsent);
+        OpenFinanceConsent savedConsent = consentRepository.save(finalConsent);
 
-                    log.info("Successfully authorized consent {} for user {}", consentId, savedConsent.getUser().getId());
-                    return mapper.toDTO(savedConsent);
-                })
-                .block();
+        // Broadcast realtime update
+        broadcastConsentUpdate(savedConsent);
+
+        log.info("Successfully authorized consent {} for user {}", consentId, savedConsent.getUser().getId());
+        return mapper.toDTO(savedConsent);
     }
 
     /**
@@ -161,21 +159,19 @@ public class OpenFinanceConsentService {
 
         final OpenFinanceConsent finalConsent = consent;
 
-        return oauthClient.refreshToken(finalConsent.getInstitution(), refreshToken)
-                .map(tokenResponse -> {
-                    finalConsent.setAccessToken(encryptToken(tokenResponse.getAccessToken()));
-                    if (StringUtils.hasText(tokenResponse.getRefreshToken())) {
-                        finalConsent.setRefreshToken(encryptToken(tokenResponse.getRefreshToken()));
-                    }
-                    finalConsent.setExpiresAt(tokenResponse.getExpiresAt());
-                    finalConsent.setStatus("AUTHORIZED");
+        var tokenResponse = oauthClient.refreshToken(finalConsent.getInstitution(), refreshToken);
 
-                    OpenFinanceConsent savedConsent = consentRepository.save(finalConsent);
+        finalConsent.setAccessToken(encryptToken(tokenResponse.getAccessToken()));
+        if (StringUtils.hasText(tokenResponse.getRefreshToken())) {
+            finalConsent.setRefreshToken(encryptToken(tokenResponse.getRefreshToken()));
+        }
+        finalConsent.setExpiresAt(tokenResponse.getExpiresAt());
+        finalConsent.setStatus("AUTHORIZED");
 
-                    log.info("Successfully refreshed token for consent {}", consentId);
-                    return mapper.toDTO(savedConsent);
-                })
-                .block();
+        OpenFinanceConsent savedConsent = consentRepository.save(finalConsent);
+
+        log.info("Successfully refreshed token for consent {}", consentId);
+        return mapper.toDTO(savedConsent);
     }
 
     /**
@@ -196,9 +192,11 @@ public class OpenFinanceConsentService {
         // Revoke token with institution
         String accessToken = decryptToken(consent.getAccessToken());
         if (StringUtils.hasText(accessToken)) {
-            oauthClient.revokeToken(consent.getInstitution(), accessToken, "access_token")
-                    .doOnError(error -> log.warn("Failed to revoke token with institution: {}", error.getMessage()))
-                    .block();
+            try {
+                oauthClient.revokeToken(consent.getInstitution(), accessToken, "access_token");
+            } catch (Exception e) {
+                log.warn("Failed to revoke token with institution: {}", e.getMessage());
+            }
         }
 
         consent.setStatus("REVOKED");

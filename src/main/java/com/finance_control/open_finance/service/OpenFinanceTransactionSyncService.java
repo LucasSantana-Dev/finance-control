@@ -132,7 +132,7 @@ public class OpenFinanceTransactionSyncService {
                 dateRange.to(),
                 1,
                 100
-        ).block();
+        );
     }
 
     private int processTransactionList(List<AccountInformationClient.Transaction> transactions, ConnectedAccount account,
@@ -160,7 +160,7 @@ public class OpenFinanceTransactionSyncService {
                     dateRange.to(),
                     page,
                     100
-            ).block();
+            );
 
             if (pageResponse != null && pageResponse.getTransactions() != null) {
                 recordsImported += processTransactionList(

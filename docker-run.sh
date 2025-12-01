@@ -113,10 +113,12 @@ is_supabase_enabled() {
 
 # Function to build and start the application
 start_application() {
-    local services="app db redis"
+    local services
 
     if is_supabase_enabled; then
         print_status "Supabase local is enabled, starting Supabase services..."
+        # When using local Supabase, we still need the local db service for SonarQube
+        services="app db redis"
 
         # Export local Supabase database connection variables to override docker.env values
         # These will be picked up by docker compose and override env_file values
@@ -134,6 +136,10 @@ start_application() {
         docker compose --env-file docker.env --profile supabase up --build -d $services
     else
         print_status "Using remote Supabase (SUPABASE_LOCAL_ENABLED=false)"
+        # When using remote Supabase, we don't need the local db service
+        # Only start app and redis (db is only needed for SonarQube, which uses a separate profile)
+        services="app redis"
+
         # Unset any previously exported local Supabase variables to ensure remote values from docker.env are used
         unset SUPABASE_DATABASE_HOST SUPABASE_DATABASE_PORT SUPABASE_DATABASE_NAME
         unset SUPABASE_DATABASE_USERNAME SUPABASE_DATABASE_PASSWORD

@@ -7,14 +7,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -30,8 +32,8 @@ import java.time.LocalDateTime;
 @ConditionalOnProperty(value = "app.open-finance.enabled", havingValue = "true", matchIfMissing = false)
 public class OpenFinanceOAuthClient {
 
-    @Qualifier("openFinanceWebClient")
-    private final WebClient webClient;
+    @Qualifier("openFinanceRestClient")
+    private final RestClient restClient;
     private final AppProperties appProperties;
 
     /**
@@ -75,7 +77,7 @@ public class OpenFinanceOAuthClient {
      * @param redirectUri the redirect URI used in the authorization request
      * @return token response containing access token, refresh token, and expiration
      */
-    public Mono<TokenResponse> exchangeAuthorizationCode(OpenFinanceInstitution institution, String authorizationCode, String redirectUri) {
+    public TokenResponse exchangeAuthorizationCode(OpenFinanceInstitution institution, String authorizationCode, String redirectUri) {
         com.finance_control.shared.config.properties.OpenFinanceProperties.OAuthProperties oauthConfig = appProperties.openFinance().oauth();
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
@@ -87,16 +89,21 @@ public class OpenFinanceOAuthClient {
 
         log.debug("Exchanging authorization code for tokens with institution: {}", institution.getCode());
 
-        return webClient.post()
-                .uri(institution.getTokenUrl())
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .bodyValue(formData)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(this::parseTokenResponse)
-                .doOnSuccess(response -> log.info("Successfully exchanged authorization code for tokens"))
-                .doOnError(error -> log.error("Failed to exchange authorization code: {}", error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleTokenError);
+        try {
+            JsonNode response = restClient.post()
+                    .uri(institution.getTokenUrl())
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(formData)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            TokenResponse tokenResponse = parseTokenResponse(response);
+            log.info("Successfully exchanged authorization code for tokens");
+            return tokenResponse;
+        } catch (RestClientException e) {
+            log.error("Failed to exchange authorization code: {}", e.getMessage());
+            throw handleTokenError(e);
+        }
     }
 
     /**
@@ -106,7 +113,7 @@ public class OpenFinanceOAuthClient {
      * @param refreshToken the refresh token
      * @return token response with new access token and refresh token
      */
-    public Mono<TokenResponse> refreshToken(OpenFinanceInstitution institution, String refreshToken) {
+    public TokenResponse refreshToken(OpenFinanceInstitution institution, String refreshToken) {
         com.finance_control.shared.config.properties.OpenFinanceProperties.OAuthProperties oauthConfig = appProperties.openFinance().oauth();
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
@@ -117,16 +124,21 @@ public class OpenFinanceOAuthClient {
 
         log.debug("Refreshing access token for institution: {}", institution.getCode());
 
-        return webClient.post()
-                .uri(institution.getTokenUrl())
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .bodyValue(formData)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .map(this::parseTokenResponse)
-                .doOnSuccess(response -> log.info("Successfully refreshed access token"))
-                .doOnError(error -> log.error("Failed to refresh access token: {}", error.getMessage()))
-                .onErrorResume(WebClientResponseException.class, this::handleTokenError);
+        try {
+            JsonNode response = restClient.post()
+                    .uri(institution.getTokenUrl())
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(formData)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            TokenResponse tokenResponse = parseTokenResponse(response);
+            log.info("Successfully refreshed access token");
+            return tokenResponse;
+        } catch (RestClientException e) {
+            log.error("Failed to refresh access token: {}", e.getMessage());
+            throw handleTokenError(e);
+        }
     }
 
     /**
@@ -135,9 +147,8 @@ public class OpenFinanceOAuthClient {
      * @param institution the Open Finance institution
      * @param token the access token or refresh token to revoke
      * @param tokenTypeHint hint about the token type ("access_token" or "refresh_token")
-     * @return Mono completing when revocation is successful
      */
-    public Mono<Void> revokeToken(OpenFinanceInstitution institution, String token, String tokenTypeHint) {
+    public void revokeToken(OpenFinanceInstitution institution, String token, String tokenTypeHint) {
         com.finance_control.shared.config.properties.OpenFinanceProperties.OAuthProperties oauthConfig = appProperties.openFinance().oauth();
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
@@ -150,14 +161,19 @@ public class OpenFinanceOAuthClient {
 
         log.debug("Revoking token for institution: {}", institution.getCode());
 
-        return webClient.post()
-                .uri(institution.getTokenUrl().replace("/token", "/revoke"))
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .bodyValue(formData)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(response -> log.info("Successfully revoked token"))
-                .doOnError(error -> log.error("Failed to revoke token: {}", error.getMessage()));
+        try {
+            restClient.post()
+                    .uri(institution.getTokenUrl().replace("/token", "/revoke"))
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(formData)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Successfully revoked token");
+        } catch (RestClientException e) {
+            log.error("Failed to revoke token: {}", e.getMessage());
+            throw new RuntimeException("Failed to revoke token", e);
+        }
     }
 
     private TokenResponse parseTokenResponse(JsonNode jsonNode) {
@@ -179,11 +195,20 @@ public class OpenFinanceOAuthClient {
                 .build();
     }
 
-    private Mono<TokenResponse> handleTokenError(WebClientResponseException exception) {
-        log.error("Open Finance OAuth error: status={}, body={}",
-                  exception.getStatusCode().value(), exception.getResponseBodyAsString());
-        return Mono.error(new IllegalStateException(
-                "Open Finance OAuth error: " + exception.getStatusCode(), exception));
+    private RuntimeException handleTokenError(RestClientException exception) {
+        HttpStatusCode statusCode = null;
+        String errorBody = exception.getMessage();
+
+        if (exception instanceof HttpClientErrorException httpEx) {
+            statusCode = httpEx.getStatusCode();
+            errorBody = httpEx.getResponseBodyAsString();
+        } else if (exception instanceof HttpServerErrorException serverEx) {
+            statusCode = serverEx.getStatusCode();
+            errorBody = serverEx.getResponseBodyAsString();
+        }
+
+        log.error("Open Finance OAuth error: status={}, body={}", statusCode, errorBody);
+        return new IllegalStateException("Open Finance OAuth error: " + statusCode, exception);
     }
 
     /**

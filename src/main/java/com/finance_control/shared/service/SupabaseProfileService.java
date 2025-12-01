@@ -7,8 +7,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.util.Map;
 
@@ -22,28 +22,32 @@ import java.util.Map;
 @ConditionalOnProperty(value = "app.supabase.enabled", havingValue = "true", matchIfMissing = false)
 public class SupabaseProfileService {
 
-    @Qualifier("supabaseWebClient")
-    private final WebClient webClient;
+    @Qualifier("supabaseRestClient")
+    private final RestClient restClient;
 
     /**
      * Updates user metadata in Supabase.
      *
      * @param accessToken The user's access token
      * @param metadata The metadata to update
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> updateUserMetadata(String accessToken, Map<String, Object> metadata) {
+    public void updateUserMetadata(String accessToken, Map<String, Object> metadata) {
         log.debug("Updating user metadata in Supabase");
 
-        return webClient.put()
-                .uri("/auth/v1/user")
-                .header("Authorization", "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(Map.of("data", metadata))
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.info("Successfully updated user metadata in Supabase"))
-                .doOnError(error -> log.error("Failed to update user metadata in Supabase: {}", error.getMessage()));
+        try {
+            restClient.put()
+                    .uri("/auth/v1/user")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("data", metadata))
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Successfully updated user metadata in Supabase");
+        } catch (RestClientException e) {
+            log.error("Failed to update user metadata in Supabase: {}", e.getMessage());
+            throw new RuntimeException("Failed to update user metadata", e);
+        }
     }
 
     /**
@@ -52,20 +56,24 @@ public class SupabaseProfileService {
      *
      * @param accessToken The user's access token
      * @param newEmail The new email address
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> updateUserEmail(String accessToken, String newEmail) {
+    public void updateUserEmail(String accessToken, String newEmail) {
         log.debug("Updating user email in Supabase to: {}", newEmail);
 
-        return webClient.put()
-                .uri("/auth/v1/user")
-                .header("Authorization", "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(Map.of("email", newEmail))
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.info("Successfully initiated email update in Supabase for: {}", newEmail))
-                .doOnError(error -> log.error("Failed to update user email in Supabase: {}", error.getMessage()));
+        try {
+            restClient.put()
+                    .uri("/auth/v1/user")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("email", newEmail))
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Successfully initiated email update in Supabase for: {}", newEmail);
+        } catch (RestClientException e) {
+            log.error("Failed to update user email in Supabase: {}", e.getMessage());
+            throw new RuntimeException("Failed to update user email", e);
+        }
     }
 
     /**
@@ -73,38 +81,48 @@ public class SupabaseProfileService {
      *
      * @param accessToken The user's access token
      * @param newPassword The new password
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> updateUserPassword(String accessToken, String newPassword) {
+    public void updateUserPassword(String accessToken, String newPassword) {
         log.debug("Updating user password in Supabase");
 
-        return webClient.put()
-                .uri("/auth/v1/user")
-                .header("Authorization", "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(Map.of("password", newPassword))
-                .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.info("Successfully updated user password in Supabase"))
-                .doOnError(error -> log.error("Failed to update user password in Supabase: {}", error.getMessage()));
+        try {
+            restClient.put()
+                    .uri("/auth/v1/user")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("password", newPassword))
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Successfully updated user password in Supabase");
+        } catch (RestClientException e) {
+            log.error("Failed to update user password in Supabase: {}", e.getMessage());
+            throw new RuntimeException("Failed to update user password", e);
+        }
     }
 
     /**
      * Gets comprehensive user profile information from Supabase.
      *
      * @param accessToken The user's access token
-     * @return Mono containing user profile data
+     * @return user profile data
      */
-    public Mono<JsonNode> getUserProfile(String accessToken) {
+    public JsonNode getUserProfile(String accessToken) {
         log.debug("Getting user profile from Supabase");
 
-        return webClient.get()
-                .uri("/auth/v1/user")
-                .header("Authorization", "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
-                .doOnSuccess(profile -> log.debug("Successfully retrieved user profile from Supabase"))
-                .doOnError(error -> log.error("Failed to get user profile from Supabase: {}", error.getMessage()));
+        try {
+            JsonNode profile = restClient.get()
+                    .uri("/auth/v1/user")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+            log.debug("Successfully retrieved user profile from Supabase");
+            return profile;
+        } catch (RestClientException e) {
+            log.error("Failed to get user profile from Supabase: {}", e.getMessage());
+            throw new RuntimeException("Failed to get user profile", e);
+        }
     }
 
     /**
@@ -113,15 +131,12 @@ public class SupabaseProfileService {
      *
      * @param accessToken The user's access token
      * @param preferences User preferences to update
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> updateUserPreferences(String accessToken, Map<String, Object> preferences) {
+    public void updateUserPreferences(String accessToken, Map<String, Object> preferences) {
         log.debug("Updating user preferences in Supabase");
 
-        // Add a timestamp to track when preferences were last updated
         preferences.put("preferences_updated_at", System.currentTimeMillis());
-
-        return updateUserMetadata(accessToken, Map.of("preferences", preferences));
+        updateUserMetadata(accessToken, Map.of("preferences", preferences));
     }
 
     /**
@@ -130,9 +145,8 @@ public class SupabaseProfileService {
      *
      * @param accessToken The user's access token
      * @param localUserId The local application user ID
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> linkLocalUser(String accessToken, Long localUserId) {
+    public void linkLocalUser(String accessToken, Long localUserId) {
         log.debug("Linking local user ID to Supabase profile: {}", localUserId);
 
         Map<String, Object> linkData = Map.of(
@@ -140,7 +154,7 @@ public class SupabaseProfileService {
             "linked_at", System.currentTimeMillis()
         );
 
-        return updateUserMetadata(accessToken, linkData);
+        updateUserMetadata(accessToken, linkData);
     }
 
     /**
@@ -148,12 +162,11 @@ public class SupabaseProfileService {
      *
      * @param accessToken The user's access token
      * @param avatarUrl The avatar URL (could be from Supabase Storage or external)
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> updateUserAvatar(String accessToken, String avatarUrl) {
+    public void updateUserAvatar(String accessToken, String avatarUrl) {
         log.debug("Updating user avatar in Supabase: {}", avatarUrl);
 
-        return updateUserMetadata(accessToken, Map.of("avatar_url", avatarUrl));
+        updateUserMetadata(accessToken, Map.of("avatar_url", avatarUrl));
     }
 
     /**
@@ -161,11 +174,10 @@ public class SupabaseProfileService {
      *
      * @param accessToken The user's access token
      * @param displayName The display name
-     * @return Mono<Void> indicating completion
      */
-    public Mono<Void> updateDisplayName(String accessToken, String displayName) {
+    public void updateDisplayName(String accessToken, String displayName) {
         log.debug("Updating display name in Supabase: {}", displayName);
 
-        return updateUserMetadata(accessToken, Map.of("display_name", displayName));
+        updateUserMetadata(accessToken, Map.of("display_name", displayName));
     }
 }

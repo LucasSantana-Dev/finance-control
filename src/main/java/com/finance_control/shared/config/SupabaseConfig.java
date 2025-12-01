@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.StringUtils;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
 
 /**
  * Configuration class for Supabase clients.
@@ -25,23 +25,23 @@ public class SupabaseConfig {
 
 
     /**
-     * Creates a WebClient bean configured for Supabase API calls.
+     * Creates a RestClient bean configured for Supabase API calls.
      * Used by SupabaseAuthService for authentication operations.
      *
-     * @return configured WebClient
+     * @return configured RestClient
      */
     @Bean
-    @Qualifier("supabaseWebClient")
-    public WebClient supabaseWebClient() {
+    @Qualifier("supabaseRestClient")
+    public RestClient supabaseRestClient() {
         String url = appProperties.supabase().url();
         String anonKey = appProperties.supabase().anonKey();
 
         if (!StringUtils.hasText(url) || !StringUtils.hasText(anonKey)) {
-            log.warn("Supabase WebClient not configured. URL or anon key is missing.");
-            return WebClient.builder().build();
+            log.warn("Supabase RestClient not configured. URL or anon key is missing.");
+            return RestClient.builder().build();
         }
 
-        return WebClient.builder()
+        return RestClient.builder()
                 .baseUrl(url)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + anonKey)
                 .defaultHeader("apikey", anonKey)

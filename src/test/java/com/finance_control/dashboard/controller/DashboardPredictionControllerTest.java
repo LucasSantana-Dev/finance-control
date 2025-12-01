@@ -38,7 +38,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
     "app.ai.openai.enabled=false",
-    "app.supabase.enabled=false"
+    "app.supabase.enabled=false",
+    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.http.client.HttpClientAutoConfiguration,org.springframework.boot.autoconfigure.web.client.RestClientAutoConfiguration"
 })
 class DashboardPredictionControllerTest {
 

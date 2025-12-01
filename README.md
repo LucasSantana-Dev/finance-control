@@ -25,10 +25,13 @@ A comprehensive financial management system built with Spring Boot, designed to 
 - **Dashboard API**: Complete REST API for dashboard data with caching support
 
 ### 🤖 Financial Predictions
-- ✅ **NEW**: AI-assisted financial forecasts powered by the OpenAI Responses API
+- ✅ **NEW**: AI-assisted financial forecasts powered by OpenAI or CometAPI
+- **Multiple Providers**: Support for OpenAI (default) and CometAPI (optional) with 500+ AI models
 - **Configurable insights**: Tailor forecast horizon, goals, and additional context to refine guidance
 - **Structured output**: Deterministic JSON responses with month-by-month projections and recommendations
-- **Endpoint**: `POST /dashboard/predictions` (requires `app.ai.openai.enabled=true` and a valid `OPENAI_API_KEY`)
+- **Endpoint**: `POST /dashboard/predictions` (requires AI provider configuration)
+- **Provider Selection**: Configure via `app.ai.provider` and enable desired provider(s)
+- **Documentation**: See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for detailed configuration and security considerations
 
 ### 💰 Transaction Management
 - **Multi-source tracking**: Credit cards, bank accounts, cash, and more
@@ -223,11 +226,25 @@ SUPABASE_ENABLED=true
 SUPABASE_URL=https://your-project-ref.supabase.co
 
 # AI Predictions (Optional)
-APP_AI_OPENAI_ENABLED=false
-APP_AI_OPENAI_MODEL=gpt-4o-mini
-APP_AI_OPENAI_MAX_TOKENS=800
-APP_AI_OPENAI_TEMPERATURE=0.2
+# Provider Selection: openai (default) or cometapi
+AI_ENABLED=true
+AI_PROVIDER=openai
+
+# OpenAI Configuration (default)
+OPENAI_ENABLED=true
 OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_MAX_TOKENS=800
+OPENAI_TEMPERATURE=0.2
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# CometAPI Configuration (optional)
+COMETAPI_ENABLED=false
+COMETAPI_API_KEY=your-cometapi-api-key
+COMETAPI_MODEL=gpt-4o-mini
+COMETAPI_MAX_TOKENS=800
+COMETAPI_TEMPERATURE=0.7
+COMETAPI_BASE_URL=https://api.cometapi.com/v1
 SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_JWT_SIGNER=your-supabase-jwt-signer
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key

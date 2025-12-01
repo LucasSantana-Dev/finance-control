@@ -44,12 +44,17 @@ gradle-app.setting
 .vscode/
 .cursor/
 .agent/
+.rulesync/
 .agentignore
+# Note: .rulesync/ is tracked (contains project rules)
 
 # Environment Variables
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+.env.test
 docker.env
 
 # Java
@@ -81,6 +86,7 @@ build/generated/
 .vscode/
 .cursor/
 .cursorignore
+.claude
 
 # OS specific files
 .DS_Store
@@ -108,8 +114,6 @@ replay_pid*
 # BlueJ files
 *.ctxt
 
-# Logs
-logs/
 
 # Backup files
 *.backup

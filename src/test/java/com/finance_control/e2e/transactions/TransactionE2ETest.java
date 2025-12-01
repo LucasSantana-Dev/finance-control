@@ -1,6 +1,6 @@
 package com.finance_control.e2e.transactions;
 
-import com.finance_control.e2e.BaseSeleniumTest;
+import com.finance_control.e2e.BaseE2ETest;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
 
@@ -9,9 +9,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestPropertySource(properties = {
     "app.actuator.enabled=true",
     "management.endpoints.web.exposure.include=health",
-    "management.endpoints.web.base-path=/actuator"
+    "management.endpoints.web.base-path=/actuator",
+    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.http.client.HttpClientAutoConfiguration,org.springframework.boot.autoconfigure.web.client.RestClientAutoConfiguration"
 })
-class TransactionSeleniumTest extends BaseSeleniumTest {
+class TransactionE2ETest extends BaseE2ETest {
 
     @Test
     void shouldDisplayTransactionPage() {
@@ -19,7 +20,6 @@ class TransactionSeleniumTest extends BaseSeleniumTest {
         String content = getPageContent("/actuator/health");
 
         // Verify the application is responding
-        // Note: Health may show DOWN if Redis is unavailable, but endpoint should be accessible
         assertThat(content).isNotNull();
         assertThat(content).contains("\"status\"");
     }
@@ -30,7 +30,6 @@ class TransactionSeleniumTest extends BaseSeleniumTest {
         String content = getPageContent("/actuator/health");
 
         // Verify health endpoint is accessible
-        // Note: Health may show DOWN if Redis is unavailable, but endpoint should be accessible
         assertThat(content).isNotNull();
         assertThat(content).contains("\"status\"");
     }

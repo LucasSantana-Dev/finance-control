@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
@@ -133,16 +132,16 @@ public class AuthService {
      *
      * @param email the user's email
      * @param password the user's password
-     * @return Mono containing AuthResponse with tokens and mapped user information
+     * @return AuthResponse with tokens and mapped user information
      * @throws IllegalStateException if Supabase authentication is not enabled
      */
-    public Mono<AuthResponse> authenticateWithSupabase(String email, String password) {
+    public AuthResponse authenticateWithSupabase(String email, String password) {
         if (supabaseAuthService == null || !supabaseAuthService.isSupabaseAuthEnabled()) {
-            return Mono.error(new IllegalStateException("Supabase authentication is not enabled"));
+            throw new IllegalStateException("Supabase authentication is not enabled");
         }
 
         if (userMappingService == null) {
-            return Mono.error(new IllegalStateException("User mapping service is not available"));
+            throw new IllegalStateException("User mapping service is not available");
         }
 
         log.debug("Authenticating user with Supabase: {}", email);
@@ -152,36 +151,28 @@ public class AuthService {
                 .password(password)
                 .build();
 
-        return supabaseAuthService.signin(loginRequest)
-                .flatMap(supabaseResponse -> {
-                    try {
-                        // Map Supabase user to local user
-                        Long localUserId = userMappingService.findOrCreateUserFromSupabase(supabaseResponse);
+        try {
+            AuthResponse supabaseResponse = supabaseAuthService.signin(loginRequest);
 
-                        // Create enhanced response with local user ID
-                        AuthResponse enhancedResponse = AuthResponse.builder()
-                                .accessToken(supabaseResponse.getAccessToken())
-                                .refreshToken(supabaseResponse.getRefreshToken())
-                                .tokenType(supabaseResponse.getTokenType())
-                                .expiresIn(supabaseResponse.getExpiresIn())
-                                .user(supabaseResponse.getUser())
-                                .build();
+            // Map Supabase user to local user
+            Long localUserId = userMappingService.findOrCreateUserFromSupabase(supabaseResponse);
 
-                        // Store the local user ID in a custom claim or metadata
-                        // For now, we'll log it - in a real implementation, you might want to add it to the token
+            // Create enhanced response with local user ID
+            AuthResponse enhancedResponse = AuthResponse.builder()
+                    .accessToken(supabaseResponse.getAccessToken())
+                    .refreshToken(supabaseResponse.getRefreshToken())
+                    .tokenType(supabaseResponse.getTokenType())
+                    .expiresIn(supabaseResponse.getExpiresIn())
+                    .user(supabaseResponse.getUser())
+                    .build();
 
-                        log.info("User authenticated successfully with Supabase, mapped to local user: {}", localUserId);
+            log.info("User authenticated successfully with Supabase, mapped to local user: {}", localUserId);
+            return enhancedResponse;
 
-                        return Mono.just(enhancedResponse);
-
-                    } catch (Exception e) {
-                        log.error("Failed to map Supabase user to local user: {}", e.getMessage(), e);
-                        return Mono.error(new RuntimeException("Failed to create or find local user account", e));
-                    }
-                })
-                .doOnError(error -> {
-                    log.warn("Supabase authentication failed for user: {} - {}", email, error.getMessage());
-                });
+        } catch (Exception e) {
+            log.warn("Supabase authentication failed for user: {} - {}", email, e.getMessage());
+            throw new RuntimeException("Failed to authenticate with Supabase", e);
+        }
     }
 
     /**
@@ -191,16 +182,16 @@ public class AuthService {
      * @param email the user's email
      * @param password the user's password
      * @param metadata optional user metadata
-     * @return Mono containing AuthResponse with tokens and user information
+     * @return AuthResponse with tokens and user information
      * @throws IllegalStateException if Supabase authentication is not enabled
      */
-    public Mono<AuthResponse> signupWithSupabase(String email, String password, java.util.Map<String, Object> metadata) {
+    public AuthResponse signupWithSupabase(String email, String password, java.util.Map<String, Object> metadata) {
         if (supabaseAuthService == null || !supabaseAuthService.isSupabaseAuthEnabled()) {
-            return Mono.error(new IllegalStateException("Supabase authentication is not enabled"));
+            throw new IllegalStateException("Supabase authentication is not enabled");
         }
 
         if (userMappingService == null) {
-            return Mono.error(new IllegalStateException("User mapping service is not available"));
+            throw new IllegalStateException("User mapping service is not available");
         }
 
         log.debug("Signing up user with Supabase: {}", email);
@@ -211,52 +202,52 @@ public class AuthService {
                 .metadata(metadata != null ? metadata : java.util.Map.of())
                 .build();
 
-        return supabaseAuthService.signup(signupRequest)
-                .flatMap(supabaseResponse -> {
-                    try {
-                        // Create local user account from Supabase response
-                        Long localUserId = userMappingService.findOrCreateUserFromSupabase(supabaseResponse);
+        try {
+            AuthResponse supabaseResponse = supabaseAuthService.signup(signupRequest);
 
-                        // Create enhanced response
-                        AuthResponse enhancedResponse = AuthResponse.builder()
-                                .accessToken(supabaseResponse.getAccessToken())
-                                .refreshToken(supabaseResponse.getRefreshToken())
-                                .tokenType(supabaseResponse.getTokenType())
-                                .expiresIn(supabaseResponse.getExpiresIn())
-                                .user(supabaseResponse.getUser())
-                                .build();
+            // Create local user account from Supabase response
+            Long localUserId = userMappingService.findOrCreateUserFromSupabase(supabaseResponse);
 
-                        log.info("User signed up successfully with Supabase, created local user: {}", localUserId);
+            // Create enhanced response
+            AuthResponse enhancedResponse = AuthResponse.builder()
+                    .accessToken(supabaseResponse.getAccessToken())
+                    .refreshToken(supabaseResponse.getRefreshToken())
+                    .tokenType(supabaseResponse.getTokenType())
+                    .expiresIn(supabaseResponse.getExpiresIn())
+                    .user(supabaseResponse.getUser())
+                    .build();
 
-                        return Mono.just(enhancedResponse);
+            log.info("User signed up successfully with Supabase, created local user: {}", localUserId);
+            return enhancedResponse;
 
-                    } catch (Exception e) {
-                        log.error("Failed to create local user account for Supabase signup: {}", e.getMessage(), e);
-                        return Mono.error(new RuntimeException("Failed to create local user account", e));
-                    }
-                })
-                .doOnError(error -> {
-                    log.warn("Supabase signup failed for user: {} - {}", email, error.getMessage());
-                });
+        } catch (Exception e) {
+            log.warn("Supabase signup failed for user: {} - {}", email, e.getMessage());
+            throw new RuntimeException("Failed to sign up with Supabase", e);
+        }
     }
 
     /**
      * Refreshes a Supabase access token using a refresh token.
      *
      * @param refreshToken the refresh token
-     * @return Mono containing AuthResponse with new tokens
+     * @return AuthResponse with new tokens
      * @throws IllegalStateException if Supabase authentication is not enabled
      */
-    public Mono<AuthResponse> refreshSupabaseToken(String refreshToken) {
+    public AuthResponse refreshSupabaseToken(String refreshToken) {
         if (supabaseAuthService == null || !supabaseAuthService.isSupabaseAuthEnabled()) {
-            return Mono.error(new IllegalStateException("Supabase authentication is not enabled"));
+            throw new IllegalStateException("Supabase authentication is not enabled");
         }
 
         log.debug("Refreshing Supabase token");
 
-        return supabaseAuthService.refreshToken(refreshToken)
-                .doOnSuccess(response -> log.info("Supabase token refreshed successfully"))
-                .doOnError(error -> log.warn("Supabase token refresh failed: {}", error.getMessage()));
+        try {
+            AuthResponse response = supabaseAuthService.refreshToken(refreshToken);
+            log.info("Supabase token refreshed successfully");
+            return response;
+        } catch (Exception e) {
+            log.warn("Supabase token refresh failed: {}", e.getMessage());
+            throw new RuntimeException("Failed to refresh Supabase token", e);
+        }
     }
 
     /**
@@ -264,12 +255,11 @@ public class AuthService {
      *
      * @param email the user's email
      * @param redirectTo optional redirect URL after password reset
-     * @return Mono<Void> indicating completion
      * @throws IllegalStateException if Supabase authentication is not enabled
      */
-    public Mono<Void> resetPasswordWithSupabase(String email, String redirectTo) {
+    public void resetPasswordWithSupabase(String email, String redirectTo) {
         if (supabaseAuthService == null || !supabaseAuthService.isSupabaseAuthEnabled()) {
-            return Mono.error(new IllegalStateException("Supabase authentication is not enabled"));
+            throw new IllegalStateException("Supabase authentication is not enabled");
         }
 
         log.debug("Initiating password reset with Supabase for: {}", email);
@@ -279,9 +269,13 @@ public class AuthService {
                 .redirectTo(redirectTo)
                 .build();
 
-        return supabaseAuthService.resetPassword(resetRequest)
-                .doOnSuccess(v -> log.info("Password reset email sent via Supabase to: {}", email))
-                .doOnError(error -> log.warn("Supabase password reset failed for: {} - {}", email, error.getMessage()));
+        try {
+            supabaseAuthService.resetPassword(resetRequest);
+            log.info("Password reset email sent via Supabase to: {}", email);
+        } catch (Exception e) {
+            log.warn("Supabase password reset failed for: {} - {}", email, e.getMessage());
+            throw new RuntimeException("Failed to reset password with Supabase", e);
+        }
     }
 
     /**
@@ -290,38 +284,44 @@ public class AuthService {
      *
      * @param newPassword the new password
      * @param accessToken the access token for authentication
-     * @return Mono<Void> indicating completion
      * @throws IllegalStateException if Supabase authentication is not enabled
      */
-    public Mono<Void> updatePasswordWithSupabase(String newPassword, String accessToken) {
+    public void updatePasswordWithSupabase(String newPassword, String accessToken) {
         if (supabaseAuthService == null || !supabaseAuthService.isSupabaseAuthEnabled()) {
-            return Mono.error(new IllegalStateException("Supabase authentication is not enabled"));
+            throw new IllegalStateException("Supabase authentication is not enabled");
         }
 
         log.debug("Updating password with Supabase");
 
-        return supabaseAuthService.updatePassword(newPassword, accessToken)
-                .doOnSuccess(v -> log.info("Password updated successfully with Supabase"))
-                .doOnError(error -> log.warn("Supabase password update failed: {}", error.getMessage()));
+        try {
+            supabaseAuthService.updatePassword(newPassword, accessToken);
+            log.info("Password updated successfully with Supabase");
+        } catch (Exception e) {
+            log.warn("Supabase password update failed: {}", e.getMessage());
+            throw new RuntimeException("Failed to update password with Supabase", e);
+        }
     }
 
     /**
      * Signs out a user from Supabase.
      *
      * @param accessToken the access token for authentication
-     * @return Mono<Void> indicating completion
      * @throws IllegalStateException if Supabase authentication is not enabled
      */
-    public Mono<Void> signoutFromSupabase(String accessToken) {
+    public void signoutFromSupabase(String accessToken) {
         if (supabaseAuthService == null || !supabaseAuthService.isSupabaseAuthEnabled()) {
-            return Mono.error(new IllegalStateException("Supabase authentication is not enabled"));
+            throw new IllegalStateException("Supabase authentication is not enabled");
         }
 
         log.debug("Signing out user from Supabase");
 
-        return supabaseAuthService.signout(accessToken)
-                .doOnSuccess(v -> log.info("User signed out successfully from Supabase"))
-                .doOnError(error -> log.warn("Supabase signout failed: {}", error.getMessage()));
+        try {
+            supabaseAuthService.signout(accessToken);
+            log.info("User signed out successfully from Supabase");
+        } catch (Exception e) {
+            log.warn("Supabase signout failed: {}", e.getMessage());
+            throw new RuntimeException("Failed to sign out from Supabase", e);
+        }
     }
 
     /**
@@ -333,19 +333,24 @@ public class AuthService {
      * Gets current user information from Supabase.
      *
      * @param accessToken The access token for authentication
-     * @return Mono containing user information
+     * @return user information
      * @throws IllegalStateException if Supabase authentication is not enabled
      */
-    public Mono<com.fasterxml.jackson.databind.JsonNode> getCurrentSupabaseUser(String accessToken) {
+    public com.fasterxml.jackson.databind.JsonNode getCurrentSupabaseUser(String accessToken) {
         if (supabaseAuthService == null || !supabaseAuthService.isSupabaseAuthEnabled()) {
-            return Mono.error(new IllegalStateException("Supabase authentication is not enabled"));
+            throw new IllegalStateException("Supabase authentication is not enabled");
         }
 
         log.debug("Getting current user info from Supabase");
 
-        return supabaseAuthService.getUserInfo(accessToken)
-                .doOnSuccess(user -> log.debug("Successfully retrieved user info from Supabase"))
-                .doOnError(error -> log.error("Failed to get user info from Supabase: {}", error.getMessage()));
+        try {
+            com.fasterxml.jackson.databind.JsonNode user = supabaseAuthService.getUserInfo(accessToken);
+            log.debug("Successfully retrieved user info from Supabase");
+            return user;
+        } catch (Exception e) {
+            log.error("Failed to get user info from Supabase: {}", e.getMessage());
+            throw new RuntimeException("Failed to get user info from Supabase", e);
+        }
     }
 
     public boolean isSupabaseAuthEnabled() {

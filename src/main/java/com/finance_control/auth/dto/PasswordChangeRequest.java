@@ -58,6 +58,11 @@ public class PasswordChangeRequest {
         if (newPassword.length() < 8) {
             throw new IllegalArgumentException("Password must be at least 8 characters long");
         }
+        // Enforce password complexity: at least one lowercase, one uppercase, and one digit
+        if (!newPassword.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")) {
+            throw new IllegalArgumentException(
+                    "Password must contain at least one lowercase letter, one uppercase letter, and one digit");
+        }
     }
 
     private void validatePasswordConfirmation() {

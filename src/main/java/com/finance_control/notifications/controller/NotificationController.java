@@ -38,6 +38,15 @@ public class NotificationController extends BaseController<Notification, Long, N
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    // Override to prevent ambiguous mapping - this endpoint should not be used
+    // Use createNotification instead which accepts CreateNotificationDTO
+    @Override
+    @PostMapping(consumes = "application/x-invalid-content-type")
+    public ResponseEntity<NotificationDTO> create(@Valid @RequestBody NotificationDTO createDTO) {
+        throw new UnsupportedOperationException(
+            "Use POST /notifications with CreateNotificationDTO instead of NotificationDTO");
+    }
+
     @GetMapping("/unread")
     @Operation(summary = "Get unread notifications", description = "Retrieve all unread notifications for the current user")
     public ResponseEntity<Page<NotificationDTO>> getUnreadNotifications(Pageable pageable) {

@@ -5,6 +5,7 @@ import com.finance_control.shared.config.properties.OpenFinanceProperties;
 import com.finance_control.shared.service.SupabaseStorageService;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -83,6 +84,49 @@ public class OpenFinanceCertificateConfig {
         } catch (Exception e) {
             log.error("Failed to configure SSL context for Open Finance", e);
             throw new IllegalStateException("Failed to configure Open Finance SSL context", e);
+        }
+    }
+
+    /**
+     * Creates a Java SSLContext configured for mutual TLS (mTLS) with Open Finance APIs.
+     * This is used by RestClient for HTTP calls.
+     *
+     * @return configured SSLContext for mTLS
+     */
+    public javax.net.ssl.SSLContext openFinanceJavaSslContext() {
+        OpenFinanceProperties.CertificatesProperties certConfig = appProperties.openFinance().certificates();
+
+        try {
+            SSLContextBuilder sslContextBuilder = SSLContextBuilder.create();
+
+            // Load client certificate and private key
+            if (certConfig.useSupabaseStorage() && supabaseStorageService != null) {
+                log.info("Loading certificates from Supabase Storage for RestClient");
+                loadCertificatesFromSupabaseJava(sslContextBuilder, certConfig);
+            } else if (StringUtils.hasText(certConfig.keystorePath())) {
+                log.info("Loading certificates from keystore for RestClient: {}", certConfig.keystorePath());
+                loadCertificatesFromKeystoreJava(sslContextBuilder, certConfig);
+            } else if (StringUtils.hasText(certConfig.clientCertificatePath()) &&
+                    StringUtils.hasText(certConfig.privateKeyPath())) {
+                log.info("Loading certificates from files for RestClient");
+                loadCertificatesFromFilesJava(sslContextBuilder, certConfig);
+            } else {
+                log.warn("No certificate configuration found. Open Finance API calls may fail.");
+                return sslContextBuilder.build();
+            }
+
+            // Load CA certificate for trust store
+            if (StringUtils.hasText(certConfig.caCertificatePath())) {
+                loadCaCertificateJava(sslContextBuilder, certConfig);
+            } else {
+                log.warn("No CA certificate configured. Using default trust store.");
+            }
+
+            return sslContextBuilder.build();
+
+        } catch (Exception e) {
+            log.error("Failed to configure Java SSL context for Open Finance", e);
+            throw new IllegalStateException("Failed to configure Open Finance Java SSL context", e);
         }
     }
 
@@ -188,5 +232,93 @@ public class OpenFinanceCertificateConfig {
         java.security.spec.PKCS8EncodedKeySpec keySpec = new java.security.spec.PKCS8EncodedKeySpec(keyBytes);
         java.security.KeyFactory keyFactory = java.security.KeyFactory.getInstance("RSA");
         return (RSAPrivateKey) keyFactory.generatePrivate(keySpec);
+    }
+
+    // Java SSLContext helper methods (for RestClient)
+    private void loadCertificatesFromFilesJava(SSLContextBuilder builder,
+            OpenFinanceProperties.CertificatesProperties certConfig) throws Exception {
+        try (FileInputStream certStream = new FileInputStream(certConfig.clientCertificatePath());
+                FileInputStream keyStream = new FileInputStream(certConfig.privateKeyPath())) {
+
+            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+            X509Certificate certificate = (X509Certificate) certFactory.generateCertificate(certStream);
+
+            String privateKeyPem = new String(Files.readAllBytes(Paths.get(certConfig.privateKeyPath())));
+            RSAPrivateKey privateKey = parsePrivateKey(privateKeyPem);
+
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            keyStore.load(null, null);
+            keyStore.setKeyEntry("client", privateKey, "".toCharArray(), new Certificate[]{certificate});
+
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keyStore, "".toCharArray());
+
+            builder.loadKeyMaterial(keyStore, "".toCharArray());
+            log.info("Successfully loaded certificates from files for RestClient");
+        }
+    }
+
+    private void loadCertificatesFromKeystoreJava(SSLContextBuilder builder,
+            OpenFinanceProperties.CertificatesProperties certConfig) throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        try (FileInputStream keystoreStream = new FileInputStream(certConfig.keystorePath())) {
+            keyStore.load(keystoreStream, certConfig.keystorePassword().toCharArray());
+            builder.loadKeyMaterial(keyStore, certConfig.keystorePassword().toCharArray());
+            log.info("Successfully loaded certificates from keystore for RestClient");
+        }
+    }
+
+    private void loadCertificatesFromSupabaseJava(SSLContextBuilder builder,
+            OpenFinanceProperties.CertificatesProperties certConfig) throws Exception {
+        if (supabaseStorageService == null) {
+            throw new IllegalStateException("Supabase Storage service is not available");
+        }
+
+        var certResource = supabaseStorageService.downloadFile(
+                certConfig.supabaseStorageBucket(), "client-certificate.pem");
+        var keyResource = supabaseStorageService.downloadFile(
+                certConfig.supabaseStorageBucket(), "private-key.pem");
+
+        try (InputStream certStream = certResource.getInputStream();
+                InputStream keyStream = keyResource.getInputStream()) {
+
+            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+            X509Certificate certificate = (X509Certificate) certFactory.generateCertificate(certStream);
+
+            byte[] keyBytes = keyStream.readAllBytes();
+            String privateKeyPem = new String(keyBytes);
+            RSAPrivateKey privateKey = parsePrivateKey(privateKeyPem);
+
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            keyStore.load(null, null);
+            keyStore.setKeyEntry("client", privateKey, "".toCharArray(), new Certificate[]{certificate});
+
+            builder.loadKeyMaterial(keyStore, "".toCharArray());
+            log.info("Successfully loaded certificates from Supabase Storage for RestClient");
+        }
+    }
+
+    private void loadCaCertificateJava(SSLContextBuilder builder,
+            OpenFinanceProperties.CertificatesProperties certConfig) throws Exception {
+        InputStream caStream;
+        if (certConfig.useSupabaseStorage() && supabaseStorageService != null) {
+            var caResource = supabaseStorageService.downloadFile(
+                    certConfig.supabaseStorageBucket(), "ca-certificate.pem");
+            caStream = caResource.getInputStream();
+        } else {
+            caStream = new FileInputStream(certConfig.caCertificatePath());
+        }
+
+        try (caStream) {
+            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+            Certificate caCertificate = certFactory.generateCertificate(caStream);
+
+            KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            trustStore.load(null, null);
+            trustStore.setCertificateEntry("ca", caCertificate);
+
+            builder.loadTrustMaterial(trustStore, null);
+            log.info("Successfully loaded CA certificate for RestClient");
+        }
     }
 }

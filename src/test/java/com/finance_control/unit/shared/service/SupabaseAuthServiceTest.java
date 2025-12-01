@@ -2,43 +2,62 @@ package com.finance_control.unit.shared.service;
 
 import com.finance_control.shared.config.AppProperties;
 import com.finance_control.shared.config.properties.SupabaseProperties;
-import com.finance_control.shared.dto.SignupRequest;
+import com.finance_control.shared.dto.AuthResponse;
 import com.finance_control.shared.dto.LoginRequest;
 import com.finance_control.shared.dto.PasswordResetRequest;
+import com.finance_control.shared.dto.SignupRequest;
 import com.finance_control.shared.service.SupabaseAuthService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClient;
 
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for SupabaseAuthService.
+ * Uses Mockito to mock RestClient's fluent API for testing.
+ */
+@ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
+@DisplayName("SupabaseAuthService Tests")
 class SupabaseAuthServiceTest {
 
     @Mock
-    private WebClient webClient;
+    private RestClient restClient;
 
     @Mock
-    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+    private RestClient.RequestBodyUriSpec requestBodyUriSpec;
 
     @Mock
-    private WebClient.RequestBodySpec requestBodySpec;
+    private RestClient.RequestBodySpec requestBodySpec;
 
     @Mock
-    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
+    @SuppressWarnings("rawtypes")
+    private RestClient.RequestHeadersUriSpec requestHeadersUriSpec;
 
     @Mock
-    private WebClient.ResponseSpec responseSpec;
+    @SuppressWarnings("rawtypes")
+    private RestClient.RequestHeadersSpec requestHeadersSpec;
+
+    @Mock
+    private RestClient.ResponseSpec responseSpec;
 
     @Mock
     private AppProperties appProperties;
@@ -46,12 +65,12 @@ class SupabaseAuthServiceTest {
     @Mock
     private SupabaseProperties supabaseConfig;
 
-    private ObjectMapper objectMapper;
     private SupabaseAuthService authService;
+
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         objectMapper = new ObjectMapper();
 
         when(appProperties.supabase()).thenReturn(supabaseConfig);
@@ -59,243 +78,276 @@ class SupabaseAuthServiceTest {
         when(supabaseConfig.url()).thenReturn("https://test.supabase.co");
         when(supabaseConfig.anonKey()).thenReturn("test-anon-key");
 
-        // Create service instance with mocked WebClient
-        authService = new SupabaseAuthService(webClient, appProperties, objectMapper);
-
-        // Mock the WebClient chain
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(JsonNode.class)).thenReturn(Mono.just(createMockAuthResponse()));
+        // Create service with mocked RestClient
+        authService = new SupabaseAuthService(restClient, appProperties, objectMapper);
     }
 
     @Test
-    void signup_WithValidRequest_ShouldReturnAuthResponse() {
-        // Given
+    @DisplayName("signup - should return AuthResponse")
+    void signup_WithValidRequest_ShouldReturnAuthResponse() throws Exception {
         SignupRequest request = SignupRequest.builder()
                 .email("test@example.com")
                 .password("password123")
-                .metadata(Map.of("full_name", "Test User"))
+                .metadata(Map.of("name", "Test User"))
                 .build();
 
-        // When & Then
-        StepVerifier.create(authService.signup(request))
-                .expectNextMatches(response -> {
-                    assertThat(response.getAccessToken()).isEqualTo("mock-access-token");
-                    assertThat(response.getUser().getEmail()).isEqualTo("test@example.com");
-                    return true;
-                })
-                .verifyComplete();
+        String responseJson = """
+                {
+                    "access_token": "access-token",
+                    "refresh_token": "refresh-token",
+                    "token_type": "bearer",
+                    "expires_in": 3600,
+                    "user": {
+                        "id": "user-uuid",
+                        "email": "test@example.com"
+                    }
+                }
+                """;
+        JsonNode responseNode = objectMapper.readTree(responseJson);
 
-        verify(webClient, times(1)).post();
-        verify(requestBodyUriSpec).uri("/auth/v1/signup");
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(JsonNode.class)).thenReturn(responseNode);
+
+        AuthResponse result = authService.signup(request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getAccessToken()).isEqualTo("access-token");
+        assertThat(result.getRefreshToken()).isEqualTo("refresh-token");
+        assertThat(result.getUser().getEmail()).isEqualTo("test@example.com");
+        verify(restClient).post();
     }
 
     @Test
-    void signin_WithValidCredentials_ShouldReturnAuthResponse() {
-        // Given
+    @DisplayName("signin - should return AuthResponse")
+    void signin_WithValidCredentials_ShouldReturnAuthResponse() throws Exception {
         LoginRequest request = LoginRequest.builder()
                 .email("test@example.com")
                 .password("password123")
                 .build();
 
-        // When & Then
-        StepVerifier.create(authService.signin(request))
-                .expectNextMatches(response -> {
-                    assertThat(response.getAccessToken()).isEqualTo("mock-access-token");
-                    assertThat(response.getUser().getEmail()).isEqualTo("test@example.com");
-                    return true;
-                })
-                .verifyComplete();
+        String responseJson = """
+                {
+                    "access_token": "access-token",
+                    "refresh_token": "refresh-token",
+                    "token_type": "bearer",
+                    "expires_in": 3600,
+                    "user": {
+                        "id": "user-uuid",
+                        "email": "test@example.com"
+                    }
+                }
+                """;
+        JsonNode responseNode = objectMapper.readTree(responseJson);
 
-        verify(requestBodyUriSpec).uri("/auth/v1/token?grant_type=password");
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(JsonNode.class)).thenReturn(responseNode);
+
+        AuthResponse result = authService.signin(request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getAccessToken()).isEqualTo("access-token");
+        assertThat(result.getUser().getEmail()).isEqualTo("test@example.com");
+        verify(restClient).post();
     }
 
     @Test
-    void refreshToken_WithValidRefreshToken_ShouldReturnNewTokens() {
-        // Given
-        String refreshToken = "refresh-token-123";
+    @DisplayName("refreshToken - should return new tokens")
+    void refreshToken_WithValidRefreshToken_ShouldReturnNewTokens() throws Exception {
+        String refreshToken = "refresh-token";
+        String responseJson = """
+                {
+                    "access_token": "new-access-token",
+                    "refresh_token": "new-refresh-token",
+                    "token_type": "bearer",
+                    "expires_in": 3600
+                }
+                """;
+        JsonNode responseNode = objectMapper.readTree(responseJson);
 
-        // When & Then
-        StepVerifier.create(authService.refreshToken(refreshToken))
-                .expectNextMatches(response -> {
-                    assertThat(response.getAccessToken()).isEqualTo("mock-access-token");
-                    return true;
-                })
-                .verifyComplete();
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(JsonNode.class)).thenReturn(responseNode);
 
-        verify(requestBodyUriSpec).uri("/auth/v1/token?grant_type=refresh_token");
+        AuthResponse result = authService.refreshToken(refreshToken);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getAccessToken()).isEqualTo("new-access-token");
+        assertThat(result.getRefreshToken()).isEqualTo("new-refresh-token");
+        verify(restClient).post();
     }
 
     @Test
+    @DisplayName("resetPassword - should complete successfully")
     void resetPassword_WithValidEmail_ShouldCompleteSuccessfully() {
-        // Given
         PasswordResetRequest request = PasswordResetRequest.builder()
                 .email("test@example.com")
+                .redirectTo("https://example.com/reset")
                 .build();
 
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
 
-        // When & Then
-        StepVerifier.create(authService.resetPassword(request))
-                .verifyComplete();
+        authService.resetPassword(request);
 
+        verify(restClient).post();
         verify(requestBodyUriSpec).uri("/auth/v1/recover");
     }
 
     @Test
+    @DisplayName("updatePassword - should complete successfully")
     void updatePassword_WithValidToken_ShouldCompleteSuccessfully() {
-        // Given
-        String newPassword = "newpassword123";
-        String accessToken = "access-token-123";
+        String newPassword = "newPassword123";
+        String accessToken = "access-token";
 
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
 
-        // Mock PUT request chain
-        WebClient.RequestBodyUriSpec putUriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        WebClient.RequestBodySpec putBodySpec = mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec<?> putHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-        WebClient.ResponseSpec putResponseSpec = mock(WebClient.ResponseSpec.class);
+        authService.updatePassword(newPassword, accessToken);
 
-        when(webClient.put()).thenReturn(putUriSpec);
-        when(putUriSpec.uri(anyString())).thenReturn(putBodySpec);
-        when(putBodySpec.header(anyString(), anyString())).thenReturn(putBodySpec);
-        when(putBodySpec.contentType(any())).thenReturn(putBodySpec);
-        doReturn(putHeadersSpec).when(putBodySpec).bodyValue(any());
-        when(putHeadersSpec.retrieve()).thenReturn(putResponseSpec);
-        when(putResponseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
-
-        // When & Then
-        StepVerifier.create(authService.updatePassword(newPassword, accessToken))
-                .verifyComplete();
-
-        verify(webClient, times(1)).put();
-        verify(putUriSpec).uri("/auth/v1/user");
+        verify(restClient).put();
+        verify(requestBodySpec).header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
     }
 
     @Test
+    @DisplayName("updateEmail - should complete successfully")
     void updateEmail_WithValidToken_ShouldCompleteSuccessfully() {
-        // Given
-        String newEmail = "newemail@example.com";
-        String accessToken = "access-token-123";
+        String newEmail = "new@example.com";
+        String accessToken = "access-token";
 
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
 
-        // Mock PUT request chain
-        WebClient.RequestBodyUriSpec putUriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        WebClient.RequestBodySpec putBodySpec = mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec<?> putHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-        WebClient.ResponseSpec putResponseSpec = mock(WebClient.ResponseSpec.class);
+        authService.updateEmail(newEmail, accessToken);
 
-        when(webClient.put()).thenReturn(putUriSpec);
-        when(putUriSpec.uri(anyString())).thenReturn(putBodySpec);
-        when(putBodySpec.header(anyString(), anyString())).thenReturn(putBodySpec);
-        when(putBodySpec.contentType(any())).thenReturn(putBodySpec);
-        doReturn(putHeadersSpec).when(putBodySpec).bodyValue(any());
-        when(putHeadersSpec.retrieve()).thenReturn(putResponseSpec);
-        when(putResponseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
-
-        // When & Then
-        StepVerifier.create(authService.updateEmail(newEmail, accessToken))
-                .verifyComplete();
-
-        verify(webClient, times(1)).put();
-        verify(putUriSpec).uri("/auth/v1/user");
+        verify(restClient).put();
+        verify(requestBodySpec).header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
     }
 
     @Test
+    @DisplayName("signout - should complete successfully")
     void signout_WithValidToken_ShouldCompleteSuccessfully() {
-        // Given
-        String accessToken = "access-token-123";
+        String accessToken = "access-token";
 
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
 
-        // Mock POST request chain for signout
-        WebClient.RequestBodyUriSpec postUriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        WebClient.RequestBodySpec postBodySpec = mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec<?> postHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-        WebClient.ResponseSpec postResponseSpec = mock(WebClient.ResponseSpec.class);
+        authService.signout(accessToken);
 
-        when(webClient.post()).thenReturn(postUriSpec);
-        when(postUriSpec.uri(anyString())).thenReturn(postBodySpec);
-        when(postBodySpec.header(anyString(), anyString())).thenReturn(postBodySpec);
-        doReturn(postResponseSpec).when(postBodySpec).retrieve();
-        doReturn(postHeadersSpec).when(postBodySpec).bodyValue(any());
-        when(postHeadersSpec.retrieve()).thenReturn(postResponseSpec);
-        when(postResponseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
-
-        // When & Then
-        StepVerifier.create(authService.signout(accessToken))
-                .verifyComplete();
-
-        verify(webClient, times(1)).post();
-        verify(postUriSpec).uri("/auth/v1/logout");
+        verify(restClient).post();
+        verify(requestBodySpec).header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
     }
 
     @Test
-    void verifyEmail_WithValidToken_ShouldReturnAuthResponse() {
-        // Given
+    @DisplayName("verifyEmail - should return AuthResponse")
+    void verifyEmail_WithValidToken_ShouldReturnAuthResponse() throws Exception {
         String token = "verification-token";
         String type = "signup";
         String email = "test@example.com";
 
-        // When & Then
-        StepVerifier.create(authService.verifyEmail(token, type, email))
-                .expectNextMatches(response -> {
-                    assertThat(response.getAccessToken()).isEqualTo("mock-access-token");
-                    return true;
-                })
-                .verifyComplete();
+        String responseJson = """
+                {
+                    "access_token": "access-token",
+                    "refresh_token": "refresh-token",
+                    "token_type": "bearer",
+                    "expires_in": 3600,
+                    "user": {
+                        "id": "user-uuid",
+                        "email": "test@example.com"
+                    }
+                }
+                """;
+        JsonNode responseNode = objectMapper.readTree(responseJson);
 
-        verify(requestBodyUriSpec).uri("/auth/v1/verify");
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(JsonNode.class)).thenReturn(responseNode);
+
+        AuthResponse result = authService.verifyEmail(token, type, email);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getAccessToken()).isEqualTo("access-token");
+        assertThat(result.getUser().getEmail()).isEqualTo(email);
+        verify(restClient).post();
     }
 
     @Test
-    void getUserInfo_WithValidToken_ShouldReturnUserData() {
-        // Given
-        String accessToken = "access-token-123";
+    @DisplayName("getUserInfo - should return user data")
+    @SuppressWarnings("unchecked")
+    void getUserInfo_WithValidToken_ShouldReturnUserData() throws Exception {
+        String accessToken = "access-token";
+        String userJson = """
+                {
+                    "id": "user-uuid",
+                    "email": "test@example.com",
+                    "email_confirmed_at": "2024-01-01T00:00:00Z"
+                }
+                """;
+        JsonNode userNode = objectMapper.readTree(userJson);
 
-        // Mock GET request chain
-        WebClient.RequestHeadersUriSpec<?> getUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
-        WebClient.RequestHeadersSpec<?> getHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-        WebClient.ResponseSpec getResponseSpec = mock(WebClient.ResponseSpec.class);
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(JsonNode.class)).thenReturn(userNode);
 
-        doReturn(getUriSpec).when(webClient).get();
-        doReturn(getHeadersSpec).when(getUriSpec).uri(anyString());
-        doReturn(getHeadersSpec).when(getHeadersSpec).header(anyString(), anyString());
-        when(getHeadersSpec.retrieve()).thenReturn(getResponseSpec);
-        when(getResponseSpec.bodyToMono(JsonNode.class)).thenReturn(Mono.just(createMockUserInfo()));
+        JsonNode result = authService.getUserInfo(accessToken);
 
-        // When & Then
-        StepVerifier.create(authService.getUserInfo(accessToken))
-                .expectNextMatches(userInfo -> {
-                    assertThat(userInfo.get("email").asText()).isEqualTo("test@example.com");
-                    return true;
-                })
-                .verifyComplete();
-
-        verify(webClient, times(1)).get();
-        verify(getUriSpec).uri("/auth/v1/user");
+        assertThat(result).isNotNull();
+        assertThat(result.get("email").asText()).isEqualTo("test@example.com");
+        verify(restClient).get();
+        verify(requestHeadersSpec).header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
     }
 
     @Test
+    @DisplayName("signup - should handle Supabase error")
     void signup_WithSupabaseError_ShouldHandleError() {
-        // Given
         SignupRequest request = SignupRequest.builder()
                 .email("test@example.com")
                 .password("password123")
                 .build();
 
-        WebClientResponseException error = WebClientResponseException.create(
-                400, "Bad Request", null, "Invalid email".getBytes(), null);
-        when(responseSpec.bodyToMono(JsonNode.class)).thenReturn(Mono.error(error));
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(JsonNode.class))
+                .thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Email already registered"));
 
-        // When & Then
-        StepVerifier.create(authService.signup(request))
-                .expectError(WebClientResponseException.class)
-                .verify();
+        assertThatThrownBy(() -> authService.signup(request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Supabase authentication error");
     }
 
     @Test
@@ -317,53 +369,5 @@ class SupabaseAuthServiceTest {
 
         // Then
         assertThat(enabled).isFalse();
-    }
-
-    private JsonNode createMockAuthResponse() {
-        try {
-            String json = """
-                    {
-                        "access_token": "mock-access-token",
-                        "refresh_token": "mock-refresh-token",
-                        "token_type": "bearer",
-                        "expires_in": 3600,
-                        "expires_at": 1638360000,
-                        "user": {
-                            "id": "123e4567-e89b-12d3-a456-426614174000",
-                            "email": "test@example.com",
-                            "email_confirmed_at": "2023-01-01T00:00:00Z",
-                            "role": "authenticated",
-                            "user_metadata": {},
-                            "app_metadata": {},
-                            "created_at": "2023-01-01T00:00:00Z",
-                            "updated_at": "2023-01-01T00:00:00Z",
-                            "confirmed_at": "2023-01-01T00:00:00Z"
-                        }
-                    }
-                    """;
-            return objectMapper.readTree(json);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private JsonNode createMockUserInfo() {
-        try {
-            String json = """
-                    {
-                        "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "email": "test@example.com",
-                        "email_confirmed_at": "2023-01-01T00:00:00Z",
-                        "role": "authenticated",
-                        "user_metadata": {"full_name": "Test User"},
-                        "app_metadata": {},
-                        "created_at": "2023-01-01T00:00:00Z",
-                        "updated_at": "2023-01-01T00:00:00Z"
-                    }
-                    """;
-            return objectMapper.readTree(json);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 }

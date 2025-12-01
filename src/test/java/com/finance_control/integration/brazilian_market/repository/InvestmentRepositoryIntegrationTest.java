@@ -1,5 +1,6 @@
 package com.finance_control.integration.brazilian_market.repository;
 
+import com.finance_control.integration.BaseIntegrationTest;
 import com.finance_control.brazilian_market.model.Investment;
 import com.finance_control.brazilian_market.model.InvestmentType;
 import com.finance_control.brazilian_market.model.InvestmentSubtype;
@@ -9,13 +10,10 @@ import com.finance_control.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,16 +25,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration tests for InvestmentRepository.
  * Tests the database operations and queries for the Investment entity.
+ * Uses TestContainers PostgreSQL for full database compatibility.
  */
-@DataJpaTest
-@ActiveProfiles("test")
-@TestPropertySource(properties = {
-    "app.supabase.enabled=false"
-})
-class InvestmentRepositoryIntegrationTest {
-
-    @Autowired
-    private TestEntityManager entityManager;
+@Transactional
+class InvestmentRepositoryIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private InvestmentRepository investmentRepository;
@@ -68,9 +60,6 @@ class InvestmentRepositoryIntegrationTest {
         testInvestment.setCreatedAt(LocalDateTime.now());
         testInvestment.setUpdatedAt(LocalDateTime.now());
         testInvestment = investmentRepository.save(testInvestment);
-
-        entityManager.flush();
-        entityManager.clear();
     }
 
     @Test
@@ -166,8 +155,6 @@ class InvestmentRepositoryIntegrationTest {
         // Given
         testInvestment.setIsActive(false);
         investmentRepository.save(testInvestment);
-        entityManager.flush();
-        entityManager.clear();
 
         // When
         List<Investment> result = investmentRepository.findByUser_IdAndIsActiveTrue(testUser.getId());

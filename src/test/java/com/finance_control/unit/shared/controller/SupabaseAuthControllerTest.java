@@ -15,8 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
+import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
 
@@ -59,17 +58,14 @@ class SupabaseAuthControllerTest {
         request.setPassword("password123");
         request.setMetadata(Map.of("key", "value"));
 
-        when(authService.signup(any(SignupRequest.class))).thenReturn(Mono.just(mockAuthResponse));
+        when(authService.signup(any(SignupRequest.class))).thenReturn(mockAuthResponse);
 
-        StepVerifier.create(controller.signup(request))
-                .expectNextMatches(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(response.getBody()).isNotNull();
-                    assertThat(response.getBody().getAccessToken()).isEqualTo("access-token");
-                    assertThat(response.getBody().getUser().getEmail()).isEqualTo("test@example.com");
-                    return true;
-                })
-                .verifyComplete();
+        ResponseEntity<AuthResponse> response = controller.signup(request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getAccessToken()).isEqualTo("access-token");
+        assertThat(response.getBody().getUser().getEmail()).isEqualTo("test@example.com");
 
         verify(authService).signup(any(SignupRequest.class));
     }
@@ -80,16 +76,13 @@ class SupabaseAuthControllerTest {
         request.setEmail("test@example.com");
         request.setPassword("password123");
 
-        when(authService.signin(any(LoginRequest.class))).thenReturn(Mono.just(mockAuthResponse));
+        when(authService.signin(any(LoginRequest.class))).thenReturn(mockAuthResponse);
 
-        StepVerifier.create(controller.signin(request))
-                .expectNextMatches(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(response.getBody()).isNotNull();
-                    assertThat(response.getBody().getAccessToken()).isEqualTo("access-token");
-                    return true;
-                })
-                .verifyComplete();
+        ResponseEntity<AuthResponse> response = controller.signin(request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getAccessToken()).isEqualTo("access-token");
 
         verify(authService).signin(any(LoginRequest.class));
     }
@@ -99,16 +92,13 @@ class SupabaseAuthControllerTest {
         SupabaseAuthController.RefreshTokenRequest request = new SupabaseAuthController.RefreshTokenRequest();
         request.setRefreshToken("refresh-token");
 
-        when(authService.refreshToken("refresh-token")).thenReturn(Mono.just(mockAuthResponse));
+        when(authService.refreshToken("refresh-token")).thenReturn(mockAuthResponse);
 
-        StepVerifier.create(controller.refreshToken(request))
-                .expectNextMatches(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(response.getBody()).isNotNull();
-                    assertThat(response.getBody().getAccessToken()).isEqualTo("access-token");
-                    return true;
-                })
-                .verifyComplete();
+        ResponseEntity<AuthResponse> response = controller.refreshToken(request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getAccessToken()).isEqualTo("access-token");
 
         verify(authService).refreshToken("refresh-token");
     }
@@ -118,15 +108,12 @@ class SupabaseAuthControllerTest {
         PasswordResetRequest request = new PasswordResetRequest();
         request.setEmail("test@example.com");
 
-        when(authService.resetPassword(any(PasswordResetRequest.class))).thenReturn(Mono.empty());
+        doNothing().when(authService).resetPassword(any(PasswordResetRequest.class));
 
-        StepVerifier.create(controller.resetPassword(request))
-                .expectNextMatches(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(response.getBody()).contains("Password reset email sent successfully");
-                    return true;
-                })
-                .verifyComplete();
+        ResponseEntity<String> response = controller.resetPassword(request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Password reset email sent successfully");
 
         verify(authService).resetPassword(any(PasswordResetRequest.class));
     }
@@ -136,16 +123,12 @@ class SupabaseAuthControllerTest {
         SupabaseAuthController.UpdatePasswordRequest request = new SupabaseAuthController.UpdatePasswordRequest();
         request.setNewPassword("newPassword123");
 
-        when(authService.updatePassword("newPassword123", "access-token"))
-                .thenReturn(Mono.empty());
+        doNothing().when(authService).updatePassword("newPassword123", "access-token");
 
-        StepVerifier.create(controller.updatePassword(request, "Bearer access-token"))
-                .expectNextMatches(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(response.getBody()).contains("Password updated successfully");
-                    return true;
-                })
-                .verifyComplete();
+        ResponseEntity<String> response = controller.updatePassword(request, "Bearer access-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Password updated successfully");
 
         verify(authService).updatePassword("newPassword123", "access-token");
     }
@@ -155,7 +138,7 @@ class SupabaseAuthControllerTest {
         SupabaseAuthController.UpdatePasswordRequest request = new SupabaseAuthController.UpdatePasswordRequest();
         request.setNewPassword("newPassword123");
 
-        assertThatThrownBy(() -> controller.updatePassword(request, "InvalidHeader").block())
+        assertThatThrownBy(() -> controller.updatePassword(request, "InvalidHeader"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid Authorization header format");
     }
@@ -165,16 +148,12 @@ class SupabaseAuthControllerTest {
         SupabaseAuthController.UpdateEmailRequest request = new SupabaseAuthController.UpdateEmailRequest();
         request.setNewEmail("newemail@example.com");
 
-        when(authService.updateEmail("newemail@example.com", "access-token"))
-                .thenReturn(Mono.empty());
+        doNothing().when(authService).updateEmail("newemail@example.com", "access-token");
 
-        StepVerifier.create(controller.updateEmail(request, "Bearer access-token"))
-                .expectNextMatches(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(response.getBody()).contains("Email update initiated successfully");
-                    return true;
-                })
-                .verifyComplete();
+        ResponseEntity<String> response = controller.updateEmail(request, "Bearer access-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Email update initiated successfully");
 
         verify(authService).updateEmail("newemail@example.com", "access-token");
     }
@@ -184,29 +163,26 @@ class SupabaseAuthControllerTest {
         SupabaseAuthController.UpdateEmailRequest request = new SupabaseAuthController.UpdateEmailRequest();
         request.setNewEmail("newemail@example.com");
 
-        assertThatThrownBy(() -> controller.updateEmail(request, "InvalidHeader").block())
+        assertThatThrownBy(() -> controller.updateEmail(request, "InvalidHeader"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid Authorization header format");
     }
 
     @Test
     void signout_WithValidToken_ShouldReturnSuccess() {
-        when(authService.signout("access-token")).thenReturn(Mono.empty());
+        doNothing().when(authService).signout("access-token");
 
-        StepVerifier.create(controller.signout("Bearer access-token"))
-                .expectNextMatches(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(response.getBody()).contains("Sign out successful");
-                    return true;
-                })
-                .verifyComplete();
+        ResponseEntity<String> response = controller.signout("Bearer access-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Sign out successful");
 
         verify(authService).signout("access-token");
     }
 
     @Test
     void signout_WithInvalidHeader_ShouldThrowException() {
-        assertThatThrownBy(() -> controller.signout("InvalidHeader").block())
+        assertThatThrownBy(() -> controller.signout("InvalidHeader"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid Authorization header format");
     }
@@ -214,16 +190,13 @@ class SupabaseAuthControllerTest {
     @Test
     void verifyEmail_WithValidToken_ShouldReturnAuthResponse() {
         when(authService.verifyEmail("token", "signup", "test@example.com"))
-                .thenReturn(Mono.just(mockAuthResponse));
+                .thenReturn(mockAuthResponse);
 
-        StepVerifier.create(controller.verifyEmail("token", "signup", "test@example.com"))
-                .expectNextMatches(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(response.getBody()).isNotNull();
-                    assertThat(response.getBody().getAccessToken()).isEqualTo("access-token");
-                    return true;
-                })
-                .verifyComplete();
+        ResponseEntity<AuthResponse> response = controller.verifyEmail("token", "signup", "test@example.com");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getAccessToken()).isEqualTo("access-token");
 
         verify(authService).verifyEmail("token", "signup", "test@example.com");
     }
@@ -232,22 +205,19 @@ class SupabaseAuthControllerTest {
     void getCurrentUser_WithValidToken_ShouldReturnUserInfo() throws Exception {
         JsonNode userInfo = objectMapper.readTree("{\"id\":\"user-uuid\",\"email\":\"test@example.com\"}");
 
-        when(authService.getUserInfo("access-token")).thenReturn(Mono.just(userInfo));
+        when(authService.getUserInfo("access-token")).thenReturn(userInfo);
 
-        StepVerifier.create(controller.getCurrentUser("Bearer access-token"))
-                .expectNextMatches(response -> {
-                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                    assertThat(response.getBody()).isNotNull();
-                    return true;
-                })
-                .verifyComplete();
+        ResponseEntity<Object> response = controller.getCurrentUser("Bearer access-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
 
         verify(authService).getUserInfo("access-token");
     }
 
     @Test
     void getCurrentUser_WithInvalidHeader_ShouldThrowException() {
-        assertThatThrownBy(() -> controller.getCurrentUser("InvalidHeader").block())
+        assertThatThrownBy(() -> controller.getCurrentUser("InvalidHeader"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid Authorization header format");
     }

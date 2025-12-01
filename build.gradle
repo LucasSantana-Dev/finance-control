@@ -45,12 +45,17 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
+    // Apache HttpClient 5 for RestClient with custom SSL (mTLS)
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.3.1'
+    // Redis is optional - only needed for production profile with Redis infrastructure
+    compileOnly 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.postgresql:postgresql'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
@@ -63,27 +68,27 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
     implementation 'com.bucket4j:bucket4j-core:8.10.1'
-    implementation 'com.bucket4j:bucket4j-redis:8.10.1'
+    // bucket4j-redis removed - using in-memory bucket instead
     implementation 'io.sentry:sentry-spring-boot-starter:7.15.0'
     implementation 'io.sentry:sentry-logback:7.15.0'
     implementation 'org.apache.commons:commons-lang3:3.19.0'
     implementation 'jakarta.annotation:jakarta.annotation-api:3.0.0'
 
-    // Supabase Integration - Using WebClient directly for better compatibility
-    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    // Supabase Integration - Using RestClient (Spring Boot 3.2+)
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     compileOnly 'org.projectlombok:lombok'
-    implementation 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'io.projectreactor:reactor-test'
-    runtimeOnly 'com.h2database:h2'
     testImplementation 'com.h2database:h2'
-    testImplementation 'org.seleniumhq.selenium:selenium-java'
-    testImplementation 'org.seleniumhq.selenium:selenium-chrome-driver'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'io.projectreactor:reactor-test' // For StepVerifier in reactive tests
+    // Apache HttpClient 5 for TestRestTemplate in integration tests
+    testImplementation 'org.apache.httpcomponents.client5:httpclient5:5.3.1'
+    // TestContainers for PostgreSQL integration tests
+    testImplementation 'org.testcontainers:testcontainers:1.19.3'
+    testImplementation 'org.testcontainers:postgresql:1.19.3'
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
+    // Removed: Selenium (replaced with Spring test tools in E2ETest)
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // MapStruct for DTO-Entity mapping (Industry Standard)

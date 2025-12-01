@@ -73,7 +73,7 @@ class TransactionServiceIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void shouldCreateAndRetrieveTransaction() {
+    void shouldCreateTransactionWhenValidDataProvided() {
         TransactionDTO dto = new TransactionDTO();
         dto.setDescription("Integration Test Transaction");
         dto.setAmount(BigDecimal.valueOf(150.00));
@@ -103,7 +103,7 @@ class TransactionServiceIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void shouldFindTransactionsByUser() {
+    void shouldFindTransactionsWhenUserHasTransactions() {
         TransactionDTO dto1 = new TransactionDTO();
         dto1.setDescription("Transaction 1");
         dto1.setAmount(BigDecimal.valueOf(100.00));

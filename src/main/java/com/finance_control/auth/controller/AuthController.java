@@ -41,17 +41,14 @@ public class AuthController {
         // Try Supabase Auth first if available
         if (authService.hasSupabaseAuth()) {
             try {
-                return authService.authenticateWithSupabase(loginRequest.getEmail(), loginRequest.getPassword())
-                        .map(authResponse -> {
-                            // Return Supabase auth response
-                            LoginResponse response = new LoginResponse(
-                                    authResponse.getAccessToken(),
-                                    authResponse.getUser() != null ?
-                                        userMappingService.findUserIdBySupabaseId(authResponse.getUser().getId()) : null
-                            );
-                            return ResponseEntity.ok(response);
-                        })
-                        .block();
+                var authResponse = authService.authenticateWithSupabase(loginRequest.getEmail(), loginRequest.getPassword());
+                // Return Supabase auth response
+                LoginResponse response = new LoginResponse(
+                        authResponse.getAccessToken(),
+                        authResponse.getUser() != null ?
+                                userMappingService.findUserIdBySupabaseId(authResponse.getUser().getId()) : null
+                );
+                return ResponseEntity.ok(response);
             } catch (Exception e) {
                 log.debug("Supabase authentication failed, falling back to local auth: {}", e.getMessage());
                 // Fall through to local auth

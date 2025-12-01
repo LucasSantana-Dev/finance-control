@@ -13,7 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 
@@ -91,7 +90,7 @@ class UserSynchronizationServiceTest {
     void syncUserFromSupabase_WithValidData_ShouldUpdateUser() {
         when(supabaseAuthService.isSupabaseAuthEnabled()).thenReturn(true);
         when(supabaseAuthService.getUserInfo("token"))
-                .thenReturn(Mono.just(supabaseUserData));
+                .thenReturn(supabaseUserData);
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
@@ -107,7 +106,7 @@ class UserSynchronizationServiceTest {
     void syncUserFromSupabase_WithUserNotFound_ShouldLogWarning() {
         when(supabaseAuthService.isSupabaseAuthEnabled()).thenReturn(true);
         when(supabaseAuthService.getUserInfo("token"))
-                .thenReturn(Mono.just(supabaseUserData));
+                .thenReturn(supabaseUserData);
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
         userSynchronizationService.syncUserFromSupabase(1L, "token");
@@ -121,7 +120,7 @@ class UserSynchronizationServiceTest {
     void syncUserFromSupabase_WithNoSupabaseUserInfo_ShouldLogWarning() {
         when(supabaseAuthService.isSupabaseAuthEnabled()).thenReturn(true);
         when(supabaseAuthService.getUserInfo("token"))
-                .thenReturn(Mono.empty());
+                .thenThrow(new RuntimeException("User not found"));
 
         userSynchronizationService.syncUserFromSupabase(1L, "token");
 
@@ -141,7 +140,7 @@ class UserSynchronizationServiceTest {
 
         when(supabaseAuthService.isSupabaseAuthEnabled()).thenReturn(true);
         when(supabaseAuthService.getUserInfo("token"))
-                .thenReturn(Mono.just(sameEmailData));
+                .thenReturn(sameEmailData);
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
         userSynchronizationService.syncUserFromSupabase(1L, "token");
@@ -165,7 +164,7 @@ class UserSynchronizationServiceTest {
 
         when(supabaseAuthService.isSupabaseAuthEnabled()).thenReturn(true);
         when(supabaseAuthService.getUserInfo("token"))
-                .thenReturn(Mono.just(sameEmailData));
+                .thenReturn(sameEmailData);
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 

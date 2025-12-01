@@ -51,8 +51,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,6 +90,21 @@ class TransactionServiceTest {
 
     @Mock
     private com.finance_control.shared.monitoring.SentryService sentryService;
+
+    @Mock
+    private com.finance_control.transactions.service.TransactionEntityLookupHelper entityLookupHelper;
+
+    @Mock
+    private com.finance_control.transactions.service.TransactionMapper transactionMapper;
+
+    @Mock
+    private com.finance_control.transactions.service.TransactionSpecificationBuilder specificationBuilder;
+
+    @Mock
+    private com.finance_control.transactions.service.TransactionUpdateHelper updateHelper;
+
+    @Mock
+    private com.finance_control.transactions.service.TransactionQueryHelper queryHelper;
 
     @InjectMocks
     private TransactionService transactionService;
@@ -137,6 +155,149 @@ class TransactionServiceTest {
         testTransaction.setSource(TransactionSource.CASH);
 
         testTransaction.addResponsible(testResponsible, new BigDecimal("100.00"), "Test notes");
+
+        // Setup default mock behaviors for helpers (using lenient to avoid UnnecessaryStubbingException)
+        lenient().when(entityLookupHelper.getUserById(anyLong())).thenAnswer(invocation -> {
+            Long userId = invocation.getArgument(0);
+            if (userId.equals(1L)) {
+                return testUser;
+            }
+            User user = new User();
+            user.setId(userId);
+            user.setEmail("user" + userId + "@example.com");
+            user.setIsActive(true);
+            return user;
+        });
+
+        lenient().when(entityLookupHelper.getCategoryById(anyLong())).thenAnswer(invocation -> {
+            Long categoryId = invocation.getArgument(0);
+            if (categoryId.equals(1L)) {
+                return testCategory;
+            }
+            TransactionCategory category = new TransactionCategory();
+            category.setId(categoryId);
+            category.setName("Category " + categoryId);
+            return category;
+        });
+
+        lenient().when(entityLookupHelper.getSubcategoryById(anyLong())).thenAnswer(invocation -> {
+            Long subcategoryId = invocation.getArgument(0);
+            if (subcategoryId.equals(1L)) {
+                return testSubcategory;
+            }
+            TransactionSubcategory subcategory = new TransactionSubcategory();
+            subcategory.setId(subcategoryId);
+            subcategory.setName("Subcategory " + subcategoryId);
+            subcategory.setCategory(testCategory);
+            return subcategory;
+        });
+
+        lenient().when(entityLookupHelper.getSourceEntityById(anyLong())).thenAnswer(invocation -> {
+            Long sourceId = invocation.getArgument(0);
+            if (sourceId.equals(1L)) {
+                return testSourceEntity;
+            }
+            TransactionSourceEntity source = new TransactionSourceEntity();
+            source.setId(sourceId);
+            source.setName("Source " + sourceId);
+            return source;
+        });
+
+        lenient().when(entityLookupHelper.getResponsibleById(anyLong())).thenAnswer(invocation -> {
+            Long responsibleId = invocation.getArgument(0);
+            if (responsibleId.equals(1L)) {
+                return testResponsible;
+            }
+            TransactionResponsibles responsible = new TransactionResponsibles();
+            responsible.setId(responsibleId);
+            responsible.setName("Responsible " + responsibleId);
+            return responsible;
+        });
+
+        lenient().when(transactionMapper.mapToResponseDTO(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction transaction = invocation.getArgument(0);
+            TransactionDTO dto = new TransactionDTO();
+            dto.setId(transaction.getId());
+            dto.setDescription(transaction.getDescription());
+            dto.setAmount(transaction.getAmount());
+            dto.setType(transaction.getType());
+            dto.setSubtype(transaction.getSubtype());
+            dto.setSource(transaction.getSource());
+            dto.setDate(transaction.getDate());
+            if (transaction.getUser() != null) {
+                dto.setUserId(transaction.getUser().getId());
+            }
+            if (transaction.getCategory() != null) {
+                dto.setCategoryId(transaction.getCategory().getId());
+            }
+            if (transaction.getSubcategory() != null) {
+                dto.setSubcategoryId(transaction.getSubcategory().getId());
+            }
+            if (transaction.getSourceEntity() != null) {
+                dto.setSourceEntityId(transaction.getSourceEntity().getId());
+            }
+            return dto;
+        });
+
+        lenient().when(specificationBuilder.buildSpecification(anyString(), any(Map.class))).thenAnswer(invocation -> {
+            return (Specification<Transaction>) (root, query, criteriaBuilder) -> null;
+        });
+
+        lenient().doAnswer(invocation -> {
+            Transaction entity = invocation.getArgument(0);
+            TransactionDTO dto = invocation.getArgument(1);
+
+            // Update common fields
+            if (dto.getDescription() != null) {
+                entity.setDescription(dto.getDescription());
+            }
+            if (dto.getAmount() != null) {
+                entity.setAmount(dto.getAmount());
+            }
+            if (dto.getType() != null) {
+                entity.setType(dto.getType());
+            }
+            if (dto.getSubtype() != null) {
+                entity.setSubtype(dto.getSubtype());
+            }
+            if (dto.getSource() != null) {
+                entity.setSource(dto.getSource());
+            }
+            if (dto.getDate() != null) {
+                entity.setDate(dto.getDate());
+            }
+
+            // Update relationships
+            if (dto.getCategoryId() != null) {
+                entity.setCategory(entityLookupHelper.getCategoryById(dto.getCategoryId()));
+            }
+            if (dto.getSubcategoryId() != null) {
+                entity.setSubcategory(entityLookupHelper.getSubcategoryById(dto.getSubcategoryId()));
+            } else if (dto.getSubcategoryId() == null && dto.getCategoryId() == null) {
+                // Only clear if explicitly set to null in update
+                entity.setSubcategory(null);
+            }
+            if (dto.getSourceEntityId() != null) {
+                entity.setSourceEntity(entityLookupHelper.getSourceEntityById(dto.getSourceEntityId()));
+            } else if (dto.getSourceEntityId() == null && dto.getCategoryId() == null) {
+                // Only clear if explicitly set to null in update
+                entity.setSourceEntity(null);
+            }
+
+            // Update responsibilities - clear existing and add new
+            if (entity.getResponsibilities() != null) {
+                entity.getResponsibilities().clear();
+            } else {
+                entity.setResponsibilities(new ArrayList<>());
+            }
+            if (dto.getResponsibilities() != null) {
+                for (TransactionResponsiblesDTO respDTO : dto.getResponsibilities()) {
+                    TransactionResponsibles responsible = entityLookupHelper.getResponsibleById(respDTO.getResponsibleId());
+                    entity.addResponsible(responsible, respDTO.getPercentage(), respDTO.getNotes());
+                }
+            }
+            return null;
+        }).when(updateHelper).updateEntityFromDTO(any(Transaction.class), any(TransactionDTO.class));
     }
 
     @AfterEach
@@ -185,33 +346,26 @@ class TransactionServiceTest {
             responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction savedTransaction = invocation.getArgument(0);
+            savedTransaction.setId(1L);
+            return savedTransaction;
         });
-            when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
-                Transaction savedTransaction = invocation.getArgument(0);
-                savedTransaction.setId(1L);
-                return savedTransaction;
-            });
 
         // When
         TransactionDTO result = transactionService.create(createDTO);
 
         // Then
-            assertThat(result).isNotNull();
+        assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1L);
-            assertThat(result.getDescription()).isEqualTo("New Transaction");
+        assertThat(result.getDescription()).isEqualTo("New Transaction");
         assertThat(result.getAmount()).isEqualTo(BigDecimal.valueOf(50.00));
 
-        verify(userRepository, atLeastOnce()).findById(1L);
-        verify(categoryRepository).findById(1L);
-        verify(responsibleRepository).findById(1L);
+        verify(entityLookupHelper, atLeastOnce()).getUserById(1L);
+        verify(entityLookupHelper).getCategoryById(1L);
+        verify(entityLookupHelper).getResponsibleById(1L);
         verify(transactionRepository).save(any(Transaction.class));
+        verify(transactionMapper).mapToResponseDTO(any(Transaction.class));
     }
 
     @Test
@@ -234,15 +388,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(subcategoryRepository.findById(1L)).thenReturn(Optional.of(testSubcategory));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
-        });
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction savedTransaction = invocation.getArgument(0);
             savedTransaction.setId(1L);
@@ -256,7 +401,7 @@ class TransactionServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1L);
 
-        verify(subcategoryRepository).findById(1L);
+        verify(entityLookupHelper).getSubcategoryById(1L);
     }
 
     @Test
@@ -279,15 +424,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(sourceRepository.findById(1L)).thenReturn(Optional.of(testSourceEntity));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
-        });
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction savedTransaction = invocation.getArgument(0);
             savedTransaction.setId(1L);
@@ -301,7 +437,7 @@ class TransactionServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1L);
 
-        verify(sourceRepository).findById(1L);
+        verify(entityLookupHelper).getSourceEntityById(1L);
     }
 
     @Test
@@ -324,14 +460,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
-        });
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction savedTransaction = invocation.getArgument(0);
             savedTransaction.setId(1L);
@@ -365,14 +493,14 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+        when(entityLookupHelper.getUserById(999L)).thenThrow(new EntityNotFoundException("User", "id", 999L));
 
         // When & Then
         assertThatThrownBy(() -> transactionService.create(createDTO))
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("User not found");
+                .hasMessageContaining("User");
 
-        verify(userRepository).findById(999L);
+        verify(entityLookupHelper).getUserById(999L);
         verify(transactionRepository, never()).save(any(Transaction.class));
     }
 
@@ -395,15 +523,14 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
+        when(entityLookupHelper.getCategoryById(999L)).thenThrow(new EntityNotFoundException("TransactionCategory", "id", 999L));
 
         // When & Then
         assertThatThrownBy(() -> transactionService.create(createDTO))
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("TransactionCategory not found");
+                .hasMessageContaining("TransactionCategory");
 
-        verify(categoryRepository).findById(999L);
+        verify(entityLookupHelper).getCategoryById(999L);
         verify(transactionRepository, never()).save(any(Transaction.class));
     }
 
@@ -427,16 +554,14 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(subcategoryRepository.findById(999L)).thenReturn(Optional.empty());
+        when(entityLookupHelper.getSubcategoryById(999L)).thenThrow(new EntityNotFoundException("TransactionSubcategory", "id", 999L));
 
         // When & Then
         assertThatThrownBy(() -> transactionService.create(createDTO))
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("TransactionSubcategory not found");
+                .hasMessageContaining("TransactionSubcategory");
 
-        verify(subcategoryRepository).findById(999L);
+        verify(entityLookupHelper).getSubcategoryById(999L);
         verify(transactionRepository, never()).save(any(Transaction.class));
     }
 
@@ -460,16 +585,14 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(sourceRepository.findById(999L)).thenReturn(Optional.empty());
+        when(entityLookupHelper.getSourceEntityById(999L)).thenThrow(new EntityNotFoundException("TransactionSourceEntity", "id", 999L));
 
         // When & Then
         assertThatThrownBy(() -> transactionService.create(createDTO))
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("TransactionSourceEntity not found");
+                .hasMessageContaining("TransactionSourceEntity");
 
-        verify(sourceRepository).findById(999L);
+        verify(entityLookupHelper).getSourceEntityById(999L);
         verify(transactionRepository, never()).save(any(Transaction.class));
     }
 
@@ -492,16 +615,14 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(999L)).thenReturn(Optional.empty());
+        when(entityLookupHelper.getResponsibleById(999L)).thenThrow(new EntityNotFoundException("TransactionResponsible", "id", 999L));
 
         // When & Then
         assertThatThrownBy(() -> transactionService.create(createDTO))
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("TransactionResponsible not found");
+                .hasMessageContaining("TransactionResponsible");
 
-        verify(responsibleRepository).findById(999L);
+        verify(entityLookupHelper).getResponsibleById(999L);
         verify(transactionRepository, never()).save(any(Transaction.class));
     }
 
@@ -569,11 +690,11 @@ class TransactionServiceTest {
 
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(existingTransaction));
 
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+        when(entityLookupHelper.getResponsibleById(1L)).thenAnswer(invocation -> {
             TransactionResponsibles freshResponsible = new TransactionResponsibles();
             freshResponsible.setId(1L);
             freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
+            return freshResponsible;
         });
 
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
@@ -592,7 +713,7 @@ class TransactionServiceTest {
         assertThat(result.getAmount()).isEqualTo(BigDecimal.valueOf(200.00));
 
         verify(transactionRepository).findById(1L);
-        verify(responsibleRepository).findById(1L);
+        verify(entityLookupHelper).getResponsibleById(1L);
         verify(transactionRepository).save(any(Transaction.class));
     }
 
@@ -617,13 +738,13 @@ class TransactionServiceTest {
 
         Transaction freshTransaction = createFreshTransaction();
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(freshTransaction));
-        when(categoryRepository.findById(2L)).thenReturn(Optional.of(newCategory));
+        when(entityLookupHelper.getCategoryById(2L)).thenReturn(newCategory);
 
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+        when(entityLookupHelper.getResponsibleById(1L)).thenAnswer(invocation -> {
             TransactionResponsibles freshResponsible = new TransactionResponsibles();
             freshResponsible.setId(1L);
             freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
+            return freshResponsible;
         });
 
         when(transactionRepository.save(any(Transaction.class))).thenReturn(freshTransaction);
@@ -634,8 +755,8 @@ class TransactionServiceTest {
         // Then
         assertThat(result).isNotNull();
 
-        verify(categoryRepository).findById(2L);
-        verify(responsibleRepository).findById(1L);
+        verify(entityLookupHelper).getCategoryById(2L);
+        verify(entityLookupHelper).getResponsibleById(1L);
     }
 
     @Test
@@ -659,12 +780,12 @@ class TransactionServiceTest {
 
         Transaction freshTransaction = createFreshTransaction();
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(freshTransaction));
-        when(subcategoryRepository.findById(2L)).thenReturn(Optional.of(newSubcategory));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+        when(entityLookupHelper.getSubcategoryById(2L)).thenReturn(newSubcategory);
+        when(entityLookupHelper.getResponsibleById(1L)).thenAnswer(invocation -> {
             TransactionResponsibles freshResponsible = new TransactionResponsibles();
             freshResponsible.setId(1L);
             freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
+            return freshResponsible;
         });
         when(transactionRepository.save(any(Transaction.class))).thenReturn(freshTransaction);
 
@@ -674,8 +795,8 @@ class TransactionServiceTest {
         // Then
         assertThat(result).isNotNull();
 
-        verify(subcategoryRepository).findById(2L);
-        verify(responsibleRepository).findById(1L);
+        verify(entityLookupHelper).getSubcategoryById(2L);
+        verify(entityLookupHelper).getResponsibleById(1L);
     }
 
     @Test
@@ -695,11 +816,11 @@ class TransactionServiceTest {
 
         Transaction freshTransaction = createFreshTransaction();
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(freshTransaction));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+        when(entityLookupHelper.getResponsibleById(1L)).thenAnswer(invocation -> {
             TransactionResponsibles freshResponsible = new TransactionResponsibles();
             freshResponsible.setId(1L);
             freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
+            return freshResponsible;
         });
         when(transactionRepository.save(any(Transaction.class))).thenReturn(freshTransaction);
 
@@ -709,8 +830,8 @@ class TransactionServiceTest {
         // Then
         assertThat(result).isNotNull();
 
-        verify(subcategoryRepository, never()).findById(anyLong());
-        verify(responsibleRepository).findById(1L);
+        verify(entityLookupHelper, never()).getSubcategoryById(anyLong());
+        verify(entityLookupHelper).getResponsibleById(1L);
     }
 
     @Test
@@ -734,12 +855,12 @@ class TransactionServiceTest {
 
         Transaction freshTransaction = createFreshTransaction();
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(freshTransaction));
-        when(sourceRepository.findById(2L)).thenReturn(Optional.of(newSourceEntity));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+        when(entityLookupHelper.getSourceEntityById(2L)).thenReturn(newSourceEntity);
+        when(entityLookupHelper.getResponsibleById(1L)).thenAnswer(invocation -> {
             TransactionResponsibles freshResponsible = new TransactionResponsibles();
             freshResponsible.setId(1L);
             freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
+            return freshResponsible;
         });
         when(transactionRepository.save(any(Transaction.class))).thenReturn(freshTransaction);
 
@@ -749,8 +870,8 @@ class TransactionServiceTest {
         // Then
         assertThat(result).isNotNull();
 
-        verify(sourceRepository).findById(2L);
-        verify(responsibleRepository).findById(1L);
+        verify(entityLookupHelper).getSourceEntityById(2L);
+        verify(entityLookupHelper).getResponsibleById(1L);
     }
 
     @Test
@@ -770,11 +891,11 @@ class TransactionServiceTest {
 
         Transaction freshTransaction = createFreshTransaction();
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(freshTransaction));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
+        when(entityLookupHelper.getResponsibleById(1L)).thenAnswer(invocation -> {
             TransactionResponsibles freshResponsible = new TransactionResponsibles();
             freshResponsible.setId(1L);
             freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
+            return freshResponsible;
         });
         when(transactionRepository.save(any(Transaction.class))).thenReturn(freshTransaction);
 
@@ -784,8 +905,8 @@ class TransactionServiceTest {
         // Then
         assertThat(result).isNotNull();
 
-        verify(sourceRepository, never()).findById(anyLong());
-        verify(responsibleRepository).findById(1L);
+        verify(entityLookupHelper, never()).getSourceEntityById(anyLong());
+        verify(entityLookupHelper).getResponsibleById(1L);
     }
 
     @Test
@@ -808,7 +929,7 @@ class TransactionServiceTest {
 
         Transaction freshTransaction = createFreshTransaction();
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(freshTransaction));
-        when(responsibleRepository.findById(2L)).thenReturn(Optional.of(newResponsible));
+        when(entityLookupHelper.getResponsibleById(2L)).thenReturn(newResponsible);
         when(transactionRepository.save(any(Transaction.class))).thenReturn(freshTransaction);
 
         // When
@@ -817,7 +938,7 @@ class TransactionServiceTest {
         // Then
         assertThat(result).isNotNull();
 
-        verify(responsibleRepository).findById(2L);
+        verify(entityLookupHelper).getResponsibleById(2L);
     }
 
     @Test
@@ -1027,9 +1148,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(1L)).thenReturn(Optional.of(testResponsible));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction t = invocation.getArgument(0);
             t.setId(1L);
@@ -1062,9 +1180,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(1L)).thenReturn(Optional.of(testResponsible));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction t = invocation.getArgument(0);
             t.setId(1L);
@@ -1074,7 +1189,7 @@ class TransactionServiceTest {
         TransactionDTO result = transactionService.create(createDTO);
 
         assertThat(result).isNotNull();
-        verify(subcategoryRepository, never()).findById(anyLong());
+        verify(entityLookupHelper, never()).getSubcategoryById(anyLong());
     }
 
     @Test
@@ -1096,9 +1211,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(1L)).thenReturn(Optional.of(testResponsible));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction t = invocation.getArgument(0);
             t.setId(1L);
@@ -1108,7 +1220,7 @@ class TransactionServiceTest {
         TransactionDTO result = transactionService.create(createDTO);
 
         assertThat(result).isNotNull();
-        verify(sourceRepository, never()).findById(anyLong());
+        verify(entityLookupHelper, never()).getSourceEntityById(anyLong());
     }
 
     @Test
@@ -1530,14 +1642,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
-        });
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction savedTransaction = invocation.getArgument(0);
             savedTransaction.setId(1L);
@@ -1571,14 +1675,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
-        });
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction savedTransaction = invocation.getArgument(0);
             savedTransaction.setId(1L);
@@ -1615,14 +1711,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
-        });
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction savedTransaction = invocation.getArgument(0);
             savedTransaction.setId(1L);
@@ -1656,14 +1744,6 @@ class TransactionServiceTest {
         responsibilities.add(responsible);
         createDTO.setResponsibilities(responsibilities);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
-        });
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction savedTransaction = invocation.getArgument(0);
             savedTransaction.setId(1L);
@@ -1694,12 +1774,6 @@ class TransactionServiceTest {
 
         Transaction existingTransaction = createFreshTransaction();
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(existingTransaction));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
-        });
         when(transactionRepository.save(any(Transaction.class))).thenReturn(existingTransaction);
 
         // When
@@ -1726,12 +1800,6 @@ class TransactionServiceTest {
 
         Transaction existingTransaction = createFreshTransaction();
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(existingTransaction));
-        when(responsibleRepository.findById(1L)).thenAnswer(invocation -> {
-            TransactionResponsibles freshResponsible = new TransactionResponsibles();
-            freshResponsible.setId(1L);
-            freshResponsible.setName("Test Responsible");
-            return Optional.of(freshResponsible);
-        });
         when(transactionRepository.save(any(Transaction.class))).thenReturn(existingTransaction);
 
         // When
@@ -1762,7 +1830,7 @@ class TransactionServiceTest {
     void getSubcategoriesByCategoryId_ShouldReturnSubcategories() {
         // Given
         List<TransactionSubcategory> subcategories = List.of(testSubcategory);
-        when(subcategoryRepository.findByCategoryIdAndIsActiveTrueOrderByNameAsc(1L)).thenReturn(subcategories);
+        when(queryHelper.getSubcategoriesByCategoryId(1L)).thenReturn(subcategories);
 
         // When
         List<TransactionSubcategory> result = transactionService.getSubcategoriesByCategoryId(1L);
@@ -1771,14 +1839,14 @@ class TransactionServiceTest {
         assertThat(result).isNotNull();
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(1L);
-        verify(subcategoryRepository).findByCategoryIdAndIsActiveTrueOrderByNameAsc(1L);
+        verify(queryHelper).getSubcategoriesByCategoryId(1L);
     }
 
     @Test
     void getTransactionTypes_ShouldReturnTypes() {
         // Given
         List<String> types = List.of("INCOME", "EXPENSE");
-        when(transactionRepository.findDistinctTypes()).thenReturn(types);
+        when(queryHelper.getTransactionTypes()).thenReturn(types);
 
         // When
         List<String> result = transactionService.getTransactionTypes();
@@ -1787,14 +1855,14 @@ class TransactionServiceTest {
         assertThat(result).isNotNull();
         assertThat(result).hasSize(2);
         assertThat(result).containsExactly("INCOME", "EXPENSE");
-        verify(transactionRepository).findDistinctTypes();
+        verify(queryHelper).getTransactionTypes();
     }
 
     @Test
     void getSourceEntities_ShouldReturnSourceEntities() {
         // Given
         List<TransactionSourceEntity> sourceEntities = List.of(testSourceEntity);
-        when(sourceRepository.findAll()).thenReturn(sourceEntities);
+        when(queryHelper.getSourceEntities()).thenReturn(sourceEntities);
 
         // When
         List<TransactionSourceEntity> result = transactionService.getSourceEntities();
@@ -1803,7 +1871,7 @@ class TransactionServiceTest {
         assertThat(result).isNotNull();
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(1L);
-        verify(sourceRepository).findAll();
+        verify(queryHelper).getSourceEntities();
     }
 
     @Test

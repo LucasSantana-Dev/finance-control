@@ -12,7 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -24,7 +25,7 @@ import java.util.UUID;
 
 /**
  * Service for managing file storage operations with Supabase Storage.
- * Provides file upload, download, deletion, and URL generation capabilities using WebClient.
+ * Provides file upload, download, deletion, and URL generation capabilities using RestClient.
  */
 @Slf4j
 @Service
@@ -36,8 +37,8 @@ public class SupabaseStorageService {
     private final FileCompressionService compressionService;
     private final ObjectMapper objectMapper;
 
-    @Qualifier("supabaseWebClient")
-    private final WebClient webClient;
+    @Qualifier("supabaseRestClient")
+    private final RestClient restClient;
 
     private String supabaseUrl;
     private String anonKey;
@@ -96,18 +97,17 @@ public class SupabaseStorageService {
                 }
             }
 
-            webClient.post()
+            restClient.post()
                     .uri("/storage/v1/object/{bucket}/{path}", bucketName, finalFileName)
                     .contentType(MediaType.parseMediaType(finalContentType))
-                    .bodyValue(dataToUpload)
+                    .body(dataToUpload)
                     .retrieve()
-                    .bodyToMono(Void.class)
-                    .block();
+                    .toBodilessEntity();
 
             log.info("Successfully uploaded file {} to bucket {}", finalFileName, bucketName);
             return generatePublicUrl(bucketName, finalFileName);
 
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("Failed to upload file {} to bucket {}: {}", fileName, bucketName, e.getMessage(), e);
             throw new IOException("Failed to upload file to Supabase Storage", e);
         }
@@ -124,11 +124,10 @@ public class SupabaseStorageService {
         validateConfiguration();
 
         try {
-            byte[] fileContent = webClient.get()
+            byte[] fileContent = restClient.get()
                     .uri("/storage/v1/object/{bucket}/{path}", bucketName, fileName)
                     .retrieve()
-                    .bodyToMono(byte[].class)
-                    .block();
+                    .body(byte[].class);
 
             if (fileContent == null || fileContent.length == 0) {
                 throw new RuntimeException("File not found or empty: " + fileName);
@@ -148,7 +147,7 @@ public class SupabaseStorageService {
             log.debug("Successfully downloaded file {} from bucket {}", fileName, bucketName);
             return new ByteArrayResource(fileContent);
 
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("Failed to download file {} from bucket {}: {}", fileName, bucketName, e.getMessage(), e);
             throw new RuntimeException("Failed to download file from Supabase Storage", e);
         }
@@ -165,16 +164,15 @@ public class SupabaseStorageService {
         validateConfiguration();
 
         try {
-            webClient.delete()
+            restClient.delete()
                     .uri("/storage/v1/object/{bucket}/{path}", bucketName, fileName)
                     .retrieve()
-                    .bodyToMono(Void.class)
-                    .block();
+                    .toBodilessEntity();
 
             log.info("Successfully deleted file {} from bucket {}", fileName, bucketName);
             return true;
 
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("Failed to delete file {} from bucket {}: {}", fileName, bucketName, e.getMessage(), e);
             return false;
         }
@@ -262,9 +260,7 @@ public class SupabaseStorageService {
         }
 
         try {
-            // Supabase Storage API: POST /storage/v1/object/sign/{bucket}/{path}
-            // Returns a signed URL that can be used to access the file
-            String response = webClient.post()
+            String response = restClient.post()
                     .uri(uriBuilder -> {
                         uriBuilder.path("/storage/v1/object/sign/{bucket}/{path}");
                         uriBuilder.queryParam("expiresIn", expiresIn);
@@ -273,36 +269,31 @@ public class SupabaseStorageService {
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + serviceRoleKey)
                     .header("apikey", serviceRoleKey)
                     .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+                    .body(String.class);
 
             if (response == null || response.isEmpty()) {
                 throw new RuntimeException("Empty response from Supabase Storage API");
             }
 
-            // Parse JSON response to extract signed URL
             try {
                 JsonNode jsonNode = objectMapper.readTree(response);
                 String signedUrl = jsonNode.path("signedURL").asText();
 
                 if (StringUtils.hasText(signedUrl)) {
-                    // If the signed URL is relative, prepend the base URL
                     if (signedUrl.startsWith("/")) {
                         signedUrl = supabaseUrl + signedUrl;
                     }
                     log.debug("Generated signed URL for {}/{}: expires in {} seconds", bucketName, fileName, expiresIn);
                     return signedUrl;
                 } else {
-                    // Fallback: construct URL manually if response format is different
                     log.warn("Signed URL not found in response, constructing manually");
                     return String.format("%s/storage/v1/object/sign/%s/%s?expiresIn=%d", supabaseUrl, bucketName, fileName, expiresIn);
                 }
             } catch (Exception e) {
                 log.warn("Failed to parse signed URL response, constructing manually: {}", e.getMessage());
-                // Fallback: construct URL manually
                 return String.format("%s/storage/v1/object/sign/%s/%s?expiresIn=%d", supabaseUrl, bucketName, fileName, expiresIn);
             }
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("Failed to generate signed URL for {}/{}: {}", bucketName, fileName, e.getMessage(), e);
             throw new RuntimeException("Failed to generate signed URL", e);
         }
@@ -321,8 +312,7 @@ public class SupabaseStorageService {
         validateConfiguration();
 
         try {
-            // Supabase Storage API: GET /storage/v1/object/list/{bucket}
-            WebClient.RequestHeadersSpec<?> requestSpec = webClient.get()
+            String response = restClient.get()
                     .uri(uriBuilder -> {
                         uriBuilder.path("/storage/v1/object/list/{bucket}");
                         if (StringUtils.hasText(path)) {
@@ -332,19 +322,15 @@ public class SupabaseStorageService {
                             uriBuilder.queryParam("limit", limit);
                         }
                         return uriBuilder.build(bucketName);
-                    });
-
-            String response = requestSpec
+                    })
                     .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+                    .body(String.class);
 
             if (response == null || response.isEmpty()) {
                 log.debug("Empty response from Supabase Storage list API for bucket {}", bucketName);
                 return new String[0];
             }
 
-            // Parse JSON response to extract file names
             try {
                 JsonNode jsonNode = objectMapper.readTree(response);
                 List<String> fileNames = new ArrayList<>();
@@ -357,7 +343,6 @@ public class SupabaseStorageService {
                         }
                     }
                 } else if (jsonNode.has("data") && jsonNode.get("data").isArray()) {
-                    // Some Supabase versions return data in a "data" field
                     for (JsonNode item : jsonNode.get("data")) {
                         String name = item.path("name").asText();
                         if (StringUtils.hasText(name)) {
@@ -372,7 +357,7 @@ public class SupabaseStorageService {
                 log.warn("Failed to parse file list response: {}", e.getMessage());
                 return new String[0];
             }
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("Failed to list files in bucket {}: {}", bucketName, e.getMessage(), e);
             return new String[0];
         }
@@ -437,7 +422,6 @@ public class SupabaseStorageService {
             throw new IllegalArgumentException("File must be an image");
         }
 
-        // Check for common image formats
         if (!contentType.equals("image/jpeg") &&
             !contentType.equals("image/png") &&
             !contentType.equals("image/gif") &&

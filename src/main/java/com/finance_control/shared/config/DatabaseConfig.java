@@ -43,6 +43,7 @@ public class DatabaseConfig {
     public DataSource localDataSource() {
         String jdbcUrl = buildLocalJdbcUrl();
         log.info("Configuring local datasource with URL: {}", jdbcUrl);
+        log.info("Driver class name from properties: '{}'", appProperties.database().driverClassName());
 
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);

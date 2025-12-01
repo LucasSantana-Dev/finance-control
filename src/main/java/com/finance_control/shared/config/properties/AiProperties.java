@@ -5,10 +5,12 @@ package com.finance_control.shared.config.properties;
  */
 public record AiProperties(
     boolean enabled,
-    OpenAIProperties openai
+    String provider,
+    OpenAIProperties openai,
+    CometAPIProperties cometapi
 ) {
     public AiProperties() {
-        this(false, new OpenAIProperties());
+        this(false, "openai", new OpenAIProperties(), new CometAPIProperties());
     }
 
     public record OpenAIProperties(
@@ -23,5 +25,17 @@ public record AiProperties(
             this(false, "", "gpt-4o-mini", 800, 0.2, "https://api.openai.com/v1");
         }
     }
-}
 
+    public record CometAPIProperties(
+        boolean enabled,
+        String apiKey,
+        String model,
+        Integer maxTokens,
+        Double temperature,
+        String baseUrl
+    ) {
+        public CometAPIProperties() {
+            this(false, "", "gpt-4o-mini", 800, 0.7, "https://api.cometapi.com/v1");
+        }
+    }
+}

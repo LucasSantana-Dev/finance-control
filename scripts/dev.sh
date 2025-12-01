@@ -420,8 +420,44 @@ check_environment() {
     done
 }
 
+# Function to check if Supabase local is enabled
+is_supabase_local_enabled() {
+    # Check environment variable first (allows override via command line)
+    if [ "${SUPABASE_LOCAL_ENABLED}" = "true" ]; then
+        return 0
+    fi
+    # Then check docker.env file
+    if [ -f docker.env ]; then
+        if grep -q "^SUPABASE_LOCAL_ENABLED=true" docker.env 2>/dev/null; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Function to check if using remote Supabase
+is_remote_supabase() {
+    # First check if local Supabase is enabled - if so, not remote
+    if is_supabase_local_enabled; then
+        return 1
+    fi
+    # Check if SUPABASE_DATABASE_ENABLED is true in docker.env or environment
+    if [ -f docker.env ]; then
+        if grep -q "^SUPABASE_DATABASE_ENABLED=true" docker.env 2>/dev/null; then
+            return 0
+        fi
+    fi
+    # Also check environment variable
+    if [ "${SUPABASE_DATABASE_ENABLED}" = "true" ]; then
+        return 0
+    fi
+    return 1
+}
+
 start_app() {
     local skip_tests=false
+    local services
+    local compose_cmd
 
     # Check for --no-test parameter
     for arg in "$@"; do
@@ -431,18 +467,60 @@ start_app() {
         fi
     done
 
+    # Determine which services to start based on Supabase configuration
+    if is_supabase_local_enabled; then
+        print_status "Supabase local is enabled, starting Supabase services..."
+        # When using local Supabase, we still need the local db service for SonarQube
+        services="app db redis"
+
+        # Export local Supabase database connection variables to override docker.env values
+        # These will be picked up by docker compose and override env_file values
+        # Note: supabase-db is the service name, port 5432 is the internal container port
+        export SUPABASE_DATABASE_HOST="supabase-db"
+        export SUPABASE_DATABASE_PORT="5432"
+        export SUPABASE_DATABASE_NAME="${SUPABASE_LOCAL_DB_NAME:-postgres}"
+        export SUPABASE_DATABASE_USERNAME="${SUPABASE_LOCAL_DB_USER:-postgres}"
+        export SUPABASE_DATABASE_PASSWORD="${SUPABASE_LOCAL_DB_PASSWORD:-postgres}"
+        export SUPABASE_DATABASE_SSL_ENABLED="false"
+        export SUPABASE_DATABASE_SSL_MODE="disable"
+
+        print_status "Using local Supabase database: ${SUPABASE_DATABASE_HOST}:${SUPABASE_DATABASE_PORT}/${SUPABASE_DATABASE_NAME}"
+        compose_cmd="docker compose --env-file docker.env --profile supabase"
+    elif is_remote_supabase; then
+        print_status "Remote Supabase detected - starting app and redis only (db not needed)"
+        services="app redis"
+
+        # Unset any previously exported local Supabase variables to ensure remote values from docker.env are used
+        unset SUPABASE_DATABASE_HOST SUPABASE_DATABASE_PORT SUPABASE_DATABASE_NAME
+        unset SUPABASE_DATABASE_USERNAME SUPABASE_DATABASE_PASSWORD
+        unset SUPABASE_DATABASE_SSL_ENABLED SUPABASE_DATABASE_SSL_MODE
+        compose_cmd="docker compose --env-file docker.env"
+    else
+        print_status "Local database detected - starting app, db, and redis"
+        services="app db redis"
+        compose_cmd="docker compose --env-file docker.env"
+    fi
+
     if [ "$skip_tests" = true ]; then
         print_status "Starting application (skipping tests)..."
-        SKIP_TESTS=true docker compose up -d
+        SKIP_TESTS=true $compose_cmd up -d $services
         print_success "Application started (tests skipped)!"
     else
         print_status "Starting application..."
-        docker compose up -d
+        $compose_cmd up -d $services
         print_success "Application started!"
     fi
 
     print_status "Access at: http://localhost:8080"
-    print_status "Database at: localhost:5432"
+    if is_supabase_local_enabled; then
+        print_status "Database: Local Supabase (supabase-db container)"
+        print_status "Supabase Studio: http://localhost:54323"
+        print_status "Supabase API: http://localhost:54321"
+    elif is_remote_supabase; then
+        print_status "Database: Remote Supabase (configured in docker.env)"
+    else
+        print_status "Database at: localhost:5432"
+    fi
 }
 
 start_dev() {

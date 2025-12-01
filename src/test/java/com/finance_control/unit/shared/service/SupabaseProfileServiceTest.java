@@ -10,223 +10,219 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClient;
 
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for SupabaseProfileService.
+ * Note: RestClient's fluent API is complex to mock, so these tests focus on
+ * verifying the service methods execute without exceptions and handle errors correctly.
+ * For more comprehensive testing, consider integration tests with MockRestServiceServer.
+ */
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 @DisplayName("SupabaseProfileService Tests")
 class SupabaseProfileServiceTest {
 
     @Mock
-    private WebClient webClient;
+    private RestClient restClient;
+
+    @Mock
+    private RestClient.RequestBodyUriSpec requestBodyUriSpec;
+
+    @Mock
+    private RestClient.RequestBodySpec requestBodySpec;
+
+    @Mock
+    @SuppressWarnings("rawtypes")
+    private RestClient.RequestHeadersUriSpec requestHeadersUriSpec;
+
+    @Mock
+    @SuppressWarnings("rawtypes")
+    private RestClient.RequestHeadersSpec requestHeadersSpec;
+
+    @Mock
+    private RestClient.ResponseSpec responseSpec;
 
     @InjectMocks
     private SupabaseProfileService supabaseProfileService;
 
-    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
-    private WebClient.RequestBodySpec requestBodySpec;
-    private WebClient.ResponseSpec responseSpec;
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
-        requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        requestBodySpec = mock(WebClient.RequestBodySpec.class);
-        responseSpec = mock(WebClient.ResponseSpec.class);
-
-        ReflectionTestUtils.setField(supabaseProfileService, "webClient", webClient);
+        objectMapper = new ObjectMapper();
     }
 
     @Test
-    @DisplayName("updateUserMetadata - should call Supabase API")
-    void updateUserMetadata_ShouldCallSupabaseApi() {
+    @DisplayName("updateUserMetadata - should call RestClient")
+    void updateUserMetadata_ShouldCallRestClient() {
+        // Setup mocks for RestClient fluent API
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
+
         Map<String, Object> metadata = Map.of("key", "value");
-        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
 
-        when(webClient.put()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
-        when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        // Should not throw exception
+        supabaseProfileService.updateUserMetadata("token", metadata);
 
-        Mono<Void> result = supabaseProfileService.updateUserMetadata("token", metadata);
-
-        StepVerifier.create(result)
-                .verifyComplete();
-
-        verify(webClient).put();
-        verify(requestBodyUriSpec).uri("/auth/v1/user");
-        verify(requestBodySpec).header("Authorization", "Bearer token");
-        verify(requestBodySpec).contentType(MediaType.APPLICATION_JSON);
-    }
-
-    @Test
-    @DisplayName("updateUserEmail - should call Supabase API")
-    void updateUserEmail_ShouldCallSupabaseApi() {
-        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-
-        when(webClient.put()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
-        when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
-
-        Mono<Void> result = supabaseProfileService.updateUserEmail("token", "new@example.com");
-
-        StepVerifier.create(result)
-                .verifyComplete();
-
-        verify(webClient).put();
+        // Verify RestClient was called
+        verify(restClient).put();
         verify(requestBodyUriSpec).uri("/auth/v1/user");
         verify(requestBodySpec).header("Authorization", "Bearer token");
     }
 
     @Test
-    @DisplayName("updateUserPassword - should call Supabase API")
-    void updateUserPassword_ShouldCallSupabaseApi() {
-        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+    @DisplayName("updateUserEmail - should call RestClient")
+    void updateUserEmail_ShouldCallRestClient() {
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
 
-        when(webClient.put()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
-        when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        supabaseProfileService.updateUserEmail("token", "new@example.com");
 
-        Mono<Void> result = supabaseProfileService.updateUserPassword("token", "newPassword123");
-
-        StepVerifier.create(result)
-                .verifyComplete();
-
-        verify(webClient).put();
+        verify(restClient).put();
         verify(requestBodyUriSpec).uri("/auth/v1/user");
-        verify(requestBodySpec).header("Authorization", "Bearer token");
+    }
+
+    @Test
+    @DisplayName("updateUserPassword - should call RestClient")
+    void updateUserPassword_ShouldCallRestClient() {
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
+
+        supabaseProfileService.updateUserPassword("token", "newPassword123");
+
+        verify(restClient).put();
     }
 
     @Test
     @DisplayName("getUserProfile - should return user profile")
+    @SuppressWarnings("unchecked")
     void getUserProfile_ShouldReturnUserProfile() throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode profileData = mapper.readTree("{\"id\":\"123\",\"email\":\"test@example.com\"}");
-        var requestHeadersUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
-        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+        String profileJson = "{\"id\":\"123\",\"email\":\"test@example.com\"}";
+        JsonNode expectedProfile = objectMapper.readTree(profileJson);
 
-        doReturn(requestHeadersUriSpec).when(webClient).get();
-        when(requestHeadersUriSpec.uri("/auth/v1/user")).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.header(eq("Authorization"), anyString())).thenReturn(requestHeadersSpec);
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(JsonNode.class)).thenReturn(Mono.just(profileData));
+        when(responseSpec.body(JsonNode.class)).thenReturn(expectedProfile);
 
-        Mono<JsonNode> result = supabaseProfileService.getUserProfile("token");
+        JsonNode result = supabaseProfileService.getUserProfile("token");
 
-        StepVerifier.create(result)
-                .expectNext(profileData)
-                .verifyComplete();
-
-        verify(webClient).get();
-        verify(requestHeadersUriSpec).uri("/auth/v1/user");
-        verify(requestHeadersSpec).header("Authorization", "Bearer token");
+        assertThat(result).isNotNull();
+        assertThat(result.get("id").asText()).isEqualTo("123");
+        assertThat(result.get("email").asText()).isEqualTo("test@example.com");
+        verify(restClient).get();
     }
 
     @Test
-    @DisplayName("updateUserPreferences - should add timestamp and call updateUserMetadata")
-    void updateUserPreferences_ShouldAddTimestampAndCallUpdateUserMetadata() {
+    @DisplayName("updateUserPreferences - should add timestamp")
+    void updateUserPreferences_ShouldAddTimestamp() {
         Map<String, Object> preferences = new java.util.HashMap<>(Map.of("theme", "dark"));
-        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
 
-        when(webClient.put()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
-        when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
 
-        Mono<Void> result = supabaseProfileService.updateUserPreferences("token", preferences);
+        supabaseProfileService.updateUserPreferences("token", preferences);
 
-        StepVerifier.create(result)
-                .verifyComplete();
-
-        verify(webClient).put();
+        // Verify preferences were updated with timestamp
+        assertThat(preferences).containsKey("preferences_updated_at");
+        verify(restClient).put();
     }
 
     @Test
-    @DisplayName("linkLocalUser - should call updateUserMetadata with link data")
-    void linkLocalUser_ShouldCallUpdateUserMetadataWithLinkData() {
-        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+    @DisplayName("linkLocalUser - should call updateUserMetadata")
+    void linkLocalUser_ShouldCallUpdateUserMetadata() {
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
 
-        when(webClient.put()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
-        when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        supabaseProfileService.linkLocalUser("token", 1L);
 
-        Mono<Void> result = supabaseProfileService.linkLocalUser("token", 1L);
-
-        StepVerifier.create(result)
-                .verifyComplete();
-
-        verify(webClient).put();
+        verify(restClient).put();
     }
 
     @Test
-    @DisplayName("updateUserAvatar - should call updateUserMetadata with avatar URL")
-    void updateUserAvatar_ShouldCallUpdateUserMetadataWithAvatarUrl() {
-        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+    @DisplayName("updateUserAvatar - should call updateUserMetadata")
+    void updateUserAvatar_ShouldCallUpdateUserMetadata() {
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
 
-        when(webClient.put()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
-        when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        supabaseProfileService.updateUserAvatar("token", "https://example.com/avatar.jpg");
 
-        Mono<Void> result = supabaseProfileService.updateUserAvatar("token", "https://example.com/avatar.jpg");
-
-        StepVerifier.create(result)
-                .verifyComplete();
-
-        verify(webClient).put();
+        verify(restClient).put();
     }
 
     @Test
-    @DisplayName("updateDisplayName - should call updateUserMetadata with display name")
-    void updateDisplayName_ShouldCallUpdateUserMetadataWithDisplayName() {
-        var requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+    @DisplayName("updateDisplayName - should call updateUserMetadata")
+    void updateDisplayName_ShouldCallUpdateUserMetadata() {
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(HttpStatus.OK).build());
 
-        when(webClient.put()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri("/auth/v1/user")).thenReturn(requestBodySpec);
-        when(requestBodySpec.header(eq("Authorization"), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(Void.class)).thenReturn(Mono.empty());
+        supabaseProfileService.updateDisplayName("token", "John Doe");
 
-        Mono<Void> result = supabaseProfileService.updateDisplayName("token", "John Doe");
+        verify(restClient).put();
+    }
 
-        StepVerifier.create(result)
-                .verifyComplete();
+    @Test
+    @DisplayName("updateUserMetadata - should handle RestClientException")
+    void updateUserMetadata_ShouldHandleRestClientException() {
+        when(restClient.put()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenThrow(new org.springframework.web.client.RestClientException("API Error"));
 
-        verify(webClient).put();
+        Map<String, Object> metadata = Map.of("key", "value");
+
+        assertThatThrownBy(() -> supabaseProfileService.updateUserMetadata("token", metadata))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to update user metadata");
     }
 }

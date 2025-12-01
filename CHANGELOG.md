@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CometAPI Integration**: Optional AI provider for financial predictions
+  - Added `CometAPIPredictionClient` implementing `PredictionModelClient` interface
+  - Support for CometAPI's OpenAI-compatible API with access to 500+ AI models
+  - Configuration via `app.ai.cometapi.*` properties
+  - Provider selection: OpenAI (default, @Primary) or CometAPI (optional)
+  - Comprehensive unit tests for CometAPI client
+  - Documentation in `docs/AI_PROVIDERS.md` with security considerations, configuration guide, and troubleshooting
+  - Cost savings: Claims 20% cheaper than direct provider pricing
+  - Model flexibility: Easy switching between different AI models
+  - Security documentation: Detailed risk assessment and mitigation strategies
+  - Environment variables: `COMETAPI_ENABLED`, `COMETAPI_API_KEY`, `COMETAPI_MODEL`, etc.
+
+### Changed
+- **Test Cleanup and Refactoring**: Comprehensive backend test cleanup and refactoring
+  - Removed disabled/non-functional test files (SupabaseRealtimeServiceTest.java.disabled)
+  - Removed example/demo tests (InvestmentControllerExampleTest.java, TestInvestmentController.java)
+  - Consolidated duplicate tests (removed MonitoringControllerUnitTest.java, kept MonitoringControllerTest.java)
+  - Removed redundant Supabase integration tests (SupabaseAuthIntegrationTest, SupabaseStorageIntegrationTest, SupabaseRealtimeIntegrationTest) - unit tests already exist
+  - Added TestContainers PostgreSQL support for integration tests to fix H2 compatibility issues (JSONB, ENUM types)
+  - Updated BaseIntegrationTest to use TestContainers PostgreSQL
+  - Updated InvestmentControllerIntegrationTest and InvestmentRepositoryIntegrationTest to use TestContainers
+  - Fixed false positive tests (SimpleIntegrationTest, BaseServiceTest)
+  - Improved test naming conventions (should[ExpectedBehavior]When[StateUnderTest])
+  - Updated TESTING.md with TestContainers setup documentation
+
+### Added
 - **Notifications Module**: Complete notification system for user alerts
   - `Notification` entity with types: INSTALLMENT_DUE, GOAL_PROGRESS, GOAL_ACHIEVED, BUDGET_ALERT
   - `NotificationController` with CRUD operations and filtering endpoints
@@ -125,6 +151,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Integration Tests**: Added coverage for CSV, OFX, and duplicate handling scenarios in `TransactionImportServiceIntegrationTest`
 
 ### Fixed
+- **Supabase Advisor Issues**: Addressed all Supabase advisor warnings, errors, and infos
+  - **RLS Policies**: Added comprehensive Row Level Security policies for new tables (`notifications`, `user_settings`, `user_categories`) in migration V18
+  - **RLS Enablement**: Enabled RLS on all new tables with proper user isolation
+  - **Missing RLS on Public Tables**: Fixed "RLS Disabled in Public" security warnings in migration V19
+    - Enabled RLS on `market_indicators` (public read-only market data)
+    - Re-enabled RLS on `transaction_categories` and `transaction_subcategories` (global/shared tables)
+    - Re-enabled RLS on `transaction_source_entity` (user-specific sources)
+    - Enabled RLS on `signup_audit` and `signup_blocklist` (Supabase Auth extension tables, service role only)
+  - **Function search_path Security**: Fixed mutable search_path security warnings in migration V20
+    - Set `search_path = public` on `table_change_audit()` function to prevent search_path injection attacks
+    - Set `search_path = public` on `insert_audit_log()` function to prevent search_path injection attacks
+    - Migration handles all function overloads automatically
+  - **Missing RLS Policies**: Fixed "RLS Enabled No Policy" warning for `transaction_responsibilities` table in migration V20
+    - Added comprehensive RLS policies for SELECT, INSERT, UPDATE, DELETE operations
+    - Policies grant access through transaction ownership (checking transaction's user_id)
+    - Users can only manage responsibility assignments for their own transactions
+    - Service role has full access for administrative operations
+  - **Type Compatibility**: Fixed BIGINT user_id compatibility with UUID auth.uid() using `auth.uid()::text = user_id::text` pattern
+  - **Case Mismatch**: Fixed V17 migration to use uppercase enum values (LOW, MEDIUM, HIGH, ACTIVE, COMPLETED, PAUSED, CANCELLED) to match `@Enumerated(EnumType.STRING)` behavior
+  - **Performance Indexes**: Added composite indexes for common query patterns (notifications by user/read/date, user_categories by user/type/default)
+  - **Service Role Bypass**: All RLS policies include service_role bypass for admin operations
+  - **Security**: Signup audit and blocklist tables are now restricted to service_role only
+  - **Documentation**: Added comprehensive policy comments explaining RLS patterns and type conversion
 - **AppProperties Architecture**: Refactored to immutable Java records with constructor binding for better security and performance
 - **BCBApiClient**: Fixed deprecated UriComponentsBuilder.fromHttpUrl(), raw type warnings, code duplication, improved error logging, removed unused bcbApiKey field, and eliminated @SuppressWarnings in tests using doReturn/doThrow pattern
 - **Investment Model**: Replaced deprecated BigDecimal.divide() and BigDecimal.ROUND_HALF_UP with RoundingMode.HALF_UP
