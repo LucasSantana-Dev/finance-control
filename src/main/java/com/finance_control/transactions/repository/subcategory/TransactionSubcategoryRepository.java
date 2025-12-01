@@ -67,4 +67,20 @@ public interface TransactionSubcategoryRepository extends NameBasedRepository<Tr
         throw new UnsupportedOperationException(
                 "Subcategory names are scoped to categories. Use existsByCategoryIdAndNameIgnoreCase instead.");
     }
+
+    @Override
+    @Query("SELECT s FROM TransactionSubcategory s WHERE s.isActive = true ORDER BY s.name ASC")
+    default List<TransactionSubcategory> findAllByUserIdOrderByNameAsc(Long userId) {
+        // Subcategories are not user-aware, so userId parameter is ignored
+        // This method exists to satisfy the NameBasedRepository interface
+        return findByIsActiveTrueOrderByNameAsc();
+    }
+
+    @Override
+    @Query("SELECT s FROM TransactionSubcategory s WHERE s.isActive = true ORDER BY s.name ASC")
+    default List<TransactionSubcategory> findAllByOrderByNameAsc() {
+        // Subcategory names are scoped to categories
+        // This method exists to satisfy the NameBasedRepository interface
+        return findByIsActiveTrueOrderByNameAsc();
+    }
 }

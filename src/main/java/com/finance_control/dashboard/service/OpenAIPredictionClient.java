@@ -2,7 +2,6 @@ package com.finance_control.dashboard.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.finance_control.shared.config.AppProperties;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -12,26 +11,29 @@ import java.util.stream.StreamSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 /**
  * Implementation of {@link PredictionModelClient} that communicates with OpenAI's Responses API.
+ * This is the primary (default) provider when both OpenAI and CometAPI are configured.
  */
 @Service
+@Primary
 @RequiredArgsConstructor
 @Slf4j
 @ConditionalOnProperty(prefix = "app.ai.openai", name = "enabled", havingValue = "true")
 public class OpenAIPredictionClient implements PredictionModelClient {
 
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(45);
     private static final String RESPONSES_ENDPOINT = "/responses";
 
-    private final WebClient.Builder webClientBuilder;
     private final AppProperties appProperties;
 
     @Override
@@ -45,7 +47,7 @@ public class OpenAIPredictionClient implements PredictionModelClient {
             throw new IllegalStateException("OpenAI API key must be configured before requesting predictions");
         }
 
-        WebClient client = webClientBuilder.clone()
+        RestClient client = RestClient.builder()
                 .baseUrl(aiConfig.openai().baseUrl())
                 .build();
 
@@ -62,16 +64,11 @@ public class OpenAIPredictionClient implements PredictionModelClient {
         try {
             JsonNode responseNode = client.post()
                     .uri(RESPONSES_ENDPOINT)
-                    .headers(headers -> {
-                        headers.setBearerAuth(aiConfig.openai().apiKey());
-                        headers.setContentType(MediaType.APPLICATION_JSON);
-                    })
-                    .bodyValue(payload)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + aiConfig.openai().apiKey())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
                     .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .timeout(REQUEST_TIMEOUT)
-                    .onErrorResume(WebClientResponseException.class, this::handleWebClientException)
-                    .block(REQUEST_TIMEOUT);
+                    .body(JsonNode.class);
 
             if (responseNode == null) {
                 log.warn("OpenAI response returned null payload");
@@ -79,17 +76,13 @@ public class OpenAIPredictionClient implements PredictionModelClient {
             }
 
             return extractText(responseNode);
-        } catch (WebClientResponseException ex) {
-            throw ex;
-        } catch (Exception ex) {
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            log.error("OpenAI API error: status={} body={}", ex.getStatusCode().value(), ex.getResponseBodyAsString());
+            throw new IllegalStateException("OpenAI API returned an error: " + ex.getStatusText(), ex);
+        } catch (RestClientException ex) {
             log.error("Unexpected error retrieving prediction from OpenAI: {}", ex.getMessage());
             throw new IllegalStateException("Failed to obtain financial prediction from OpenAI", ex);
         }
-    }
-
-    private Mono<JsonNode> handleWebClientException(WebClientResponseException exception) {
-        log.error("OpenAI API error: status={} body={}", exception.getStatusCode().value(), exception.getResponseBodyAsString());
-        return Mono.error(new IllegalStateException("OpenAI API returned an error: " + exception.getStatusText(), exception));
     }
 
     private String extractText(JsonNode root) {

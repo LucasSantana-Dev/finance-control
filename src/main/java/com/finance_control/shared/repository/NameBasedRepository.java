@@ -1,5 +1,7 @@
 package com.finance_control.shared.repository;
 
+import org.springframework.data.repository.NoRepositoryBean;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -10,6 +12,7 @@ import java.util.Optional;
  * @param <T> The entity type
  * @param <I> The ID type
  */
+@NoRepositoryBean
 public interface NameBasedRepository<T, I> extends BaseRepository<T, I> {
 
     /**

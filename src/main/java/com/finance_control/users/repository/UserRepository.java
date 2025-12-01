@@ -59,41 +59,6 @@ public interface UserRepository extends BaseRepository<User, Long> {
      */
     boolean existsBySupabaseUserId(String supabaseUserId);
 
-    /**
-     * Finds a user by their email address.
-     * NOTE: This method is deprecated for performance reasons.
-     * Use findByEmailHash() instead after hashing the email.
-     *
-     * @param email the email address to search for
-     * @return an Optional containing the user if found, empty otherwise
-     * @deprecated Use findByEmailHash() with hashed email for better performance
-     */
-    @Deprecated
-    Optional<User> findByEmail(String email);
-
-    /**
-     * Checks if a user exists with the given email address.
-     * NOTE: This method is deprecated for performance reasons.
-     * Use existsByEmailHash() instead after hashing the email.
-     *
-     * @param email the email address to check
-     * @return true if a user exists with the email, false otherwise
-     * @deprecated Use existsByEmailHash() with hashed email for better performance
-     */
-    @Deprecated
-    boolean existsByEmail(String email);
-
-    /**
-     * Finds an active user by their email address.
-     * NOTE: This method is deprecated for performance reasons.
-     * Use findByEmailHashAndIsActiveTrue() instead after hashing the email.
-     *
-     * @param email the email address to search for
-     * @return an Optional containing the active user if found, empty otherwise
-     * @deprecated Use findByEmailHashAndIsActiveTrue() with hashed email for better performance
-     */
-    @Deprecated
-    Optional<User> findByEmailAndIsActiveTrue(String email);
 
     @Override
     @Query("SELECT u FROM User u WHERE " +

@@ -42,6 +42,14 @@ public interface TransactionCategoryRepository extends NameBasedRepository<Trans
                 "Transaction categories are not user-aware. Use existsByNameIgnoreCase instead.");
     }
 
+    @Override
+    @Query("SELECT c FROM TransactionCategory c ORDER BY c.name ASC")
+    default List<TransactionCategory> findAllByUserIdOrderByNameAsc(Long userId) {
+        // Transaction categories are not user-aware, so userId parameter is ignored
+        // This method exists to satisfy the NameBasedRepository interface
+        return findAllByOrderByNameAsc();
+    }
+
     @Query("SELECT " +
             "COUNT(*) as totalCategories, " +
             "COUNT(CASE WHEN c.id IN (SELECT DISTINCT t.category.id FROM Transaction t) THEN 1 END) as usedCategories "
