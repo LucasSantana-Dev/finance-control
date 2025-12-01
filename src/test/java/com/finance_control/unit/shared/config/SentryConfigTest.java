@@ -11,7 +11,6 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
@@ -34,28 +33,29 @@ class SentryConfigTest {
     }
 
     @Test
-    void initializeSentry_WithValidDsn_ShouldInitializeSentry() {
+    void customizeSentryOptions_WithValidDsn_ShouldCustomizeSentry() {
         // Given
         SentryConfig sentryConfig = new SentryConfig(appProperties);
 
         try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
-            // When - Initialize Sentry (should not throw exception)
-            // The actual implementation calls Sentry.init(Consumer<SentryOptions>) which
-            // maps to the init(OptionsConfiguration<SentryOptions>) overload
-            sentryConfig.initializeSentry();
+            // Mock Sentry.isEnabled() to return true
+            sentryMock.when(() -> io.sentry.Sentry.isEnabled()).thenReturn(true);
+            // Mock Sentry.getCurrentHub() and getOptions()
+            io.sentry.IHub mockHub = Mockito.mock(io.sentry.IHub.class);
+            io.sentry.SentryOptions mockOptions = Mockito.mock(io.sentry.SentryOptions.class);
+            sentryMock.when(() -> io.sentry.Sentry.getCurrentHub()).thenReturn(mockHub);
+            when(mockHub.getOptions()).thenReturn(mockOptions);
 
-            // Then - Verify that initialization completed successfully
-            // Note: Sentry.init has multiple overloads making strict verification complex.
-            // The actual call uses init(OptionsConfiguration<SentryOptions>) via lambda.
-            // Since OptionsConfiguration type is not easily accessible for verification,
-            // we verify that the method execution completed without exception, which
-            // indicates the initialization logic worked correctly.
-            // The main test objective is that initialization succeeds, not strict mock verification.
+            // When - Customize Sentry options (should not throw exception)
+            sentryConfig.customizeSentryOptions();
+
+            // Then - Verify that customization completed successfully
+            // The method should execute without exception when Sentry is enabled and options are available
         }
     }
 
     @Test
-    void initializeSentry_WithEmptyDsn_ShouldNotInitializeSentry() {
+    void customizeSentryOptions_WithEmptyDsn_ShouldNotCustomizeSentry() {
         // Given
         MonitoringProperties monitoring = new MonitoringProperties(
             true,
@@ -66,15 +66,15 @@ class SentryConfigTest {
 
         try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
             // When
-            sentryConfig.initializeSentry();
+            sentryConfig.customizeSentryOptions();
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.init(any(io.sentry.SentryOptions.class)), never());
+            // Then - Should return early without accessing Sentry
+            sentryMock.verify(() -> io.sentry.Sentry.getCurrentHub(), never());
         }
     }
 
     @Test
-    void initializeSentry_WithNullDsn_ShouldNotInitializeSentry() {
+    void customizeSentryOptions_WithNullDsn_ShouldNotCustomizeSentry() {
         // Given
         MonitoringProperties monitoring = new MonitoringProperties(
             true,
@@ -85,10 +85,10 @@ class SentryConfigTest {
 
         try (MockedStatic<io.sentry.Sentry> sentryMock = Mockito.mockStatic(io.sentry.Sentry.class)) {
             // When
-            sentryConfig.initializeSentry();
+            sentryConfig.customizeSentryOptions();
 
-            // Then
-            sentryMock.verify(() -> io.sentry.Sentry.init(any(io.sentry.SentryOptions.class)), never());
+            // Then - Should return early without accessing Sentry
+            sentryMock.verify(() -> io.sentry.Sentry.getCurrentHub(), never());
         }
     }
 }
